@@ -1,0 +1,51 @@
+/*******************************************************************************
+*                                                                              *
+*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*                   MindBricks Confidential Proprietary.                       *
+*                         All Rights Reserved.                                 *
+*                                                                              *
+********************************************************************************
+*                                                                              *
+* This document contains information that is confidential and proprietary to   *
+* MindBricks Technologies. No part of this document may be reproduced in any   *
+* form whatsoever without prior written approval from MindBricks Technologies. *
+*                                                                              *
+*******************************************************************************/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/******************************************************************************/
+
+
+#include "types.h"
+#include "msg_layer_api.h"
+#include "stun_txn_api.h"
+#include "stun_binding_api.h"
+#include "stun_binding_int.h"
+#include "stun_binding_utils.h"
+
+
+int32_t stun_binding_utils_create_request_msg(handle *h_req)
+{
+    handle h_msg;
+    int32_t status;
+
+    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
+    if (status != STUN_OK) return status;
+
+    *h_req = h_msg;
+
+    return status;
+}
+
+
+
+/******************************************************************************/
+
+#ifdef __cplusplus
+}
+#endif
+
+/******************************************************************************/

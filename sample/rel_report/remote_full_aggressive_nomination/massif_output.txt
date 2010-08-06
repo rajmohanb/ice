@@ -1,0 +1,381 @@
+--------------------------------------------------------------------------------
+Command:            ./ice_lite_agent
+Massif arguments:   (none)
+ms_print arguments: massif.out.13965
+--------------------------------------------------------------------------------
+
+
+    KB
+12.52^                             #                                          
+     |                             #                                          
+     |                             #                                          
+     |                             #        @@@     :                         
+     |                        :::::#   :::::@  ::::::                         
+     |                     @@@:   :#   :   :@  :   ::                         
+     |         ::::::::@:::@  :   :#::::   :@  :   :::::::::::::::@:::::::::@:
+     |         ::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+     |        :::::::::@:::@  :   :#   :   :@  :   ::::::::: :::::@::: :::::@:
+   0 +----------------------------------------------------------------------->Mi
+     0                                                                   6.656
+
+Number of snapshots: 52
+ Detailed snapshots: [12, 16, 19 (peak), 23, 40, 49]
+
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+  0              0                0                0             0            0
+  1        728,017              144              136             8            0
+  2        797,975            7,752            7,668            84            0
+  3        879,868            9,264            9,168            96            0
+  4      1,008,514            9,424            9,312           112            0
+  5      1,131,012            9,408            9,304           104            0
+  6      1,231,261            9,408            9,304           104            0
+  7      1,293,499            9,408            9,304           104            0
+  8      1,363,728            9,408            9,304           104            0
+  9      1,436,790            9,408            9,304           104            0
+ 10      1,521,009            9,424            9,312           112            0
+ 11      1,643,143            9,424            9,312           112            0
+ 12      1,734,666            9,408            9,304           104            0
+98.89% (9,304B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+->93.96% (8,840B) 0x8058C19: platform_calloc (platform_api.c:255)
+| ->70.88% (6,668B) 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+| | ->70.88% (6,668B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |   ->70.88% (6,668B) 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+| |     ->70.88% (6,668B) 0x804B1A5: main (ice_lite_agent.c:936)
+| |       
+| ->15.94% (1,500B) 0x804B21E: main (ice_lite_agent.c:953)
+| | 
+| ->04.25% (400B) 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+| | ->04.25% (400B) 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+| |   ->04.25% (400B) 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+| |     ->04.25% (400B) 0x804B673: ice_create_instance (ice_api.c:54)
+| |       ->04.25% (400B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |         ->04.25% (400B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |           
+| ->01.53% (144B) 0x804B655: ice_create_instance (ice_api.c:50)
+| | ->01.53% (144B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |   ->01.53% (144B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |     
+| ->01.36% (128B) in 3 places, all below massif's threshold (01.00%)
+|   
+->04.34% (408B) 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+| ->04.34% (408B) 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+|   ->02.89% (272B) 0x40B3387: timer_helper_thread (timer_routines.c:128)
+|   | ->02.89% (272B) 0x436D80C: start_thread (pthread_create.c:300)
+|   |   ->02.89% (272B) 0x41878DC: clone (clone.S:130)
+|   |     
+|   ->01.45% (136B) 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+|     ->01.45% (136B) 0x437315E: pthread_once (pthread_once.S:122)
+|       ->01.45% (136B) 0x8058AC8: platform_timer_init (platform_api.c:191)
+|         ->01.45% (136B) 0x8058BDA: platform_init (platform_api.c:236)
+|           ->01.45% (136B) 0x804B0F5: main (ice_lite_agent.c:921)
+|             
+->00.60% (56B) in 1+ places, all below ms_print's threshold (01.00%)
+
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+ 13      1,831,955            9,408            9,304           104            0
+ 14      1,886,202            9,408            9,304           104            0
+ 15      1,972,794            9,408            9,304           104            0
+ 16      2,075,449            9,864            9,646           218            0
+97.79% (9,646B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+->92.11% (9,086B) 0x8058C19: platform_calloc (platform_api.c:255)
+| ->67.60% (6,668B) 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+| | ->67.60% (6,668B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |   ->67.60% (6,668B) 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+| |     ->67.60% (6,668B) 0x804B1A5: main (ice_lite_agent.c:936)
+| |       
+| ->15.21% (1,500B) 0x804B21E: main (ice_lite_agent.c:953)
+| | 
+| ->04.06% (400B) 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+| | ->04.06% (400B) 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+| |   ->04.06% (400B) 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+| |     ->04.06% (400B) 0x804B673: ice_create_instance (ice_api.c:54)
+| |       ->04.06% (400B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |         ->04.06% (400B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |           
+| ->02.66% (262B) in 12 places, all below massif's threshold (01.00%)
+| | 
+| ->01.46% (144B) 0x804B655: ice_create_instance (ice_api.c:50)
+| | ->01.46% (144B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |   ->01.46% (144B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |     
+| ->01.14% (112B) 0x805404E: stun_msg_decode (stun_enc_dec_api.c:246)
+|   ->01.14% (112B) 0x804B35B: main (ice_lite_agent.c:977)
+|     
+->04.14% (408B) 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+| ->04.14% (408B) 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+|   ->02.76% (272B) 0x40B3387: timer_helper_thread (timer_routines.c:128)
+|   | ->02.76% (272B) 0x436D80C: start_thread (pthread_create.c:300)
+|   |   ->02.76% (272B) 0x41878DC: clone (clone.S:130)
+|   |     
+|   ->01.38% (136B) 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+|     ->01.38% (136B) 0x437315E: pthread_once (pthread_once.S:122)
+|       ->01.38% (136B) 0x8058AC8: platform_timer_init (platform_api.c:191)
+|         ->01.38% (136B) 0x8058BDA: platform_init (platform_api.c:236)
+|           ->01.38% (136B) 0x804B0F5: main (ice_lite_agent.c:921)
+|             
+->01.54% (152B) in 3 places, all below massif's threshold (01.00%)
+  
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+ 17      2,405,275           10,536           10,314           222            0
+ 18      2,778,895           10,808           10,538           270            0
+ 19      2,843,678           12,824           12,458           366            0
+97.15% (12,458B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+->89.82% (11,518B) 0x8058C19: platform_calloc (platform_api.c:255)
+| ->52.00% (6,668B) 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+| | ->52.00% (6,668B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |   ->52.00% (6,668B) 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+| |     ->52.00% (6,668B) 0x804B1A5: main (ice_lite_agent.c:936)
+| |       
+| ->11.70% (1,500B) 0x804B21E: main (ice_lite_agent.c:953)
+| | 
+| ->11.70% (1,500B) 0x804B9B7: ice_format_and_send_message (ice_api.c:225)
+| | ->11.70% (1,500B) 0x804FCBE: cc_nwk_send_cb_fxn (conn_check_api.c:60)
+| |   ->11.70% (1,500B) 0x8057F52: send_resp (stun_txn_fsm.c:218)
+| |     ->11.70% (1,500B) 0x8057FC2: stun_txn_fsm_inject_msg (stun_txn_fsm.c:254)
+| |       ->11.70% (1,500B) 0x8057894: stun_txn_send_stun_message (stun_txn_api.c:359)
+| |         ->11.70% (1,500B) 0x80508D9: cc_process_ic_check (conn_check_session_fsm.c:161)
+| |           ->11.70% (1,500B) 0x8050A01: conn_check_session_fsm_inject_msg (conn_check_session_fsm.c:212)
+| |             ->11.70% (1,500B) 0x8050532: conn_check_session_inject_received_msg (conn_check_api.c:493)
+| |               ->11.70% (1,500B) 0x804D2CD: ice_media_process_rx_msg (ice_media_fsm.c:111)
+| |                 ->11.70% (1,500B) 0x804D5F5: ice_media_stream_fsm_inject_msg (ice_media_fsm.c:306)
+| |                   ->11.70% (1,500B) 0x804CC81: handle_peer_msg (ice_session_fsm.c:117)
+| |                     ->11.70% (1,500B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |                       ->11.70% (1,500B) 0x804C81F: ice_session_inject_received_msg (ice_api.c:800)
+| |                         ->11.70% (1,500B) 0x804B4BE: main (ice_lite_agent.c:1002)
+| |                           
+| ->05.27% (676B) 0x804FF70: conn_check_create_session (conn_check_api.c:198)
+| | ->05.27% (676B) 0x804ED2E: ice_utils_create_conn_check_session (ice_utils.c:884)
+| |   ->05.27% (676B) 0x804D27E: ice_media_process_rx_msg (ice_media_fsm.c:102)
+| |     ->05.27% (676B) 0x804D5F5: ice_media_stream_fsm_inject_msg (ice_media_fsm.c:306)
+| |       ->05.27% (676B) 0x804CC81: handle_peer_msg (ice_session_fsm.c:117)
+| |         ->05.27% (676B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |           ->05.27% (676B) 0x804C81F: ice_session_inject_received_msg (ice_api.c:800)
+| |             ->05.27% (676B) 0x804B4BE: main (ice_lite_agent.c:1002)
+| |               
+| ->04.91% (630B) in 19 places, all below massif's threshold (01.00%)
+| | 
+| ->03.12% (400B) 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+| | ->03.12% (400B) 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+| |   ->03.12% (400B) 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+| |     ->03.12% (400B) 0x804B673: ice_create_instance (ice_api.c:54)
+| |       ->03.12% (400B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |         ->03.12% (400B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |           
+| ->01.12% (144B) 0x804B655: ice_create_instance (ice_api.c:50)
+|   ->01.12% (144B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+|     ->01.12% (144B) 0x804B0FA: main (ice_lite_agent.c:923)
+|       
+->03.18% (408B) 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+| ->03.18% (408B) 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+|   ->02.12% (272B) 0x40B3387: timer_helper_thread (timer_routines.c:128)
+|   | ->02.12% (272B) 0x436D80C: start_thread (pthread_create.c:300)
+|   |   ->02.12% (272B) 0x41878DC: clone (clone.S:130)
+|   |     
+|   ->01.06% (136B) 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+|     ->01.06% (136B) 0x437315E: pthread_once (pthread_once.S:122)
+|       ->01.06% (136B) 0x8058AC8: platform_timer_init (platform_api.c:191)
+|         ->01.06% (136B) 0x8058BDA: platform_init (platform_api.c:236)
+|           ->01.06% (136B) 0x804B0F5: main (ice_lite_agent.c:921)
+|             
+->02.34% (300B) 0x423CEFC: ??? (in /lib/i686/cmov/libcrypto.so.0.9.8)
+| ->02.34% (300B) 0x423D55A: CRYPTO_malloc (in /lib/i686/cmov/libcrypto.so.0.9.8)
+|   ->01.56% (200B) 0x42ABCE0: EVP_DigestInit_ex (in /lib/i686/cmov/libcrypto.so.0.9.8)
+|   | ->01.56% (200B) in 2 places, all below massif's threshold (01.00%)
+|   |   
+|   ->00.78% (100B) in 1+ places, all below ms_print's threshold (01.00%)
+|   
+->01.37% (176B) 0x8058BFF: platform_malloc (platform_api.c:250)
+| ->01.37% (176B) 0x80520C5: stun_msg_create (stun_msg_api.c:88)
+|   ->01.37% (176B) in 2 places, all below massif's threshold (01.00%)
+|     
+->00.44% (56B) in 1+ places, all below ms_print's threshold (01.00%)
+
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+ 20      2,904,935            9,504            9,392           112            0
+ 21      3,237,272           10,536           10,314           222            0
+ 22      3,599,749           10,808           10,538           270            0
+ 23      3,694,372           10,968           10,678           290            0
+97.36% (10,678B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+->91.52% (10,038B) 0x8058C19: platform_calloc (platform_api.c:255)
+| ->60.80% (6,668B) 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+| | ->60.80% (6,668B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |   ->60.80% (6,668B) 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+| |     ->60.80% (6,668B) 0x804B1A5: main (ice_lite_agent.c:936)
+| |       
+| ->13.68% (1,500B) 0x804B21E: main (ice_lite_agent.c:953)
+| | 
+| ->06.16% (676B) 0x804FF70: conn_check_create_session (conn_check_api.c:198)
+| | ->06.16% (676B) 0x804ED2E: ice_utils_create_conn_check_session (ice_utils.c:884)
+| |   ->06.16% (676B) 0x804D27E: ice_media_process_rx_msg (ice_media_fsm.c:102)
+| |     ->06.16% (676B) 0x804D5F5: ice_media_stream_fsm_inject_msg (ice_media_fsm.c:306)
+| |       ->06.16% (676B) 0x804CC81: handle_peer_msg (ice_session_fsm.c:117)
+| |         ->06.16% (676B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |           ->06.16% (676B) 0x804C81F: ice_session_inject_received_msg (ice_api.c:800)
+| |             ->06.16% (676B) 0x804B4BE: main (ice_lite_agent.c:1002)
+| |               
+| ->03.81% (418B) in 19 places, all below massif's threshold (01.00%)
+| | 
+| ->03.65% (400B) 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+| | ->03.65% (400B) 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+| |   ->03.65% (400B) 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+| |     ->03.65% (400B) 0x804B673: ice_create_instance (ice_api.c:54)
+| |       ->03.65% (400B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |         ->03.65% (400B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |           
+| ->01.31% (144B) 0x804B655: ice_create_instance (ice_api.c:50)
+| | ->01.31% (144B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |   ->01.31% (144B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |     
+| ->01.09% (120B) 0x80535F3: stun_utils_create_attr (stun_utils.c:118)
+| | ->01.09% (120B) 0x8052929: stun_attr_create (stun_attr_api.c:37)
+| |   ->01.09% (120B) in 4 places, all below massif's threshold (01.00%)
+| |     
+| ->01.02% (112B) 0x805404E: stun_msg_decode (stun_enc_dec_api.c:246)
+|   ->01.02% (112B) 0x804B35B: main (ice_lite_agent.c:977)
+|     
+->03.72% (408B) 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+| ->03.72% (408B) 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+|   ->02.48% (272B) 0x40B3387: timer_helper_thread (timer_routines.c:128)
+|   | ->02.48% (272B) 0x436D80C: start_thread (pthread_create.c:300)
+|   |   ->02.48% (272B) 0x41878DC: clone (clone.S:130)
+|   |     
+|   ->01.24% (136B) 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+|     ->01.24% (136B) 0x437315E: pthread_once (pthread_once.S:122)
+|       ->01.24% (136B) 0x8058AC8: platform_timer_init (platform_api.c:191)
+|         ->01.24% (136B) 0x8058BDA: platform_init (platform_api.c:236)
+|           ->01.24% (136B) 0x804B0F5: main (ice_lite_agent.c:921)
+|             
+->01.60% (176B) 0x8058BFF: platform_malloc (platform_api.c:250)
+| ->01.60% (176B) 0x80520C5: stun_msg_create (stun_msg_api.c:88)
+|   ->01.60% (176B) in 2 places, all below massif's threshold (01.00%)
+|     
+->00.51% (56B) in 1+ places, all below ms_print's threshold (01.00%)
+
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+ 24      4,037,516           10,536           10,314           222            0
+ 25      4,400,031           10,808           10,538           270            0
+ 26      4,494,802           10,968           10,678           290            0
+ 27      4,593,498            9,424            9,312           112            0
+ 28      4,671,491            9,408            9,304           104            0
+ 29      4,780,212            9,424            9,312           112            0
+ 30      4,873,569            9,424            9,312           112            0
+ 31      4,935,807            9,424            9,312           112            0
+ 32      5,013,673            9,408            9,304           104            0
+ 33      5,122,521            9,424            9,312           112            0
+ 34      5,231,506            9,408            9,304           104            0
+ 35      5,357,943            9,424            9,312           112            0
+ 36      5,485,125            9,424            9,312           112            0
+ 37      5,612,307            9,424            9,312           112            0
+ 38      5,707,762            9,408            9,304           104            0
+ 39      5,802,599            9,408            9,304           104            0
+ 40      5,897,790            9,424            9,312           112            0
+98.81% (9,312B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+->93.80% (8,840B) 0x8058C19: platform_calloc (platform_api.c:255)
+| ->70.76% (6,668B) 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+| | ->70.76% (6,668B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |   ->70.76% (6,668B) 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+| |     ->70.76% (6,668B) 0x804B1A5: main (ice_lite_agent.c:936)
+| |       
+| ->15.92% (1,500B) 0x804B21E: main (ice_lite_agent.c:953)
+| | 
+| ->04.24% (400B) 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+| | ->04.24% (400B) 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+| |   ->04.24% (400B) 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+| |     ->04.24% (400B) 0x804B673: ice_create_instance (ice_api.c:54)
+| |       ->04.24% (400B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |         ->04.24% (400B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |           
+| ->01.53% (144B) 0x804B655: ice_create_instance (ice_api.c:50)
+| | ->01.53% (144B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |   ->01.53% (144B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |     
+| ->01.36% (128B) in 22 places, all below massif's threshold (01.00%)
+|   
+->04.33% (408B) 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+| ->04.33% (408B) 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+|   ->02.89% (272B) 0x40B3387: timer_helper_thread (timer_routines.c:128)
+|   | ->02.89% (272B) 0x436D80C: start_thread (pthread_create.c:300)
+|   |   ->02.89% (272B) 0x41878DC: clone (clone.S:130)
+|   |     
+|   ->01.44% (136B) 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+|     ->01.44% (136B) 0x437315E: pthread_once (pthread_once.S:122)
+|       ->01.44% (136B) 0x8058AC8: platform_timer_init (platform_api.c:191)
+|         ->01.44% (136B) 0x8058BDA: platform_init (platform_api.c:236)
+|           ->01.44% (136B) 0x804B0F5: main (ice_lite_agent.c:921)
+|             
+->00.68% (64B) in 1+ places, all below ms_print's threshold (01.00%)
+
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+ 41      5,961,381            9,424            9,312           112            0
+ 42      6,056,836            9,408            9,304           104            0
+ 43      6,183,273            9,424            9,312           112            0
+ 44      6,310,455            9,424            9,312           112            0
+ 45      6,437,637            9,424            9,312           112            0
+ 46      6,501,228            9,424            9,312           112            0
+ 47      6,596,683            9,408            9,304           104            0
+ 48      6,723,120            9,424            9,312           112            0
+ 49      6,850,302            9,424            9,312           112            0
+98.81% (9,312B) (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+->93.80% (8,840B) 0x8058C19: platform_calloc (platform_api.c:255)
+| ->70.76% (6,668B) 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+| | ->70.76% (6,668B) 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+| |   ->70.76% (6,668B) 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+| |     ->70.76% (6,668B) 0x804B1A5: main (ice_lite_agent.c:936)
+| |       
+| ->15.92% (1,500B) 0x804B21E: main (ice_lite_agent.c:953)
+| | 
+| ->04.24% (400B) 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+| | ->04.24% (400B) 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+| |   ->04.24% (400B) 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+| |     ->04.24% (400B) 0x804B673: ice_create_instance (ice_api.c:54)
+| |       ->04.24% (400B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |         ->04.24% (400B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |           
+| ->01.53% (144B) 0x804B655: ice_create_instance (ice_api.c:50)
+| | ->01.53% (144B) 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+| |   ->01.53% (144B) 0x804B0FA: main (ice_lite_agent.c:923)
+| |     
+| ->01.36% (128B) in 22 places, all below massif's threshold (01.00%)
+|   
+->04.33% (408B) 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+| ->04.33% (408B) 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+|   ->02.89% (272B) 0x40B3387: timer_helper_thread (timer_routines.c:128)
+|   | ->02.89% (272B) 0x436D80C: start_thread (pthread_create.c:300)
+|   |   ->02.89% (272B) 0x41878DC: clone (clone.S:130)
+|   |     
+|   ->01.44% (136B) 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+|     ->01.44% (136B) 0x437315E: pthread_once (pthread_once.S:122)
+|       ->01.44% (136B) 0x8058AC8: platform_timer_init (platform_api.c:191)
+|         ->01.44% (136B) 0x8058BDA: platform_init (platform_api.c:236)
+|           ->01.44% (136B) 0x804B0F5: main (ice_lite_agent.c:921)
+|             
+->00.68% (64B) in 1+ places, all below ms_print's threshold (01.00%)
+
+--------------------------------------------------------------------------------
+  n        time(i)         total(B)   useful-heap(B) extra-heap(B)    stacks(B)
+--------------------------------------------------------------------------------
+ 50      6,905,167            9,408            9,304           104            0
+ 51      6,979,476              288              272            16            0

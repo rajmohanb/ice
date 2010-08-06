@@ -1,0 +1,7 @@
+valgrind --tool=massif  ./stun_keepalive
+echo "*************   VALGRIND REPORT ****************"
+echo
+grep Invalid valgrind*
+echo
+echo "*************   VALGRIND REPORT ****************"
+

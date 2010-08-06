@@ -1,0 +1,7 @@
+valgrind --leak-check=yes --run-libc-freeres=yes --log-file=valgrind --leak-check=full --show-reachable=yes  --trace-children=yes ./stun_keepalive
+echo "*************   VALGRIND REPORT ****************"
+echo
+grep Invalid valgrind*
+echo
+echo "*************   VALGRIND REPORT ****************"
+

@@ -1,0 +1,1393 @@
+root@mindbricks01: ~/ICE/sample>./ice_lite_agent
+
+timer ID is 0x8128098
+
+stun transaction instance created. Maximum configured concurrent transactions: 25
+ICE session created successfully
+Transport param for component ID 1 :-> 3
+Transport param for component ID 2 :-> 4
+************************************************************
+
+--- ICE session 0x8128370 Media handle 0x8128398 state changed to ICE_CC_RUNNING
+
+************************************************************
+
+The lowest state across all media streams is 1.
+ICE session state moving from 0 state to NEW state 1
+************************************************************
+
+--- ICE session 0x8128370 state changed to ICE_CC_RUNNING
+
+************************************************************
+
+
+
+send this sdp to the peer agent
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Media in ICE_CC_RUNNING
+==============================================================
+
+Number of components: 2
+
+Component ID: 1 Number of Candidates: 1
+a=1 1 0 2130706431 192.168.1.2 44444 typ 1 192.168.1.2 44444
+
+Component ID: 2 Number of Candidates: 1
+a=1 2 0 2130706430 192.168.1.2 44445 typ 1 192.168.1.2 44445
+
+==============================================================
+v=0
+o=- 3414564553 3414923132 IN IP4 localhost
+s=ice
+t=0 0
+a=ice-lite
+a=ice-ufrag:ufrag
+a=ice-pwd:pwd
+c=IN IP4 192.168.1.2
+m=audio 44444 RTP/AVP 0
+a=candidate:1 1 UDP 2130706431 192.168.1.2 44444 typ host
+a=rtcp:44445 IN IP4 192.168.1.2
+a=candidate:1 2 UDP 2130706430 192.168.1.2 44445 typ host
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+**************************************************************
+
+Paste SDP from remote host, end with empty line
+>v=0
+o=- 3414953978 3414953978 IN IP4 localhost
+s=ice
+t=0 0
+a=ice-ufrag:431bd7b7
+a=ice-pw>d:3f2dba31
+m=audio >57522 RT>P/AVP >0
+c=IN IP4 192.168.1>.2
+a=candi>date:Hc0a80102 1 UDP 2130706431 192.168.1.2 54519 typ> host
+a=candidat>e:Rc0a80102 1 UDP 16777215 192.168>.1.2 57522 typ relay
+a=rtcp:62555 IN IP4 192.168.1.2
+a=candidate:Hc0a80102 2 UDP 2130706430 192.168.1.2 46752 typ host
+a=ca>ndidate:Rc0a80102 2 >UDP 16777214 192.168.1.2 62555 ty>p relay
+>
+The lowest state across all media streams is 1.
+Done, remote candidate(s) added
+select returned activity on 1 sockets
+Select returned that there is activity on 1 sockets
+Received packet on fd 3 from 192.168.1.2:54519
+Data: 
+
+
+COUNT: 1
+Found an existing ICE session for transport param 0x3
+Found an existing ICE media stream for transport param 0x3
+Found media stream for received message
+Received message from 192.168.1.2 and port 54519
+Searching for Transaction ID in table:STUN txn ID[e21a0017a31d72efcd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+Transaction not found
+
+Searching for Transaction ID in table:STUN txn ID[e21a0017a31d72efcd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+incoming cc check - about to add new transaction 0x812a840 to table
+
+Added Transaction ID to table:STUN txn ID[e21a0017a31d72efcd9011]
+node->h_txn -----> 0x812a840
+
+incoming cc check - added transaction 0x812a840 to table
+
+FINGERPRINT attribute is present in the received message
+platform_crc32 => CRC = a4360a68 
+
+Calculated CRC after XOR f7625f26
+
+FINGERPRINT value matched. Validation succeeded
+FINGERPRINT CRC is valid for the message
+MESSAGE-INTEGRITY attribute is present in the received message
+USERNAME attribute is present in the received message
+Local username value ufrag:431bd7b7 and 5 length
+Peer username value 431bd7b7 and 8 length
+username is valid for this session
+MESSAGE-INTEGRITY value matched. Validation succeeded
+Incoming conn check request validation succeeded. All decks clear for sending response
+Added software attribute to response msg
+Searching for Transaction ID in table:STUN txn ID[e21a0017a31d72efcd9011]
+Table Entry:STUN txn ID[e21a0017a31d72efcd9011]
+node->h_txn-----> 0x812a840
+
+Table entry match found
+platform_crc32 => CRC = f44b9115 
+
+Calculated CRC after XOR a71fc45b
+
+sent 80 bytes
+
+Table entry:STUN txn ID[e21a0017a31d72efcd9011]
+node->h_txn -----> 0x812a840
+
+Removed Transaction ID from table:STUN txn ID[e21a0017a31d72efcd9011]
+node->h_txn -----> 0x812a840
+
+select returned activity on 1 sockets
+Select returned that there is activity on 1 sockets
+Received packet on fd 4 from 192.168.1.2:46752
+Data: 
+
+
+COUNT: 2
+Found an existing ICE session for transport param 0x4
+Found an existing ICE media stream for transport param 0x4
+Found media stream for received message
+Received message from 192.168.1.2 and port 46752
+Searching for Transaction ID in table:STUN txn ID[e21a0058a84324f0cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+Transaction not found
+
+Searching for Transaction ID in table:STUN txn ID[e21a0058a84324f0cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+incoming cc check - about to add new transaction 0x812a840 to table
+
+Added Transaction ID to table:STUN txn ID[e21a0058a84324f0cd9011]
+node->h_txn -----> 0x812a840
+
+incoming cc check - added transaction 0x812a840 to table
+
+FINGERPRINT attribute is present in the received message
+platform_crc32 => CRC = 708044a4 
+
+Calculated CRC after XOR 23d411ea
+
+FINGERPRINT value matched. Validation succeeded
+FINGERPRINT CRC is valid for the message
+MESSAGE-INTEGRITY attribute is present in the received message
+USERNAME attribute is present in the received message
+Local username value ufrag:431bd7b7 and 5 length
+Peer username value 431bd7b7 and 8 length
+username is valid for this session
+MESSAGE-INTEGRITY value matched. Validation succeeded
+Incoming conn check request validation succeeded. All decks clear for sending response
+Added software attribute to response msg
+Searching for Transaction ID in table:STUN txn ID[e21a0058a84324f0cd9011]
+Table Entry:STUN txn ID[e21a0058a84324f0cd9011]
+node->h_txn-----> 0x812a840
+
+Table entry match found
+platform_crc32 => CRC = 687a9489 
+
+Calculated CRC after XOR 3b2ec1c7
+
+sent 80 bytes
+
+Table entry:STUN txn ID[e21a0058a84324f0cd9011]
+node->h_txn -----> 0x812a840
+
+Removed Transaction ID from table:STUN txn ID[e21a0058a84324f0cd9011]
+node->h_txn -----> 0x812a840
+
+select returned activity on 1 sockets
+Select returned that there is activity on 1 sockets
+Received packet on fd 3 from 192.168.1.2:57522
+Data: 
+
+
+COUNT: 3
+Found an existing ICE session for transport param 0x3
+Found an existing ICE media stream for transport param 0x3
+Found media stream for received message
+Received message from 192.168.1.2 and port 57522
+Searching for Transaction ID in table:STUN txn ID[e21a00e95a1d2df1cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+Transaction not found
+
+Searching for Transaction ID in table:STUN txn ID[e21a00e95a1d2df1cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+incoming cc check - about to add new transaction 0x812a840 to table
+
+Added Transaction ID to table:STUN txn ID[e21a00e95a1d2df1cd9011]
+node->h_txn -----> 0x812a840
+
+incoming cc check - added transaction 0x812a840 to table
+
+FINGERPRINT attribute is present in the received message
+platform_crc32 => CRC = 673a1262 
+
+Calculated CRC after XOR 346e472c
+
+FINGERPRINT value matched. Validation succeeded
+FINGERPRINT CRC is valid for the message
+MESSAGE-INTEGRITY attribute is present in the received message
+USERNAME attribute is present in the received message
+Local username value ufrag:431bd7b7 and 5 length
+Peer username value 431bd7b7 and 8 length
+username is valid for this session
+MESSAGE-INTEGRITY value matched. Validation succeeded
+Incoming conn check request validation succeeded. All decks clear for sending response
+Added software attribute to response msg
+Searching for Transaction ID in table:STUN txn ID[e21a00e95a1d2df1cd9011]
+Table Entry:STUN txn ID[e21a00e95a1d2df1cd9011]
+node->h_txn-----> 0x812a840
+
+Table entry match found
+platform_crc32 => CRC = 7952979f 
+
+Calculated CRC after XOR 2a06c2d1
+
+sent 80 bytes
+
+Table entry:STUN txn ID[e21a00e95a1d2df1cd9011]
+node->h_txn -----> 0x812a840
+
+Removed Transaction ID from table:STUN txn ID[e21a00e95a1d2df1cd9011]
+node->h_txn -----> 0x812a840
+
+select returned activity on 1 sockets
+Select returned that there is activity on 1 sockets
+Received packet on fd 4 from 192.168.1.2:62555
+Data: 
+
+
+COUNT: 4
+Found an existing ICE session for transport param 0x4
+Found an existing ICE media stream for transport param 0x4
+Found media stream for received message
+Received message from 192.168.1.2 and port 62555
+Searching for Transaction ID in table:STUN txn ID[e21a005e846367f2cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+Transaction not found
+
+Searching for Transaction ID in table:STUN txn ID[e21a005e846367f2cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+incoming cc check - about to add new transaction 0x812a840 to table
+
+Added Transaction ID to table:STUN txn ID[e21a005e846367f2cd9011]
+node->h_txn -----> 0x812a840
+
+incoming cc check - added transaction 0x812a840 to table
+
+FINGERPRINT attribute is present in the received message
+platform_crc32 => CRC = 141b4144 
+
+Calculated CRC after XOR 474f140a
+
+FINGERPRINT value matched. Validation succeeded
+FINGERPRINT CRC is valid for the message
+MESSAGE-INTEGRITY attribute is present in the received message
+USERNAME attribute is present in the received message
+Local username value ufrag:431bd7b7 and 5 length
+Peer username value 431bd7b7 and 8 length
+username is valid for this session
+MESSAGE-INTEGRITY value matched. Validation succeeded
+Incoming conn check request validation succeeded. All decks clear for sending response
+Added software attribute to response msg
+Searching for Transaction ID in table:STUN txn ID[e21a005e846367f2cd9011]
+Table Entry:STUN txn ID[e21a005e846367f2cd9011]
+node->h_txn-----> 0x812a840
+
+Table entry match found
+platform_crc32 => CRC = 72a6a29e 
+
+Calculated CRC after XOR 21f2f7d0
+
+sent 80 bytes
+
+Table entry:STUN txn ID[e21a005e846367f2cd9011]
+node->h_txn -----> 0x812a840
+
+Removed Transaction ID from table:STUN txn ID[e21a005e846367f2cd9011]
+node->h_txn -----> 0x812a840
+
+select returned activity on 1 sockets
+Select returned that there is activity on 1 sockets
+Received packet on fd 3 from 192.168.1.2:54519
+Data: 
+
+
+COUNT: 5
+Found an existing ICE session for transport param 0x3
+Found an existing ICE media stream for transport param 0x3
+Found media stream for received message
+Received message from 192.168.1.2 and port 54519
+Searching for Transaction ID in table:STUN txn ID[e21a00d4a8a275f3cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+Transaction not found
+
+Searching for Transaction ID in table:STUN txn ID[e21a00d4a8a275f3cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+incoming cc check - about to add new transaction 0x812a858 to table
+
+Added Transaction ID to table:STUN txn ID[e21a00d4a8a275f3cd9011]
+node->h_txn -----> 0x812a858
+
+incoming cc check - added transaction 0x812a858 to table
+
+FINGERPRINT attribute is present in the received message
+platform_crc32 => CRC = 92eba8ee 
+
+Calculated CRC after XOR c1bffda0
+
+FINGERPRINT value matched. Validation succeeded
+FINGERPRINT CRC is valid for the message
+MESSAGE-INTEGRITY attribute is present in the received message
+USERNAME attribute is present in the received message
+Local username value ufrag:431bd7b7 and 5 length
+Peer username value 431bd7b7 and 8 length
+username is valid for this session
+MESSAGE-INTEGRITY value matched. Validation succeeded
+Incoming conn check request validation succeeded. All decks clear for sending response
+Added software attribute to response msg
+Searching for Transaction ID in table:STUN txn ID[e21a00d4a8a275f3cd9011]
+Table Entry:STUN txn ID[e21a00d4a8a275f3cd9011]
+node->h_txn-----> 0x812a858
+
+Table entry match found
+platform_crc32 => CRC = 2e5eb4f2 
+
+Calculated CRC after XOR 7d0ae1bc
+
+sent 80 bytes
+
+USE-CANDIDATE is set for this connectivity check request
+returning from ice_media_utils_have_valid_list()
+Table entry:STUN txn ID[e21a00d4a8a275f3cd9011]
+node->h_txn -----> 0x812a858
+
+Removed Transaction ID from table:STUN txn ID[e21a00d4a8a275f3cd9011]
+node->h_txn -----> 0x812a858
+
+select returned activity on 1 sockets
+Select returned that there is activity on 1 sockets
+Received packet on fd 4 from 192.168.1.2:46752
+Data: 
+
+
+COUNT: 6
+Found an existing ICE session for transport param 0x4
+Found an existing ICE media stream for transport param 0x4
+Found media stream for received message
+Received message from 192.168.1.2 and port 46752
+Searching for Transaction ID in table:STUN txn ID[e21a00abbded8f4cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+Transaction not found
+
+Searching for Transaction ID in table:STUN txn ID[e21a00abbded8f4cd9011]
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table Entry:STUN txn ID[000000000000]
+node->h_txn-----> (nil)
+
+Table entry match NOT found
+incoming cc check - about to add new transaction 0x812a858 to table
+
+Added Transaction ID to table:STUN txn ID[e21a00abbded8f4cd9011]
+node->h_txn -----> 0x812a858
+
+incoming cc check - added transaction 0x812a858 to table
+
+FINGERPRINT attribute is present in the received message
+platform_crc32 => CRC = 650ecf5f 
+
+Calculated CRC after XOR 365a9a11
+
+FINGERPRINT value matched. Validation succeeded
+FINGERPRINT CRC is valid for the message
+MESSAGE-INTEGRITY attribute is present in the received message
+USERNAME attribute is present in the received message
+Local username value ufrag:431bd7b7 and 5 length
+Peer username value 431bd7b7 and 8 length
+username is valid for this session
+MESSAGE-INTEGRITY value matched. Validation succeeded
+Incoming conn check request validation succeeded. All decks clear for sending response
+Added software attribute to response msg
+Searching for Transaction ID in table:STUN txn ID[e21a00abbded8f4cd9011]
+Table Entry:STUN txn ID[e21a00abbded8f4cd9011]
+node->h_txn-----> 0x812a858
+
+Table entry match found
+platform_crc32 => CRC = ae1838bc 
+
+Calculated CRC after XOR fd4c6df2
+
+sent 80 bytes
+
+USE-CANDIDATE is set for this connectivity check request
+returning from ice_media_utils_have_valid_list()
+Table entry:STUN txn ID[e21a00abbded8f4cd9011]
+node->h_txn -----> 0x812a858
+
+Removed Transaction ID from table:STUN txn ID[e21a00abbded8f4cd9011]
+node->h_txn -----> 0x812a858
+
+************************************************************
+
+--- ICE session 0x8128370 Media handle 0x8128398 state changed to ICE_CC_COMPLETED
+
+************************************************************
+
+All media streams have moved to ICE_MEDIA_CC_COMPLETED state. Hence ICE session state entering ICE_SES_CC_COMPLETED state
+************************************************************
+
+--- ICE session 0x8128370 state changed to ICE_CC_COMPLETED
+
+************************************************************
+
+
+
+
+ICE negotiation completed, alert the local user
+
+ ----------------------------- SIP 180 RINGING -------------------------->
+
+Number of media 1
+
+Number of valid pairs 2
+
+VALID LIST
+
+
+comp id: 1 local: 192.168.1.2:44444 peer: 192.168.1.2:54519
+
+
+comp id: 2 local: 192.168.1.2:44445 peer: 192.168.1.2:46752
+
+
+
+send this sdp to the peer agent
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+Media in ICE_CC_COMPLETED
+==============================================================
+
+Number of components: 2
+
+Component ID: 1 Number of Candidates: 1
+a=1 1 0 2130706431 192.168.1.2 44444 typ 1 192.168.1.2 44444
+
+Component ID: 2 Number of Candidates: 1
+a=1 2 0 2130706430 192.168.1.2 44445 typ 1 192.168.1.2 44445
+
+==============================================================
+v=0
+o=- 3414564553 3414923132 IN IP4 localhost
+s=ice
+t=0 0
+a=ice-lite
+a=ice-ufrag:ufrag
+a=ice-pwd:pwd
+c=IN IP4 192.168.1.2
+m=audio 44444 RTP/AVP 0
+a=candidate:1 1 UDP 2130706431 192.168.1.2 44444 typ host
+a=rtcp:44445 IN IP4 192.168.1.2
+a=candidate:1 2 UDP 2130706430 192.168.1.2 44445 typ host
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
+
+What do you want to do today?
+1. restart existing media
+2. add new media
+3. remove existing media
+4. i am done
+4
+You chose 4
+Happy 'ice'ing
+The lowest state across all media streams is 1.
+ICE session state moving from 2 state to NEW state 1
+************************************************************
+
+--- ICE session 0x8128370 state changed to ICE_CC_RUNNING
+
+************************************************************
+
+root@mindbricks01: ~/ICE/sample>

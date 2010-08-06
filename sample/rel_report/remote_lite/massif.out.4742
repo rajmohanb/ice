@@ -1,0 +1,536 @@
+desc: (none)
+cmd: ./ice_lite_agent
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=728017
+mem_heap_B=136
+mem_heap_extra_B=8
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=743129
+mem_heap_B=192
+mem_heap_extra_B=16
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=760759
+mem_heap_B=336
+mem_heap_extra_B=24
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=780919
+mem_heap_B=7532
+mem_heap_extra_B=76
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=866811
+mem_heap_B=9032
+mem_heap_extra_B=88
+mem_stacks_B=0
+heap_tree=detailed
+n3: 9032 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n5: 8840 0x8058C19: platform_calloc (platform_api.c:255)
+  n1: 6668 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+   n1: 6668 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+    n1: 6668 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+     n0: 6668 0x804B1A5: main (ice_lite_agent.c:936)
+  n0: 1500 0x804B21E: main (ice_lite_agent.c:953)
+  n1: 400 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 400 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 400 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+     n1: 400 0x804B673: ice_create_instance (ice_api.c:54)
+      n1: 400 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+       n0: 400 0x804B0FA: main (ice_lite_agent.c:923)
+  n1: 144 0x804B655: ice_create_instance (ice_api.c:50)
+   n1: 144 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+    n0: 144 0x804B0FA: main (ice_lite_agent.c:923)
+  n0: 128 in 3 places, all below massif's threshold (01.00%)
+ n1: 136 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n1: 136 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8058AC8: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8058BDA: platform_init (platform_api.c:236)
+       n0: 136 0x804B0F5: main (ice_lite_agent.c:921)
+ n0: 56 in 1 place, below massif's threshold (01.00%)
+#-----------
+snapshot=6
+#-----------
+time=878557
+mem_heap_B=9320
+mem_heap_extra_B=120
+mem_stacks_B=0
+heap_tree=peak
+n3: 9320 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n5: 8840 0x8058C19: platform_calloc (platform_api.c:255)
+  n1: 6668 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+   n1: 6668 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+    n1: 6668 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+     n0: 6668 0x804B1A5: main (ice_lite_agent.c:936)
+  n0: 1500 0x804B21E: main (ice_lite_agent.c:953)
+  n1: 400 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 400 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 400 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+     n1: 400 0x804B673: ice_create_instance (ice_api.c:54)
+      n1: 400 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+       n0: 400 0x804B0FA: main (ice_lite_agent.c:923)
+  n1: 144 0x804B655: ice_create_instance (ice_api.c:50)
+   n1: 144 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+    n0: 144 0x804B0FA: main (ice_lite_agent.c:923)
+  n0: 128 in 3 places, all below massif's threshold (01.00%)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8058AC8: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8058BDA: platform_init (platform_api.c:236)
+       n0: 136 0x804B0F5: main (ice_lite_agent.c:921)
+ n0: 72 in 2 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=7
+#-----------
+time=903473
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=915042
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=932631
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=detailed
+n3: 9304 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n5: 8840 0x8058C19: platform_calloc (platform_api.c:255)
+  n1: 6668 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+   n1: 6668 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+    n1: 6668 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+     n0: 6668 0x804B1A5: main (ice_lite_agent.c:936)
+  n0: 1500 0x804B21E: main (ice_lite_agent.c:953)
+  n1: 400 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 400 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 400 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+     n1: 400 0x804B673: ice_create_instance (ice_api.c:54)
+      n1: 400 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+       n0: 400 0x804B0FA: main (ice_lite_agent.c:923)
+  n1: 144 0x804B655: ice_create_instance (ice_api.c:50)
+   n1: 144 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+    n0: 144 0x804B0FA: main (ice_lite_agent.c:923)
+  n0: 128 in 3 places, all below massif's threshold (01.00%)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8058AC8: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8058BDA: platform_init (platform_api.c:236)
+       n0: 136 0x804B0F5: main (ice_lite_agent.c:921)
+ n0: 56 in 2 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=10
+#-----------
+time=948122
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=971123
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=986006
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=1004340
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=14
+#-----------
+time=1027949
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=1044185
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=1065833
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=17
+#-----------
+time=1078010
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=1093638
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=1118600
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=1130169
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=1146532
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=1158582
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=1179485
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=1193015
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=25
+#-----------
+time=1209996
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=1233605
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=1247135
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=1264243
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=1280960
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=1301255
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=1321550
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=32
+#-----------
+time=1336971
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=1350497
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=1369342
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=1382872
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=1396402
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=37
+#-----------
+time=1413510
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=1422685
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=1446999
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=1524745
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=1541726
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=detailed
+n3: 9304 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n5: 8840 0x8058C19: platform_calloc (platform_api.c:255)
+  n1: 6668 0x804CF95: ice_add_media_stream (ice_session_fsm.c:270)
+   n1: 6668 0x804D1A9: ice_session_fsm_inject_msg (ice_session_fsm.c:368)
+    n1: 6668 0x804BFD1: ice_session_add_media_stream (ice_api.c:484)
+     n0: 6668 0x804B1A5: main (ice_lite_agent.c:936)
+  n0: 1500 0x804B21E: main (ice_lite_agent.c:953)
+  n1: 400 0x8057FEF: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 400 0x80571A9: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 400 0x804FC3C: conn_check_create_instance (conn_check_api.c:41)
+     n1: 400 0x804B673: ice_create_instance (ice_api.c:54)
+      n1: 400 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+       n0: 400 0x804B0FA: main (ice_lite_agent.c:923)
+  n1: 144 0x804B655: ice_create_instance (ice_api.c:50)
+   n1: 144 0x804A739: app_initialize_ice (ice_lite_agent.c:598)
+    n0: 144 0x804B0FA: main (ice_lite_agent.c:923)
+  n0: 128 in 3 places, all below massif's threshold (01.00%)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8058AC8: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8058BDA: platform_init (platform_api.c:236)
+       n0: 136 0x804B0F5: main (ice_lite_agent.c:921)
+ n0: 56 in 2 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=42
+#-----------
+time=1558570
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=1568913
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=1585630
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=1595846
+mem_heap_B=9304
+mem_heap_extra_B=104
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=1612690
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=1626220
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=1646515
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=1660045
+mem_heap_B=9312
+mem_heap_extra_B=112
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=1672145
+mem_heap_B=2636
+mem_heap_extra_B=92
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=1683051
+mem_heap_B=2604
+mem_heap_extra_B=84
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=1713774
+mem_heap_B=272
+mem_heap_extra_B=16
+mem_stacks_B=0
+heap_tree=empty

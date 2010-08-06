@@ -1,0 +1,4211 @@
+root@mindbricks01: ~/ICE/sample>./stun_keepalive
+
+timer ID is 0x81bd098
+
+Running in IPv6 mode...
+listener: waiting to recvfrom...
+Transport param for binding connection :-> 3
+stun transaction instance created. Maximum configured concurrent transactions: 10
+Stun binding instance created
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[334df1749fc38e71632ff9a]
+node->h_txn -----> 0x81bd880
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd918 for 500 ms
+
+[TIMER]: returned Timer handle is 1 and arg is 0x81bd8d0
+
+RTO timer handle 0x1
+
+COUNT: 0
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[334df1749fc38e71632ff9a]
+Table Entry:STUN txn ID[334df1749fc38e71632ff9a]
+node->h_txn-----> 0x81bd880
+
+Table entry match found
+*h_binding[0x81bd100]
+stun_binding_session_inject_received_msg() session[0x81bd100]
+Searching for Transaction ID in table:STUN txn ID[334df1749fc38e71632ff9a]
+Table Entry:STUN txn ID[334df1749fc38e71632ff9a]
+node->h_txn-----> 0x81bd880
+
+Table entry match found
+[TIMER]: Timer id 1 found and freed. Arg 0x81bd8d0
+
+Freeing node 0x81bd918
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[334df1749fc38e71632ff9a]
+node->h_txn -----> 0x81bd880
+
+Removed Transaction ID from table:STUN txn ID[334df1749fc38e71632ff9a]
+node->h_txn -----> 0x81bd880
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+node->h_txn -----> 0x81bd100
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd9b0 for 500 ms
+
+[TIMER]: returned Timer handle is 2 and arg is 0x81bda00
+
+RTO timer handle 0x2
+
+COUNT: 1
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+Table Entry:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+node->h_txn-----> 0x81bd100
+
+Table entry match found
+*h_binding[0x81bda18]
+stun_binding_session_inject_received_msg() session[0x81bda18]
+Searching for Transaction ID in table:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+Table Entry:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+node->h_txn-----> 0x81bd100
+
+Table entry match found
+[TIMER]: Timer id 2 found and freed. Arg 0x81bda00
+
+Freeing node 0x81bd9b0
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+node->h_txn -----> 0x81bd100
+
+Removed Transaction ID from table:STUN txn ID[3e41aae83d5ec08a54a6c1e]
+node->h_txn -----> 0x81bd100
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[3a111fafecd7282a9d20851]
+node->h_txn -----> 0x81bda18
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd9e8 for 500 ms
+
+[TIMER]: returned Timer handle is 3 and arg is 0x81bd8c0
+
+RTO timer handle 0x3
+
+COUNT: 2
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[3a111fafecd7282a9d20851]
+Table Entry:STUN txn ID[3a111fafecd7282a9d20851]
+node->h_txn-----> 0x81bda18
+
+Table entry match found
+*h_binding[0x81bd8d8]
+stun_binding_session_inject_received_msg() session[0x81bd8d8]
+Searching for Transaction ID in table:STUN txn ID[3a111fafecd7282a9d20851]
+Table Entry:STUN txn ID[3a111fafecd7282a9d20851]
+node->h_txn-----> 0x81bda18
+
+Table entry match found
+[TIMER]: Timer id 3 found and freed. Arg 0x81bd8c0
+
+Freeing node 0x81bd9e8
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[3a111fafecd7282a9d20851]
+node->h_txn -----> 0x81bda18
+
+Removed Transaction ID from table:STUN txn ID[3a111fafecd7282a9d20851]
+node->h_txn -----> 0x81bda18
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[942d5525ac305f1e745e22e]
+node->h_txn -----> 0x81bd880
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd930 for 500 ms
+
+[TIMER]: returned Timer handle is 4 and arg is 0x81bd8d0
+
+RTO timer handle 0x4
+
+COUNT: 3
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[942d5525ac305f1e745e22e]
+Table Entry:STUN txn ID[942d5525ac305f1e745e22e]
+node->h_txn-----> 0x81bd880
+
+Table entry match found
+*h_binding[0x81bd100]
+stun_binding_session_inject_received_msg() session[0x81bd100]
+Searching for Transaction ID in table:STUN txn ID[942d5525ac305f1e745e22e]
+Table Entry:STUN txn ID[942d5525ac305f1e745e22e]
+node->h_txn-----> 0x81bd880
+
+Table entry match found
+[TIMER]: Timer id 4 found and freed. Arg 0x81bd8d0
+
+Freeing node 0x81bd930
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[942d5525ac305f1e745e22e]
+node->h_txn -----> 0x81bd880
+
+Removed Transaction ID from table:STUN txn ID[942d5525ac305f1e745e22e]
+node->h_txn -----> 0x81bd880
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+node->h_txn -----> 0x81bd880
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bda58 for 500 ms
+
+[TIMER]: returned Timer handle is 5 and arg is 0x81bd8d0
+
+RTO timer handle 0x5
+
+COUNT: 4
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+Table Entry:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+node->h_txn-----> 0x81bd880
+
+Table entry match found
+*h_binding[0x81bd100]
+stun_binding_session_inject_received_msg() session[0x81bd100]
+Searching for Transaction ID in table:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+Table Entry:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+node->h_txn-----> 0x81bd880
+
+Table entry match found
+[TIMER]: Timer id 5 found and freed. Arg 0x81bd8d0
+
+Freeing node 0x81bda58
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+node->h_txn -----> 0x81bd880
+
+Removed Transaction ID from table:STUN txn ID[a5f3c1ea1e85b9f74cfe941]
+node->h_txn -----> 0x81bd880
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[c83c10b3d22e344ff3e34f3]
+node->h_txn -----> 0x81bd100
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd9f8 for 500 ms
+
+[TIMER]: returned Timer handle is 6 and arg is 0x81bd9e0
+
+RTO timer handle 0x6
+
+COUNT: 5
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[c83c10b3d22e344ff3e34f3]
+Table Entry:STUN txn ID[c83c10b3d22e344ff3e34f3]
+node->h_txn-----> 0x81bd100
+
+Table entry match found
+*h_binding[0x81bdb08]
+stun_binding_session_inject_received_msg() session[0x81bdb08]
+Searching for Transaction ID in table:STUN txn ID[c83c10b3d22e344ff3e34f3]
+Table Entry:STUN txn ID[c83c10b3d22e344ff3e34f3]
+node->h_txn-----> 0x81bd100
+
+Table entry match found
+[TIMER]: Timer id 6 found and freed. Arg 0x81bd9e0
+
+Freeing node 0x81bd9f8
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[c83c10b3d22e344ff3e34f3]
+node->h_txn -----> 0x81bd100
+
+Removed Transaction ID from table:STUN txn ID[c83c10b3d22e344ff3e34f3]
+node->h_txn -----> 0x81bd100
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[23eb5accc34090b2ecdc566]
+node->h_txn -----> 0x81bd100
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd880 for 500 ms
+
+[TIMER]: returned Timer handle is 7 and arg is 0x81bd8e8
+
+RTO timer handle 0x7
+
+COUNT: 6
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[23eb5accc34090b2ecdc566]
+Table Entry:STUN txn ID[23eb5accc34090b2ecdc566]
+node->h_txn-----> 0x81bd100
+
+Table entry match found
+*h_binding[0x81bdb08]
+stun_binding_session_inject_received_msg() session[0x81bdb08]
+Searching for Transaction ID in table:STUN txn ID[23eb5accc34090b2ecdc566]
+Table Entry:STUN txn ID[23eb5accc34090b2ecdc566]
+node->h_txn-----> 0x81bd100
+
+Table entry match found
+[TIMER]: Timer id 7 found and freed. Arg 0x81bd8e8
+
+Freeing node 0x81bd880
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[23eb5accc34090b2ecdc566]
+node->h_txn -----> 0x81bd100
+
+Removed Transaction ID from table:STUN txn ID[23eb5accc34090b2ecdc566]
+node->h_txn -----> 0x81bd100
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ac6486e086d7bd5a3c938]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd100 for 500 ms
+
+[TIMER]: returned Timer handle is 8 and arg is 0x81bd9c8
+
+RTO timer handle 0x8
+
+COUNT: 7
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ac6486e086d7bd5a3c938]
+Table Entry:STUN txn ID[ac6486e086d7bd5a3c938]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[ac6486e086d7bd5a3c938]
+Table Entry:STUN txn ID[ac6486e086d7bd5a3c938]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 8 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd100
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ac6486e086d7bd5a3c938]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ac6486e086d7bd5a3c938]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[eccce526af274cdc599dc3]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd100 for 500 ms
+
+[TIMER]: returned Timer handle is 9 and arg is 0x81bd938
+
+RTO timer handle 0x9
+
+COUNT: 8
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[eccce526af274cdc599dc3]
+Table Entry:STUN txn ID[eccce526af274cdc599dc3]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd950]
+stun_binding_session_inject_received_msg() session[0x81bd950]
+Searching for Transaction ID in table:STUN txn ID[eccce526af274cdc599dc3]
+Table Entry:STUN txn ID[eccce526af274cdc599dc3]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 9 found and freed. Arg 0x81bd938
+
+Freeing node 0x81bd100
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[eccce526af274cdc599dc3]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[eccce526af274cdc599dc3]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[5234841f4a5d2295549c5cf]
+node->h_txn -----> 0x81bd898
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd100 for 500 ms
+
+[TIMER]: returned Timer handle is 10 and arg is 0x81bd880
+
+RTO timer handle 0xa
+
+COUNT: 9
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[5234841f4a5d2295549c5cf]
+Table Entry:STUN txn ID[5234841f4a5d2295549c5cf]
+node->h_txn-----> 0x81bd898
+
+Table entry match found
+*h_binding[0x81bdb08]
+stun_binding_session_inject_received_msg() session[0x81bdb08]
+Searching for Transaction ID in table:STUN txn ID[5234841f4a5d2295549c5cf]
+Table Entry:STUN txn ID[5234841f4a5d2295549c5cf]
+node->h_txn-----> 0x81bd898
+
+Table entry match found
+[TIMER]: Timer id 10 found and freed. Arg 0x81bd880
+
+Freeing node 0x81bd100
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[5234841f4a5d2295549c5cf]
+node->h_txn -----> 0x81bd898
+
+Removed Transaction ID from table:STUN txn ID[5234841f4a5d2295549c5cf]
+node->h_txn -----> 0x81bd898
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[6792f8ca6d46e9dc5151efe]
+node->h_txn -----> 0x81bd9b8
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bda08 for 500 ms
+
+[TIMER]: returned Timer handle is 11 and arg is 0x81bd9a0
+
+RTO timer handle 0xb
+
+COUNT: 10
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[6792f8ca6d46e9dc5151efe]
+Table Entry:STUN txn ID[6792f8ca6d46e9dc5151efe]
+node->h_txn-----> 0x81bd9b8
+
+Table entry match found
+*h_binding[0x81bdb08]
+stun_binding_session_inject_received_msg() session[0x81bdb08]
+Searching for Transaction ID in table:STUN txn ID[6792f8ca6d46e9dc5151efe]
+Table Entry:STUN txn ID[6792f8ca6d46e9dc5151efe]
+node->h_txn-----> 0x81bd9b8
+
+Table entry match found
+[TIMER]: Timer id 11 found and freed. Arg 0x81bd9a0
+
+Freeing node 0x81bda08
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[6792f8ca6d46e9dc5151efe]
+node->h_txn -----> 0x81bd9b8
+
+Removed Transaction ID from table:STUN txn ID[6792f8ca6d46e9dc5151efe]
+node->h_txn -----> 0x81bd9b8
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[690d2e341ea90a3d310e42c]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bda08 for 500 ms
+
+[TIMER]: returned Timer handle is 12 and arg is 0x81bd930
+
+RTO timer handle 0xc
+
+COUNT: 11
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[690d2e341ea90a3d310e42c]
+Table Entry:STUN txn ID[690d2e341ea90a3d310e42c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9b8]
+stun_binding_session_inject_received_msg() session[0x81bd9b8]
+Searching for Transaction ID in table:STUN txn ID[690d2e341ea90a3d310e42c]
+Table Entry:STUN txn ID[690d2e341ea90a3d310e42c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 12 found and freed. Arg 0x81bd930
+
+Freeing node 0x81bda08
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[690d2e341ea90a3d310e42c]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[690d2e341ea90a3d310e42c]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[388ca82ce9f42b48d78c2ba]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd100 for 500 ms
+
+[TIMER]: returned Timer handle is 13 and arg is 0x81bd880
+
+RTO timer handle 0xd
+
+COUNT: 12
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[388ca82ce9f42b48d78c2ba]
+Table Entry:STUN txn ID[388ca82ce9f42b48d78c2ba]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd898]
+stun_binding_session_inject_received_msg() session[0x81bd898]
+Searching for Transaction ID in table:STUN txn ID[388ca82ce9f42b48d78c2ba]
+Table Entry:STUN txn ID[388ca82ce9f42b48d78c2ba]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 13 found and freed. Arg 0x81bd880
+
+Freeing node 0x81bd100
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[388ca82ce9f42b48d78c2ba]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[388ca82ce9f42b48d78c2ba]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[6e4751c9bee121c635997aa]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bda18 for 500 ms
+
+[TIMER]: returned Timer handle is 14 and arg is 0x81bd9b0
+
+RTO timer handle 0xe
+
+COUNT: 13
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[6e4751c9bee121c635997aa]
+Table Entry:STUN txn ID[6e4751c9bee121c635997aa]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9c8]
+stun_binding_session_inject_received_msg() session[0x81bd9c8]
+Searching for Transaction ID in table:STUN txn ID[6e4751c9bee121c635997aa]
+Table Entry:STUN txn ID[6e4751c9bee121c635997aa]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 14 found and freed. Arg 0x81bd9b0
+
+Freeing node 0x81bda18
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[6e4751c9bee121c635997aa]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[6e4751c9bee121c635997aa]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[42b1d821a7971f22bf4a4bd]
+node->h_txn -----> 0x81bd9c8
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bda18 for 500 ms
+
+[TIMER]: returned Timer handle is 15 and arg is 0x81bd948
+
+RTO timer handle 0xf
+
+COUNT: 14
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[42b1d821a7971f22bf4a4bd]
+Table Entry:STUN txn ID[42b1d821a7971f22bf4a4bd]
+node->h_txn-----> 0x81bd9c8
+
+Table entry match found
+*h_binding[0x81bdb08]
+stun_binding_session_inject_received_msg() session[0x81bdb08]
+Searching for Transaction ID in table:STUN txn ID[42b1d821a7971f22bf4a4bd]
+Table Entry:STUN txn ID[42b1d821a7971f22bf4a4bd]
+node->h_txn-----> 0x81bd9c8
+
+Table entry match found
+[TIMER]: Timer id 15 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bda18
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[42b1d821a7971f22bf4a4bd]
+node->h_txn -----> 0x81bd9c8
+
+Removed Transaction ID from table:STUN txn ID[42b1d821a7971f22bf4a4bd]
+node->h_txn -----> 0x81bd9c8
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[6e56e7af9e33cadcf1ba895]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd118 for 500 ms
+
+[TIMER]: returned Timer handle is 16 and arg is 0x81bd898
+
+RTO timer handle 0x10
+
+COUNT: 15
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[6e56e7af9e33cadcf1ba895]
+Table Entry:STUN txn ID[6e56e7af9e33cadcf1ba895]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd8b0]
+stun_binding_session_inject_received_msg() session[0x81bd8b0]
+Searching for Transaction ID in table:STUN txn ID[6e56e7af9e33cadcf1ba895]
+Table Entry:STUN txn ID[6e56e7af9e33cadcf1ba895]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 16 found and freed. Arg 0x81bd898
+
+Freeing node 0x81bd118
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[6e56e7af9e33cadcf1ba895]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[6e56e7af9e33cadcf1ba895]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[136f1d3f996cfecc2934eab]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 17 and arg is 0x81bd9c8
+
+RTO timer handle 0x11
+
+COUNT: 16
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[136f1d3f996cfecc2934eab]
+Table Entry:STUN txn ID[136f1d3f996cfecc2934eab]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[136f1d3f996cfecc2934eab]
+Table Entry:STUN txn ID[136f1d3f996cfecc2934eab]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 17 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[136f1d3f996cfecc2934eab]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[136f1d3f996cfecc2934eab]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 18 and arg is 0x81bd948
+
+RTO timer handle 0x12
+
+COUNT: 17
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+Table Entry:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+Table Entry:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 18 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[cf9ecdbd31a2ee46dd172ee]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[2aea9de7e3c328755744b66]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 19 and arg is 0x81bd9c8
+
+RTO timer handle 0x13
+
+COUNT: 18
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[2aea9de7e3c328755744b66]
+Table Entry:STUN txn ID[2aea9de7e3c328755744b66]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[2aea9de7e3c328755744b66]
+Table Entry:STUN txn ID[2aea9de7e3c328755744b66]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 19 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[2aea9de7e3c328755744b66]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[2aea9de7e3c328755744b66]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[62efb75cdecbd3f012c27fd]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 20 and arg is 0x81bd948
+
+RTO timer handle 0x14
+
+COUNT: 19
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[62efb75cdecbd3f012c27fd]
+Table Entry:STUN txn ID[62efb75cdecbd3f012c27fd]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[62efb75cdecbd3f012c27fd]
+Table Entry:STUN txn ID[62efb75cdecbd3f012c27fd]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 20 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[62efb75cdecbd3f012c27fd]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[62efb75cdecbd3f012c27fd]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[a283a0de8a879256e4d879a]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 21 and arg is 0x81bd9c8
+
+RTO timer handle 0x15
+
+COUNT: 20
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[a283a0de8a879256e4d879a]
+Table Entry:STUN txn ID[a283a0de8a879256e4d879a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[a283a0de8a879256e4d879a]
+Table Entry:STUN txn ID[a283a0de8a879256e4d879a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 21 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[a283a0de8a879256e4d879a]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[a283a0de8a879256e4d879a]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[4231bc23399d1fe8dcd26ea]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 22 and arg is 0x81bd948
+
+RTO timer handle 0x16
+
+COUNT: 21
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[4231bc23399d1fe8dcd26ea]
+Table Entry:STUN txn ID[4231bc23399d1fe8dcd26ea]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[4231bc23399d1fe8dcd26ea]
+Table Entry:STUN txn ID[4231bc23399d1fe8dcd26ea]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 22 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[4231bc23399d1fe8dcd26ea]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[4231bc23399d1fe8dcd26ea]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 23 and arg is 0x81bd9c8
+
+RTO timer handle 0x17
+
+COUNT: 22
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+Table Entry:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+Table Entry:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 23 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[bddf82eb7dd65d321b9d9c9]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[33afb56f885ec5731e889a8]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 24 and arg is 0x81bd948
+
+RTO timer handle 0x18
+
+COUNT: 23
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[33afb56f885ec5731e889a8]
+Table Entry:STUN txn ID[33afb56f885ec5731e889a8]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[33afb56f885ec5731e889a8]
+Table Entry:STUN txn ID[33afb56f885ec5731e889a8]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 24 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[33afb56f885ec5731e889a8]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[33afb56f885ec5731e889a8]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 25 and arg is 0x81bd9c8
+
+RTO timer handle 0x19
+
+COUNT: 24
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+Table Entry:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+Table Entry:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 25 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[d4d3621eaaa8b93d69f8f4d]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[e962268325e2792bb351be1]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 26 and arg is 0x81bd948
+
+RTO timer handle 0x1a
+
+COUNT: 25
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[e962268325e2792bb351be1]
+Table Entry:STUN txn ID[e962268325e2792bb351be1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[e962268325e2792bb351be1]
+Table Entry:STUN txn ID[e962268325e2792bb351be1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 26 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[e962268325e2792bb351be1]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[e962268325e2792bb351be1]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[d3ca70e78f2333b187f2363]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 27 and arg is 0x81bd9c8
+
+RTO timer handle 0x1b
+
+COUNT: 26
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[d3ca70e78f2333b187f2363]
+Table Entry:STUN txn ID[d3ca70e78f2333b187f2363]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[d3ca70e78f2333b187f2363]
+Table Entry:STUN txn ID[d3ca70e78f2333b187f2363]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 27 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[d3ca70e78f2333b187f2363]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[d3ca70e78f2333b187f2363]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[372fc911585f467e8f8329]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 28 and arg is 0x81bd948
+
+RTO timer handle 0x1c
+
+COUNT: 27
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[372fc911585f467e8f8329]
+Table Entry:STUN txn ID[372fc911585f467e8f8329]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[372fc911585f467e8f8329]
+Table Entry:STUN txn ID[372fc911585f467e8f8329]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 28 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[372fc911585f467e8f8329]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[372fc911585f467e8f8329]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[cab69f87c268a7a159cfb92]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 29 and arg is 0x81bd9c8
+
+RTO timer handle 0x1d
+
+COUNT: 28
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[cab69f87c268a7a159cfb92]
+Table Entry:STUN txn ID[cab69f87c268a7a159cfb92]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[cab69f87c268a7a159cfb92]
+Table Entry:STUN txn ID[cab69f87c268a7a159cfb92]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 29 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[cab69f87c268a7a159cfb92]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[cab69f87c268a7a159cfb92]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ade9baa547086f9262ca3aa]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 30 and arg is 0x81bd948
+
+RTO timer handle 0x1e
+
+COUNT: 29
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ade9baa547086f9262ca3aa]
+Table Entry:STUN txn ID[ade9baa547086f9262ca3aa]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[ade9baa547086f9262ca3aa]
+Table Entry:STUN txn ID[ade9baa547086f9262ca3aa]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 30 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ade9baa547086f9262ca3aa]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ade9baa547086f9262ca3aa]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[957c6c62f01162662d61f0]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 31 and arg is 0x81bd9c8
+
+RTO timer handle 0x1f
+
+COUNT: 30
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[957c6c62f01162662d61f0]
+Table Entry:STUN txn ID[957c6c62f01162662d61f0]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[957c6c62f01162662d61f0]
+Table Entry:STUN txn ID[957c6c62f01162662d61f0]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 31 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[957c6c62f01162662d61f0]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[957c6c62f01162662d61f0]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ce5d94e0d2a2e254c407832]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 32 and arg is 0x81bd948
+
+RTO timer handle 0x20
+
+COUNT: 31
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ce5d94e0d2a2e254c407832]
+Table Entry:STUN txn ID[ce5d94e0d2a2e254c407832]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[ce5d94e0d2a2e254c407832]
+Table Entry:STUN txn ID[ce5d94e0d2a2e254c407832]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 32 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ce5d94e0d2a2e254c407832]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ce5d94e0d2a2e254c407832]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[b794efff4828395365a11dc]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 33 and arg is 0x81bd9c8
+
+RTO timer handle 0x21
+
+COUNT: 32
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[b794efff4828395365a11dc]
+Table Entry:STUN txn ID[b794efff4828395365a11dc]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[b794efff4828395365a11dc]
+Table Entry:STUN txn ID[b794efff4828395365a11dc]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 33 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[b794efff4828395365a11dc]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[b794efff4828395365a11dc]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 34 and arg is 0x81bd948
+
+RTO timer handle 0x22
+
+COUNT: 33
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+Table Entry:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+Table Entry:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 34 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[570fdd68e49c6d9f4b1b08b]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[aee7bc8b321eab3090ec5ca]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 35 and arg is 0x81bd9c8
+
+RTO timer handle 0x23
+
+COUNT: 34
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[aee7bc8b321eab3090ec5ca]
+Table Entry:STUN txn ID[aee7bc8b321eab3090ec5ca]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[aee7bc8b321eab3090ec5ca]
+Table Entry:STUN txn ID[aee7bc8b321eab3090ec5ca]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 35 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[aee7bc8b321eab3090ec5ca]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[aee7bc8b321eab3090ec5ca]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[1ca1d5f85eaca1b7357b018]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 36 and arg is 0x81bd948
+
+RTO timer handle 0x24
+
+COUNT: 35
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[1ca1d5f85eaca1b7357b018]
+Table Entry:STUN txn ID[1ca1d5f85eaca1b7357b018]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[1ca1d5f85eaca1b7357b018]
+Table Entry:STUN txn ID[1ca1d5f85eaca1b7357b018]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 36 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[1ca1d5f85eaca1b7357b018]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[1ca1d5f85eaca1b7357b018]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[485c78ac93f7d7f2eeb979c]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 37 and arg is 0x81bd9c8
+
+RTO timer handle 0x25
+
+COUNT: 36
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[485c78ac93f7d7f2eeb979c]
+Table Entry:STUN txn ID[485c78ac93f7d7f2eeb979c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[485c78ac93f7d7f2eeb979c]
+Table Entry:STUN txn ID[485c78ac93f7d7f2eeb979c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 37 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[485c78ac93f7d7f2eeb979c]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[485c78ac93f7d7f2eeb979c]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[a181c69533451684311f53e]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 38 and arg is 0x81bd948
+
+RTO timer handle 0x26
+
+COUNT: 37
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[a181c69533451684311f53e]
+Table Entry:STUN txn ID[a181c69533451684311f53e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[a181c69533451684311f53e]
+Table Entry:STUN txn ID[a181c69533451684311f53e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 38 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[a181c69533451684311f53e]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[a181c69533451684311f53e]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[d517976732e0a081ebea8da]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 39 and arg is 0x81bd9c8
+
+RTO timer handle 0x27
+
+COUNT: 38
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[d517976732e0a081ebea8da]
+Table Entry:STUN txn ID[d517976732e0a081ebea8da]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[d517976732e0a081ebea8da]
+Table Entry:STUN txn ID[d517976732e0a081ebea8da]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 39 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[d517976732e0a081ebea8da]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[d517976732e0a081ebea8da]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 40 and arg is 0x81bd948
+
+RTO timer handle 0x28
+
+COUNT: 39
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+Table Entry:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+Table Entry:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 40 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[d7595a3cc4d6b7b3b9258f6]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[b94abe252ebb34ee9662230]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 41 and arg is 0x81bd9c8
+
+RTO timer handle 0x29
+
+COUNT: 40
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[b94abe252ebb34ee9662230]
+Table Entry:STUN txn ID[b94abe252ebb34ee9662230]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[b94abe252ebb34ee9662230]
+Table Entry:STUN txn ID[b94abe252ebb34ee9662230]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 41 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[b94abe252ebb34ee9662230]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[b94abe252ebb34ee9662230]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[e3268aa83a702bb88ca69f]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 42 and arg is 0x81bd948
+
+RTO timer handle 0x2a
+
+COUNT: 41
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[e3268aa83a702bb88ca69f]
+Table Entry:STUN txn ID[e3268aa83a702bb88ca69f]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[e3268aa83a702bb88ca69f]
+Table Entry:STUN txn ID[e3268aa83a702bb88ca69f]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 42 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[e3268aa83a702bb88ca69f]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[e3268aa83a702bb88ca69f]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[8b5ad023245c99da3d9b152]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 43 and arg is 0x81bd9c8
+
+RTO timer handle 0x2b
+
+COUNT: 42
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[8b5ad023245c99da3d9b152]
+Table Entry:STUN txn ID[8b5ad023245c99da3d9b152]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[8b5ad023245c99da3d9b152]
+Table Entry:STUN txn ID[8b5ad023245c99da3d9b152]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 43 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[8b5ad023245c99da3d9b152]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[8b5ad023245c99da3d9b152]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f67c84e7f6d34becef2e2df]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 44 and arg is 0x81bd948
+
+RTO timer handle 0x2c
+
+COUNT: 43
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f67c84e7f6d34becef2e2df]
+Table Entry:STUN txn ID[f67c84e7f6d34becef2e2df]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[f67c84e7f6d34becef2e2df]
+Table Entry:STUN txn ID[f67c84e7f6d34becef2e2df]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 44 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f67c84e7f6d34becef2e2df]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f67c84e7f6d34becef2e2df]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[25e69e14f0882b0edf4f274]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 45 and arg is 0x81bd9c8
+
+RTO timer handle 0x2d
+
+COUNT: 44
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[25e69e14f0882b0edf4f274]
+Table Entry:STUN txn ID[25e69e14f0882b0edf4f274]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[25e69e14f0882b0edf4f274]
+Table Entry:STUN txn ID[25e69e14f0882b0edf4f274]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 45 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[25e69e14f0882b0edf4f274]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[25e69e14f0882b0edf4f274]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 46 and arg is 0x81bd948
+
+RTO timer handle 0x2e
+
+COUNT: 45
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+Table Entry:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+Table Entry:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 46 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ac3ade6c52a1c8117ca8e24]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[1637bf807d8eb853be5cca1]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 47 and arg is 0x81bd9c8
+
+RTO timer handle 0x2f
+
+COUNT: 46
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[1637bf807d8eb853be5cca1]
+Table Entry:STUN txn ID[1637bf807d8eb853be5cca1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[1637bf807d8eb853be5cca1]
+Table Entry:STUN txn ID[1637bf807d8eb853be5cca1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 47 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[1637bf807d8eb853be5cca1]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[1637bf807d8eb853be5cca1]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[9c50b991a4dc0e5dac7be4]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 48 and arg is 0x81bd938
+
+RTO timer handle 0x30
+
+COUNT: 47
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[9c50b991a4dc0e5dac7be4]
+Table Entry:STUN txn ID[9c50b991a4dc0e5dac7be4]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd950]
+stun_binding_session_inject_received_msg() session[0x81bd950]
+Searching for Transaction ID in table:STUN txn ID[9c50b991a4dc0e5dac7be4]
+Table Entry:STUN txn ID[9c50b991a4dc0e5dac7be4]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 48 found and freed. Arg 0x81bd938
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[9c50b991a4dc0e5dac7be4]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[9c50b991a4dc0e5dac7be4]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[a93677a9fc37372afbde412]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 49 and arg is 0x81bd9c8
+
+RTO timer handle 0x31
+
+COUNT: 48
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[a93677a9fc37372afbde412]
+Table Entry:STUN txn ID[a93677a9fc37372afbde412]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[a93677a9fc37372afbde412]
+Table Entry:STUN txn ID[a93677a9fc37372afbde412]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 49 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[a93677a9fc37372afbde412]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[a93677a9fc37372afbde412]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f5c496b9571eb4853ec9e61]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 50 and arg is 0x81bd948
+
+RTO timer handle 0x32
+
+COUNT: 49
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f5c496b9571eb4853ec9e61]
+Table Entry:STUN txn ID[f5c496b9571eb4853ec9e61]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[f5c496b9571eb4853ec9e61]
+Table Entry:STUN txn ID[f5c496b9571eb4853ec9e61]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 50 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f5c496b9571eb4853ec9e61]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f5c496b9571eb4853ec9e61]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f994343f3afc235b53c655c]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 51 and arg is 0x81bd9c8
+
+RTO timer handle 0x33
+
+COUNT: 50
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f994343f3afc235b53c655c]
+Table Entry:STUN txn ID[f994343f3afc235b53c655c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[f994343f3afc235b53c655c]
+Table Entry:STUN txn ID[f994343f3afc235b53c655c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 51 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f994343f3afc235b53c655c]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f994343f3afc235b53c655c]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[4b301cfab43faa618980e89]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 52 and arg is 0x81bd948
+
+RTO timer handle 0x34
+
+COUNT: 51
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[4b301cfab43faa618980e89]
+Table Entry:STUN txn ID[4b301cfab43faa618980e89]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[4b301cfab43faa618980e89]
+Table Entry:STUN txn ID[4b301cfab43faa618980e89]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 52 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[4b301cfab43faa618980e89]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[4b301cfab43faa618980e89]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f249599a71742d7bf293c4e]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 53 and arg is 0x81bd9c8
+
+RTO timer handle 0x35
+
+COUNT: 52
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f249599a71742d7bf293c4e]
+Table Entry:STUN txn ID[f249599a71742d7bf293c4e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[f249599a71742d7bf293c4e]
+Table Entry:STUN txn ID[f249599a71742d7bf293c4e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 53 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f249599a71742d7bf293c4e]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f249599a71742d7bf293c4e]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ab9655fe941c08cb7f67a2]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 54 and arg is 0x81bd948
+
+RTO timer handle 0x36
+
+COUNT: 53
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ab9655fe941c08cb7f67a2]
+Table Entry:STUN txn ID[ab9655fe941c08cb7f67a2]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[ab9655fe941c08cb7f67a2]
+Table Entry:STUN txn ID[ab9655fe941c08cb7f67a2]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 54 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ab9655fe941c08cb7f67a2]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ab9655fe941c08cb7f67a2]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[a1f9d976a7ac69ad377578d]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 55 and arg is 0x81bd9c8
+
+RTO timer handle 0x37
+
+COUNT: 54
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[a1f9d976a7ac69ad377578d]
+Table Entry:STUN txn ID[a1f9d976a7ac69ad377578d]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[a1f9d976a7ac69ad377578d]
+Table Entry:STUN txn ID[a1f9d976a7ac69ad377578d]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 55 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[a1f9d976a7ac69ad377578d]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[a1f9d976a7ac69ad377578d]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[2cb279d9ba4828d0ab6740b]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 56 and arg is 0x81bd948
+
+RTO timer handle 0x38
+
+COUNT: 55
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[2cb279d9ba4828d0ab6740b]
+Table Entry:STUN txn ID[2cb279d9ba4828d0ab6740b]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[2cb279d9ba4828d0ab6740b]
+Table Entry:STUN txn ID[2cb279d9ba4828d0ab6740b]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 56 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[2cb279d9ba4828d0ab6740b]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[2cb279d9ba4828d0ab6740b]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[d9bc65219cda24272c8befb]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 57 and arg is 0x81bd9c8
+
+RTO timer handle 0x39
+
+COUNT: 56
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[d9bc65219cda24272c8befb]
+Table Entry:STUN txn ID[d9bc65219cda24272c8befb]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[d9bc65219cda24272c8befb]
+Table Entry:STUN txn ID[d9bc65219cda24272c8befb]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 57 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[d9bc65219cda24272c8befb]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[d9bc65219cda24272c8befb]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[bf1077fade9d554c3d83134]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 58 and arg is 0x81bd948
+
+RTO timer handle 0x3a
+
+COUNT: 57
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[bf1077fade9d554c3d83134]
+Table Entry:STUN txn ID[bf1077fade9d554c3d83134]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[bf1077fade9d554c3d83134]
+Table Entry:STUN txn ID[bf1077fade9d554c3d83134]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 58 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[bf1077fade9d554c3d83134]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[bf1077fade9d554c3d83134]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ebd8b946bb7cceee4c6686a]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 59 and arg is 0x81bd9c8
+
+RTO timer handle 0x3b
+
+COUNT: 58
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ebd8b946bb7cceee4c6686a]
+Table Entry:STUN txn ID[ebd8b946bb7cceee4c6686a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[ebd8b946bb7cceee4c6686a]
+Table Entry:STUN txn ID[ebd8b946bb7cceee4c6686a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 59 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ebd8b946bb7cceee4c6686a]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ebd8b946bb7cceee4c6686a]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[b65eb6637864bf5dbbbb797]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 60 and arg is 0x81bd948
+
+RTO timer handle 0x3c
+
+COUNT: 59
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[b65eb6637864bf5dbbbb797]
+Table Entry:STUN txn ID[b65eb6637864bf5dbbbb797]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[b65eb6637864bf5dbbbb797]
+Table Entry:STUN txn ID[b65eb6637864bf5dbbbb797]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 60 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[b65eb6637864bf5dbbbb797]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[b65eb6637864bf5dbbbb797]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[9d66ee59faef3a2cff38bba]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 61 and arg is 0x81bd9c8
+
+RTO timer handle 0x3d
+
+COUNT: 60
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[9d66ee59faef3a2cff38bba]
+Table Entry:STUN txn ID[9d66ee59faef3a2cff38bba]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[9d66ee59faef3a2cff38bba]
+Table Entry:STUN txn ID[9d66ee59faef3a2cff38bba]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 61 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[9d66ee59faef3a2cff38bba]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[9d66ee59faef3a2cff38bba]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[6596f589724335952143905]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 62 and arg is 0x81bd948
+
+RTO timer handle 0x3e
+
+COUNT: 61
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[6596f589724335952143905]
+Table Entry:STUN txn ID[6596f589724335952143905]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[6596f589724335952143905]
+Table Entry:STUN txn ID[6596f589724335952143905]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 62 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[6596f589724335952143905]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[6596f589724335952143905]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f535339bded6aff03142f7f]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 63 and arg is 0x81bd9c8
+
+RTO timer handle 0x3f
+
+COUNT: 62
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f535339bded6aff03142f7f]
+Table Entry:STUN txn ID[f535339bded6aff03142f7f]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[f535339bded6aff03142f7f]
+Table Entry:STUN txn ID[f535339bded6aff03142f7f]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 63 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f535339bded6aff03142f7f]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f535339bded6aff03142f7f]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 64 and arg is 0x81bd948
+
+RTO timer handle 0x40
+
+COUNT: 63
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+Table Entry:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+Table Entry:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 64 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[b0f62b98f594a0b5b0e6b3]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 65 and arg is 0x81bd9c8
+
+RTO timer handle 0x41
+
+COUNT: 64
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+Table Entry:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+Table Entry:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 65 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[153c8fc5d8aafb5d81d1c3]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[57423f23cf47c5f5373c60]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 66 and arg is 0x81bd948
+
+RTO timer handle 0x42
+
+COUNT: 65
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[57423f23cf47c5f5373c60]
+Table Entry:STUN txn ID[57423f23cf47c5f5373c60]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[57423f23cf47c5f5373c60]
+Table Entry:STUN txn ID[57423f23cf47c5f5373c60]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 66 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[57423f23cf47c5f5373c60]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[57423f23cf47c5f5373c60]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[13b590a5bc2aa148935a6fc]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 67 and arg is 0x81bd9c8
+
+RTO timer handle 0x43
+
+COUNT: 66
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[13b590a5bc2aa148935a6fc]
+Table Entry:STUN txn ID[13b590a5bc2aa148935a6fc]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[13b590a5bc2aa148935a6fc]
+Table Entry:STUN txn ID[13b590a5bc2aa148935a6fc]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 67 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[13b590a5bc2aa148935a6fc]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[13b590a5bc2aa148935a6fc]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[3049a37c6f34a26438fae8]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 68 and arg is 0x81bd948
+
+RTO timer handle 0x44
+
+COUNT: 67
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[3049a37c6f34a26438fae8]
+Table Entry:STUN txn ID[3049a37c6f34a26438fae8]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[3049a37c6f34a26438fae8]
+Table Entry:STUN txn ID[3049a37c6f34a26438fae8]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 68 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[3049a37c6f34a26438fae8]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[3049a37c6f34a26438fae8]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[426021e5afea8bef4b1140]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 69 and arg is 0x81bd9c8
+
+RTO timer handle 0x45
+
+COUNT: 68
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[426021e5afea8bef4b1140]
+Table Entry:STUN txn ID[426021e5afea8bef4b1140]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[426021e5afea8bef4b1140]
+Table Entry:STUN txn ID[426021e5afea8bef4b1140]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 69 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[426021e5afea8bef4b1140]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[426021e5afea8bef4b1140]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[96cd277effc247ed694a9c]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 70 and arg is 0x81bd948
+
+RTO timer handle 0x46
+
+COUNT: 69
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[96cd277effc247ed694a9c]
+Table Entry:STUN txn ID[96cd277effc247ed694a9c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[96cd277effc247ed694a9c]
+Table Entry:STUN txn ID[96cd277effc247ed694a9c]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 70 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[96cd277effc247ed694a9c]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[96cd277effc247ed694a9c]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[be8e55f0f5ec31939251c47]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 71 and arg is 0x81bd9c8
+
+RTO timer handle 0x47
+
+COUNT: 70
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[be8e55f0f5ec31939251c47]
+Table Entry:STUN txn ID[be8e55f0f5ec31939251c47]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[be8e55f0f5ec31939251c47]
+Table Entry:STUN txn ID[be8e55f0f5ec31939251c47]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 71 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[be8e55f0f5ec31939251c47]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[be8e55f0f5ec31939251c47]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[283029cfe7ddb7d67891e5e]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 72 and arg is 0x81bd948
+
+RTO timer handle 0x48
+
+COUNT: 71
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[283029cfe7ddb7d67891e5e]
+Table Entry:STUN txn ID[283029cfe7ddb7d67891e5e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[283029cfe7ddb7d67891e5e]
+Table Entry:STUN txn ID[283029cfe7ddb7d67891e5e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 72 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[283029cfe7ddb7d67891e5e]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[283029cfe7ddb7d67891e5e]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[9c974d19742c4f8118fc899]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 73 and arg is 0x81bd9c8
+
+RTO timer handle 0x49
+
+COUNT: 72
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[9c974d19742c4f8118fc899]
+Table Entry:STUN txn ID[9c974d19742c4f8118fc899]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[9c974d19742c4f8118fc899]
+Table Entry:STUN txn ID[9c974d19742c4f8118fc899]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 73 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[9c974d19742c4f8118fc899]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[9c974d19742c4f8118fc899]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[83c715f4a4e1fcd83cfb755]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 74 and arg is 0x81bd948
+
+RTO timer handle 0x4a
+
+COUNT: 73
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[83c715f4a4e1fcd83cfb755]
+Table Entry:STUN txn ID[83c715f4a4e1fcd83cfb755]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[83c715f4a4e1fcd83cfb755]
+Table Entry:STUN txn ID[83c715f4a4e1fcd83cfb755]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 74 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[83c715f4a4e1fcd83cfb755]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[83c715f4a4e1fcd83cfb755]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[6f78427ba476d8756a1ba8a]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 75 and arg is 0x81bd9c8
+
+RTO timer handle 0x4b
+
+COUNT: 74
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[6f78427ba476d8756a1ba8a]
+Table Entry:STUN txn ID[6f78427ba476d8756a1ba8a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[6f78427ba476d8756a1ba8a]
+Table Entry:STUN txn ID[6f78427ba476d8756a1ba8a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 75 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[6f78427ba476d8756a1ba8a]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[6f78427ba476d8756a1ba8a]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[64999ba1c2fa1f1f4329087]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 76 and arg is 0x81bd948
+
+RTO timer handle 0x4c
+
+COUNT: 75
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[64999ba1c2fa1f1f4329087]
+Table Entry:STUN txn ID[64999ba1c2fa1f1f4329087]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[64999ba1c2fa1f1f4329087]
+Table Entry:STUN txn ID[64999ba1c2fa1f1f4329087]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 76 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[64999ba1c2fa1f1f4329087]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[64999ba1c2fa1f1f4329087]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[6ccf35b89c4b6273bbd611f]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 77 and arg is 0x81bd9c8
+
+RTO timer handle 0x4d
+
+COUNT: 76
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[6ccf35b89c4b6273bbd611f]
+Table Entry:STUN txn ID[6ccf35b89c4b6273bbd611f]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[6ccf35b89c4b6273bbd611f]
+Table Entry:STUN txn ID[6ccf35b89c4b6273bbd611f]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 77 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[6ccf35b89c4b6273bbd611f]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[6ccf35b89c4b6273bbd611f]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f24a385664daff19de298a4]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 78 and arg is 0x81bd948
+
+RTO timer handle 0x4e
+
+COUNT: 77
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f24a385664daff19de298a4]
+Table Entry:STUN txn ID[f24a385664daff19de298a4]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[f24a385664daff19de298a4]
+Table Entry:STUN txn ID[f24a385664daff19de298a4]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 78 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f24a385664daff19de298a4]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f24a385664daff19de298a4]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[9875ec3dae69e94d9eaeff1]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 79 and arg is 0x81bd9c8
+
+RTO timer handle 0x4f
+
+COUNT: 78
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[9875ec3dae69e94d9eaeff1]
+Table Entry:STUN txn ID[9875ec3dae69e94d9eaeff1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[9875ec3dae69e94d9eaeff1]
+Table Entry:STUN txn ID[9875ec3dae69e94d9eaeff1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 79 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[9875ec3dae69e94d9eaeff1]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[9875ec3dae69e94d9eaeff1]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[21bc16f57ad016cdc988b96]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 80 and arg is 0x81bd948
+
+RTO timer handle 0x50
+
+COUNT: 79
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[21bc16f57ad016cdc988b96]
+Table Entry:STUN txn ID[21bc16f57ad016cdc988b96]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[21bc16f57ad016cdc988b96]
+Table Entry:STUN txn ID[21bc16f57ad016cdc988b96]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 80 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[21bc16f57ad016cdc988b96]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[21bc16f57ad016cdc988b96]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[32f4688c3811be6fb82238]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 81 and arg is 0x81bd9c8
+
+RTO timer handle 0x51
+
+COUNT: 80
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[32f4688c3811be6fb82238]
+Table Entry:STUN txn ID[32f4688c3811be6fb82238]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[32f4688c3811be6fb82238]
+Table Entry:STUN txn ID[32f4688c3811be6fb82238]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 81 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[32f4688c3811be6fb82238]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[32f4688c3811be6fb82238]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 82 and arg is 0x81bd948
+
+RTO timer handle 0x52
+
+COUNT: 81
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+Table Entry:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+Table Entry:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 82 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[c0d9bcd9ea9e2288d4ac7c1]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[e480c89980148aa657f819a]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 83 and arg is 0x81bd9c8
+
+RTO timer handle 0x53
+
+COUNT: 82
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[e480c89980148aa657f819a]
+Table Entry:STUN txn ID[e480c89980148aa657f819a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[e480c89980148aa657f819a]
+Table Entry:STUN txn ID[e480c89980148aa657f819a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 83 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[e480c89980148aa657f819a]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[e480c89980148aa657f819a]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[75c0a733af9164c761b886e]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 84 and arg is 0x81bd948
+
+RTO timer handle 0x54
+
+COUNT: 83
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[75c0a733af9164c761b886e]
+Table Entry:STUN txn ID[75c0a733af9164c761b886e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[75c0a733af9164c761b886e]
+Table Entry:STUN txn ID[75c0a733af9164c761b886e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 84 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[75c0a733af9164c761b886e]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[75c0a733af9164c761b886e]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[16bb69e16071d1cfc90665a]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 85 and arg is 0x81bd9c8
+
+RTO timer handle 0x55
+
+COUNT: 84
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[16bb69e16071d1cfc90665a]
+Table Entry:STUN txn ID[16bb69e16071d1cfc90665a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[16bb69e16071d1cfc90665a]
+Table Entry:STUN txn ID[16bb69e16071d1cfc90665a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 85 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[16bb69e16071d1cfc90665a]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[16bb69e16071d1cfc90665a]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[4aad062a828695f51246ea]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 86 and arg is 0x81bd948
+
+RTO timer handle 0x56
+
+COUNT: 85
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[4aad062a828695f51246ea]
+Table Entry:STUN txn ID[4aad062a828695f51246ea]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[4aad062a828695f51246ea]
+Table Entry:STUN txn ID[4aad062a828695f51246ea]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 86 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[4aad062a828695f51246ea]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[4aad062a828695f51246ea]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[79737895b85fa0bc237272d]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 87 and arg is 0x81bd9c8
+
+RTO timer handle 0x57
+
+COUNT: 86
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[79737895b85fa0bc237272d]
+Table Entry:STUN txn ID[79737895b85fa0bc237272d]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[79737895b85fa0bc237272d]
+Table Entry:STUN txn ID[79737895b85fa0bc237272d]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 87 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[79737895b85fa0bc237272d]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[79737895b85fa0bc237272d]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[dc9497246673c4cc977f3bb]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 88 and arg is 0x81bd948
+
+RTO timer handle 0x58
+
+COUNT: 87
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[dc9497246673c4cc977f3bb]
+Table Entry:STUN txn ID[dc9497246673c4cc977f3bb]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[dc9497246673c4cc977f3bb]
+Table Entry:STUN txn ID[dc9497246673c4cc977f3bb]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 88 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[dc9497246673c4cc977f3bb]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[dc9497246673c4cc977f3bb]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[5fa9dc1bfa154ee37171df1]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 89 and arg is 0x81bd9c8
+
+RTO timer handle 0x59
+
+COUNT: 88
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[5fa9dc1bfa154ee37171df1]
+Table Entry:STUN txn ID[5fa9dc1bfa154ee37171df1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[5fa9dc1bfa154ee37171df1]
+Table Entry:STUN txn ID[5fa9dc1bfa154ee37171df1]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 89 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[5fa9dc1bfa154ee37171df1]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[5fa9dc1bfa154ee37171df1]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 90 and arg is 0x81bd938
+
+RTO timer handle 0x5a
+
+COUNT: 89
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+Table Entry:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd950]
+stun_binding_session_inject_received_msg() session[0x81bd950]
+Searching for Transaction ID in table:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+Table Entry:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 90 found and freed. Arg 0x81bd938
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[8b47e1cc9a1dbfb1a99eaeb]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[a47e2c978ee17f35ea302ec]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 91 and arg is 0x81bd9c8
+
+RTO timer handle 0x5b
+
+COUNT: 90
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[a47e2c978ee17f35ea302ec]
+Table Entry:STUN txn ID[a47e2c978ee17f35ea302ec]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[a47e2c978ee17f35ea302ec]
+Table Entry:STUN txn ID[a47e2c978ee17f35ea302ec]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 91 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[a47e2c978ee17f35ea302ec]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[a47e2c978ee17f35ea302ec]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[177c14e44d34d053ae182db]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 92 and arg is 0x81bd948
+
+RTO timer handle 0x5c
+
+COUNT: 91
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[177c14e44d34d053ae182db]
+Table Entry:STUN txn ID[177c14e44d34d053ae182db]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[177c14e44d34d053ae182db]
+Table Entry:STUN txn ID[177c14e44d34d053ae182db]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 92 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[177c14e44d34d053ae182db]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[177c14e44d34d053ae182db]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 93 and arg is 0x81bd9c8
+
+RTO timer handle 0x5d
+
+COUNT: 92
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+Table Entry:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+Table Entry:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 93 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[cd5e2ec9bb42ab2e106ceb4]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f8553ff46e02ab0bb62122]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 94 and arg is 0x81bd948
+
+RTO timer handle 0x5e
+
+COUNT: 93
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f8553ff46e02ab0bb62122]
+Table Entry:STUN txn ID[f8553ff46e02ab0bb62122]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[f8553ff46e02ab0bb62122]
+Table Entry:STUN txn ID[f8553ff46e02ab0bb62122]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 94 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f8553ff46e02ab0bb62122]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f8553ff46e02ab0bb62122]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[ea041a51da9dd37548d19]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 95 and arg is 0x81bd9c8
+
+RTO timer handle 0x5f
+
+COUNT: 94
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[ea041a51da9dd37548d19]
+Table Entry:STUN txn ID[ea041a51da9dd37548d19]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[ea041a51da9dd37548d19]
+Table Entry:STUN txn ID[ea041a51da9dd37548d19]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 95 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[ea041a51da9dd37548d19]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[ea041a51da9dd37548d19]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[8c92a8cd15a563d1028335a]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 96 and arg is 0x81bd948
+
+RTO timer handle 0x60
+
+COUNT: 95
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[8c92a8cd15a563d1028335a]
+Table Entry:STUN txn ID[8c92a8cd15a563d1028335a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[8c92a8cd15a563d1028335a]
+Table Entry:STUN txn ID[8c92a8cd15a563d1028335a]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 96 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[8c92a8cd15a563d1028335a]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[8c92a8cd15a563d1028335a]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[167a603c4ff1463a18b9251]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 97 and arg is 0x81bd9c8
+
+RTO timer handle 0x61
+
+COUNT: 96
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[167a603c4ff1463a18b9251]
+Table Entry:STUN txn ID[167a603c4ff1463a18b9251]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[167a603c4ff1463a18b9251]
+Table Entry:STUN txn ID[167a603c4ff1463a18b9251]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 97 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[167a603c4ff1463a18b9251]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[167a603c4ff1463a18b9251]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 98 and arg is 0x81bd948
+
+RTO timer handle 0x62
+
+COUNT: 97
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+Table Entry:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+Table Entry:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 98 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[2d1c5b8d8960a27b92e8e7e]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[f238eaa0e3bf731f4477904]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 99 and arg is 0x81bd9c8
+
+RTO timer handle 0x63
+
+COUNT: 98
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[f238eaa0e3bf731f4477904]
+Table Entry:STUN txn ID[f238eaa0e3bf731f4477904]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd9e0]
+stun_binding_session_inject_received_msg() session[0x81bd9e0]
+Searching for Transaction ID in table:STUN txn ID[f238eaa0e3bf731f4477904]
+Table Entry:STUN txn ID[f238eaa0e3bf731f4477904]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 99 found and freed. Arg 0x81bd9c8
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[f238eaa0e3bf731f4477904]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[f238eaa0e3bf731f4477904]
+node->h_txn -----> 0x81bdb08
+
+**************************************************************
+
+Added Transaction ID to table:STUN txn ID[301cb819f072eb21d3fd21]
+node->h_txn -----> 0x81bdb08
+
+Sent 20 bytes
+[TIMER]: Added timer node 0x81bd130 for 500 ms
+
+[TIMER]: returned Timer handle is 100 and arg is 0x81bd948
+
+RTO timer handle 0x64
+
+COUNT: 99
+
+Received packet on fd 3. 72 bytes
+Searching for Transaction ID in table:STUN txn ID[301cb819f072eb21d3fd21]
+Table Entry:STUN txn ID[301cb819f072eb21d3fd21]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+*h_binding[0x81bd960]
+stun_binding_session_inject_received_msg() session[0x81bd960]
+Searching for Transaction ID in table:STUN txn ID[301cb819f072eb21d3fd21]
+Table Entry:STUN txn ID[301cb819f072eb21d3fd21]
+node->h_txn-----> 0x81bdb08
+
+Table entry match found
+[TIMER]: Timer id 100 found and freed. Arg 0x81bd948
+
+Freeing node 0x81bd130
+
+
+
+MAPPED ADDRESS and POR : 2001:db8:0:242::67 and 52546
+
+
+Table entry:STUN txn ID[301cb819f072eb21d3fd21]
+node->h_txn -----> 0x81bdb08
+
+Removed Transaction ID from table:STUN txn ID[301cb819f072eb21d3fd21]
+node->h_txn -----> 0x81bdb08
+
+
+root@mindbricks01: ~/ICE/sample>

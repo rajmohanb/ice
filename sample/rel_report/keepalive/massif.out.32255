@@ -1,0 +1,1277 @@
+desc: (none)
+cmd: ./stun_keepalive
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=723813
+mem_heap_B=136
+mem_heap_extra_B=8
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=1059565
+mem_heap_B=2606
+mem_heap_extra_B=194
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=1433023
+mem_heap_B=4024
+mem_heap_extra_B=152
+mem_stacks_B=0
+heap_tree=peak
+n5: 4024 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n6: 1972 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 1500 0x80493D4: app_nwk_send_msg (stun_keepalive.c:114)
+   n1: 1500 0x8049D3A: stun_binding_nwk_send_cb_fxn (stun_binding_api.c:67)
+    n1: 1500 0x80501B0: send_req (stun_txn_fsm.c:111)
+     n1: 1500 0x80504FE: stun_txn_fsm_inject_msg (stun_txn_fsm.c:254)
+      n1: 1500 0x804FD63: stun_txn_send_stun_message (stun_txn_api.c:340)
+       n1: 1500 0x804A2B1: stun_binding_session_send_message (stun_binding_api.c:346)
+        n0: 1500 0x8049907: main (stun_keepalive.c:313)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n0: 104 in 10 places, all below massif's threshold (01.00%)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+ n3: 1588 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 88 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n0: 0 in 1 place, below massif's threshold (01.00%)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=4
+#-----------
+time=1648139
+mem_heap_B=2712
+mem_heap_extra_B=184
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=1905560
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=2232157
+mem_heap_B=2640
+mem_heap_extra_B=160
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=7
+#-----------
+time=2428578
+mem_heap_B=2640
+mem_heap_extra_B=160
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=8
+#-----------
+time=2691066
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=9
+#-----------
+time=2932206
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=10
+#-----------
+time=3314865
+mem_heap_B=2794
+mem_heap_extra_B=206
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=11
+#-----------
+time=3510480
+mem_heap_B=2794
+mem_heap_extra_B=206
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=12
+#-----------
+time=3706707
+mem_heap_B=2794
+mem_heap_extra_B=206
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=13
+#-----------
+time=3903212
+mem_heap_B=2794
+mem_heap_extra_B=206
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2794 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 646 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n0: 110 in 8 places, all below massif's threshold (01.00%)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 8 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=14
+#-----------
+time=4163744
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=15
+#-----------
+time=4555480
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=16
+#-----------
+time=4753338
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2718 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 578 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n0: 42 in 8 places, all below massif's threshold (01.00%)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=17
+#-----------
+time=5144934
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=18
+#-----------
+time=5341439
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=19
+#-----------
+time=5537167
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=20
+#-----------
+time=5733672
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=21
+#-----------
+time=5930177
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=22
+#-----------
+time=6126682
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=23
+#-----------
+time=6324540
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=24
+#-----------
+time=6716276
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2718 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 578 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n0: 42 in 8 places, all below massif's threshold (01.00%)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=25
+#-----------
+time=6912781
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=26
+#-----------
+time=7108509
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=27
+#-----------
+time=7305014
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=28
+#-----------
+time=7599626
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=29
+#-----------
+time=7894468
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=30
+#-----------
+time=8090973
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=31
+#-----------
+time=8286841
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2718 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 578 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n0: 42 in 8 places, all below massif's threshold (01.00%)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=32
+#-----------
+time=8482709
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=33
+#-----------
+time=8679214
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=34
+#-----------
+time=8877072
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=35
+#-----------
+time=9072940
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=36
+#-----------
+time=9269445
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2718 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 578 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n0: 42 in 8 places, all below massif's threshold (01.00%)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=37
+#-----------
+time=9465950
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=38
+#-----------
+time=9662455
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=39
+#-----------
+time=9858960
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=40
+#-----------
+time=10054828
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=41
+#-----------
+time=10252686
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2718 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 578 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n0: 42 in 8 places, all below massif's threshold (01.00%)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=42
+#-----------
+time=10644282
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=43
+#-----------
+time=10840787
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=44
+#-----------
+time=11134194
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=45
+#-----------
+time=11430190
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=46
+#-----------
+time=11626695
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=47
+#-----------
+time=11822563
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=48
+#-----------
+time=12019068
+mem_heap_B=2718
+mem_heap_extra_B=162
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=49
+#-----------
+time=12313745
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=50
+#-----------
+time=12509695
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=51
+#-----------
+time=12705423
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=52
+#-----------
+time=12902604
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=53
+#-----------
+time=13098472
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=54
+#-----------
+time=13294795
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=55
+#-----------
+time=13492098
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=56
+#-----------
+time=13687926
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=57
+#-----------
+time=13884249
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=58
+#-----------
+time=14080299
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2786 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 646 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n0: 110 in 8 places, all below massif's threshold (01.00%)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=59
+#-----------
+time=14276622
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=60
+#-----------
+time=14473127
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=61
+#-----------
+time=14670985
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=62
+#-----------
+time=14867035
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=63
+#-----------
+time=15063358
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=64
+#-----------
+time=15259408
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=65
+#-----------
+time=15455276
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=66
+#-----------
+time=15651044
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=67
+#-----------
+time=15847327
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=68
+#-----------
+time=16045185
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2786 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 646 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n0: 110 in 8 places, all below massif's threshold (01.00%)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=69
+#-----------
+time=16241690
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=70
+#-----------
+time=16438195
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=71
+#-----------
+time=16634700
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=72
+#-----------
+time=16830650
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=73
+#-----------
+time=17027831
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=74
+#-----------
+time=17223599
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=75
+#-----------
+time=17419327
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=76
+#-----------
+time=17615155
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=77
+#-----------
+time=17811478
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=78
+#-----------
+time=18007983
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2786 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 646 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n0: 110 in 8 places, all below massif's threshold (01.00%)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=79
+#-----------
+time=18205386
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=80
+#-----------
+time=18401709
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=81
+#-----------
+time=18598214
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=82
+#-----------
+time=18794719
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=83
+#-----------
+time=18990669
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=84
+#-----------
+time=19188305
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=85
+#-----------
+time=19384810
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=86
+#-----------
+time=19581315
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=87
+#-----------
+time=19777820
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=88
+#-----------
+time=19974325
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=detailed
+n5: 2786 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n3: 1676 0x805113B: platform_malloc (platform_api.c:250)
+  n0: 1500 0x80497BB: main (stun_keepalive.c:277)
+  n2: 176 0x804A601: stun_msg_create (stun_msg_api.c:88)
+   n1: 88 0x804A503: stun_binding_utils_create_request_msg (stun_binding_utils.c:35)
+    n1: 88 0x804A1DB: stun_binding_session_send_message (stun_binding_api.c:326)
+     n0: 88 0x8049907: main (stun_keepalive.c:313)
+   n1: 88 0x804C2FF: stun_msg_decode (stun_enc_dec_api.c:173)
+    n0: 88 0x80499DC: main (stun_keepalive.c:337)
+  n0: 0 in 1 place, below massif's threshold (01.00%)
+ n8: 646 0x8051155: platform_calloc (platform_api.c:255)
+  n1: 160 0x805052B: stun_txn_create_table (stun_txn_table.c:50)
+   n1: 160 0x804F6E5: stun_txn_create_instance (stun_txn_api.c:48)
+    n1: 160 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+     n1: 160 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+      n0: 160 0x804978A: main (stun_keepalive.c:270)
+  n0: 110 in 8 places, all below massif's threshold (01.00%)
+  n1: 76 0x8049EED: stun_binding_create_session (stun_binding_api.c:162)
+   n0: 76 0x80497F6: main (stun_keepalive.c:283)
+  n1: 76 0x804F82D: stun_create_txn (stun_txn_api.c:116)
+   n1: 76 0x804A227: stun_binding_session_send_message (stun_binding_api.c:334)
+    n0: 76 0x8049907: main (stun_keepalive.c:313)
+  n1: 72 0x804C58A: stun_msg_decode (stun_enc_dec_api.c:246)
+   n0: 72 0x80499DC: main (stun_keepalive.c:337)
+  n1: 60 0x804DA0F: stun_attr_decode_xor_mapped_address (stun_attr_enc_dec.c:896)
+   n1: 60 0x804C714: stun_attr_decode (stun_attr_enc_dec.c:196)
+    n1: 60 0x804C517: stun_msg_decode (stun_enc_dec_api.c:231)
+     n0: 60 0x80499DC: main (stun_keepalive.c:337)
+  n1: 56 0x8049C58: stun_binding_create_instance (stun_binding_api.c:36)
+   n1: 56 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+    n0: 56 0x804978A: main (stun_keepalive.c:270)
+  n1: 36 0x804F68C: stun_txn_create_instance (stun_txn_api.c:38)
+   n1: 36 0x8049C9C: stun_binding_create_instance (stun_binding_api.c:43)
+    n1: 36 0x80494BB: app_initialize_stun_binding_layer (stun_keepalive.c:151)
+     n0: 36 0x804978A: main (stun_keepalive.c:270)
+ n1: 408 0x40109AA: _dl_allocate_tls (dl-tls.c:300)
+  n2: 408 0x436E101: pthread_create@@GLIBC_2.1 (allocatestack.c:561)
+   n1: 272 0x40B3387: timer_helper_thread (timer_routines.c:128)
+    n1: 272 0x436D80C: start_thread (pthread_create.c:300)
+     n0: 272 0x41878DC: clone (clone.S:130)
+   n1: 136 0x40B31F0: __start_helper_thread (timer_routines.c:184)
+    n1: 136 0x437315E: pthread_once (pthread_once.S:122)
+     n1: 136 0x8051004: platform_timer_init (platform_api.c:191)
+      n1: 136 0x8051116: platform_init (platform_api.c:236)
+       n0: 136 0x80495A8: main (stun_keepalive.c:187)
+ n1: 56 0x40B20AD: timer_create (timer_create.c:163)
+  n1: 56 0x8051004: platform_timer_init (platform_api.c:191)
+   n1: 56 0x8051116: platform_init (platform_api.c:236)
+    n0: 56 0x80495A8: main (stun_keepalive.c:187)
+ n0: 0 in 3 places, all below massif's threshold (01.00%)
+#-----------
+snapshot=89
+#-----------
+time=20171793
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=90
+#-----------
+time=20368160
+mem_heap_B=2786
+mem_heap_extra_B=198
+mem_stacks_B=0
+heap_tree=empty

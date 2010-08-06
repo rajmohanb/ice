@@ -1,0 +1,48 @@
+
+
+1. Add encoding of error code attribute. - DONE = May 28, 2010
+2. Encoding of IPv6 address in xor-mapped-address, mapped-address and other attributes - DONE = May 31, 2010
+3. Provide a stun transaction layer instance api to set the number of transactions for that instance. This wil help the individual usages like connectivity check layer, binding layer etc to set the number of transactions depending on the requirement - Done = June 5, 2010
+4. rename msg_layer_api.c => stun_msg_api.c = This file should contain only stun message layer related set/get apis and utility functions - DONE = June 08, 2010.
+5. create one more file called stun_attr_api.c = This file should contain only stun attribute related apis like set/get - DONE = June 08, 2010.
+6. Currently while decoding, a copy of raw stun message is kept in the decoded msg handle (h_msg). But while encoding, the encoded raw stun message is not stored in the message handle. But doing so will help in re-transmission because then there will be no need to re-encode the message during re-transmissions. If the message handle already has the raw buffer, then it can be sent directly without the need to re-encode the entore message once more - ALREADY DONE = June 04, 2010?
+7. rename the file names in stun/parse_format folder - DONE = June 09, 2010
+8. rename the directory 'parse_format' to 'enc_dec' - DONE = June 09, 2010
+9. Provide a means/api to set the implementation level (ICE Full/Lite) of the peer agent - DONE = June 14, 2010.
+10. convert data structure format in the format as used in gcc/gnu/linux. For eg: 'struct_ice_media_stream' to be renamed to 'ice_media_stream_t'. If taken up, this needs to be done across and for all the layers - DONE = June 26, 2010.
+11. Media restart, notification as to when media has completed - DONE
+12. Verifying checksum(fingerprint) for incoming messages which have fingerprint attribute in them - DONE = June 30, 2010
+13. Move ice session handle and media handle validation for ice lite api into a macro. This will move repeated code into a single place, reduce number of lines and aid modularity - DONE = July 05, 2010.
+14. Rename stun_bind sample program to stun_keepalive? - DONE = July 12, 2010
+10. instead of using max allowed static buffers in attributes, use pointers and allocate as needed. For eg: struct_stun_realm_attr uses realm as char arrary of size MAX_REALM_VAL_BYTES(763) bytes. In reality, this will be significantly less. So using a pointer and allocating as required will significantly reduce the memory used during running. Especially good for memory startved hosts and servers - DONE = July 25, 2010
+
+
+
+
+1. When peer credentials are set per media line using ice api - ice_session_set_remote_credentials(), the same needs to be propagated to all the connectivity check sessions. Though the peer credentials are not really required in ice lite scenarios, it is better to do it for both ice lite and ice full scenarios.
+2. Ignore additional attributes if present after fingerprint attribute in received message.
+3. Add function entry and exit logging
+4. split stun_msg.h into multiple headers depending on the spec in which they have been defined - stun_msg.h, ice_msg.h, turn_msg.h, etc. However, have only one header file for inclusion for the higer layer application. In that header file include all the sub header files depending on the compile time enabling such as ENABLE_ICE, ENABLE_TURN etc.
+5. in stun_enc_dec_utils.c file, stun_tlv_utils_get_hmac_key() function makes use of MD5 functions directly and also includes openssl header file directly. This needs to be abstracted out.
+6. Currently, no timer is started for incoming connectivity checks (basically all incoming stun server transactions). So these transactions immediately move to terminated state and are destroyed immediately. This implies that for any re-tranmissions of the stun requests from the peer, the stack ends up creating new server transactions. The spec says that ice implementations may use a 40 sec timer to handle request re-transmissions. This needs to be implemented.
+7. Write a utility routine to dump the STUN messages, so that all incoming and outgoing messages can be dumped. This will help in inter-op debugging.
+8. replace inet_aton() with inet_pton()?
+9. replace all platform calls with macros that is malloc() with stun_malloc()
+10. update the ice_lite sample to demonstrate the ice media restart functionality.
+11. update the ice_lite sample to demostrate the addition and deletion of media streams.
+12. Is it possible to make use of existing candidate pairs to store the valid and nominated ones than storing them as separate array in another copy?
+13. Add filename, line number and function name to the log parameters before passing to application log function.
+14. Remove "TODO - till we support IPv6" in ice_utils_set_peer_media_params() api in ice_utils.c
+15 In most of the layers, especially stun encoder and decoder layer, sizeof() is used multiple times for data structures like uint16. Instead of calculating this every time, better to keep it calculated once and just reuse. This will speed up the execution ana avoid unnecessary computation. This must be done for all such things.
+16. support rfc3484 - priority for multiple IPv6 candidates
+17. Need to validate the media handle before passing to media fsm. This needs to be done at multiple places in ice_session_fsm.c especially when media handle is passed directly by the application via an api.
+18. Provision to build both release and debug mode from makefile
+19. Add an api in msg_layer to add multiple headers at once, rather than one by one
+20. Extend the main makefile to take architecture endian type (little endian or big endian) and build type (debug or release) and pass on the CFLAGS related parameters accordingly.
+21. replace remaining usage's of inet_aton() with inet_pton() in stun encoder and decoder library source
+
+ICE Full?
+1. As per ICE spec, the IP address version type needs to be cross checked while forming candidates?
+
+
+
