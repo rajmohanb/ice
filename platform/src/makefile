@@ -14,7 +14,6 @@
 
 LIB := lib_platform.a
 SRC = platform_api.c crc.c
-#LIB_DEST_PATH = ../lib
 
 INCLUDE := -I ../inc -I ../../ -I $(ICE_APP_INCLUDE_PATH)
 
