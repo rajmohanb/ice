@@ -1454,7 +1454,8 @@ int32_t ice_utils_determine_session_state(ice_session_t *session)
     }
 
     /** if there are no media streams, then move to IDLE */
-    if ((session->num_media_streams == 0) && (lowest_state == ICE_MEDIA_CC_STATE_MAX))
+    if ((session->num_media_streams == 0) && 
+            (lowest_state == ICE_MEDIA_CC_STATE_MAX))
     {
         lowest_state = ICE_MEDIA_CC_RUNNING;
     }
