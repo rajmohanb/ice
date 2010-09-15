@@ -28,7 +28,7 @@ ICE_APP_INCLUDE_PATH := .
 # additional flags may include flags related to debugging among others. If
 # the target platform architecture is big endian, then add the flag - 
 # -DIS_LITTLE_ENDIAN, else add -DIS_BIG_ENDIAN
-ICE_APP_CFLAGS := -g -DIS_LITTLE_ENDIAN 
+ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN 
 
 ifeq ($(strip $(ENABLE_ICE_DEBUG)), y)
 ICE_APP_CFLAGS += -DDEBUG

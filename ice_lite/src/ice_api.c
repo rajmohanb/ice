@@ -68,9 +68,9 @@ static void ice_cc_callback_fxn (handle h_cc_inst,
         handle h_cc_session, conn_check_session_state_t state, handle data)
 {
     int32_t status;
-    ice_session_event_t event;
     handle h_session;
     ice_session_t *session;
+    ice_session_event_t event = ICE_SES_EVENT_MAX;
 
     if ((h_cc_inst == NULL) || (h_cc_session == NULL))
     {
@@ -151,7 +151,7 @@ static handle ice_cc_start_timer(uint32_t duration, handle arg)
     }
 
     status = conn_check_session_get_app_param( 
-                            h_cc_inst, h_cc_session, (handle *)&session);
+                            h_cc_inst, h_cc_session, (handle)&session);
     if (status != STUN_OK)
     {
         goto ERROR_EXIT;
@@ -512,7 +512,7 @@ int32_t ice_session_get_session_params(handle h_inst,
     ice_session_t *session;
     ice_media_stream_t *media;
     ice_media_params_t *media_params;
-    int32_t i, status;
+    int32_t i, status = STUN_INVALID_PARAMS;
 
     if ((h_inst == NULL) || (h_session == NULL) || (session_params == NULL))
         return STUN_INVALID_PARAMS;
@@ -870,7 +870,7 @@ int32_t ice_session_get_session_valid_pairs(handle h_inst,
     ice_instance_t *instance;
     ice_session_t *session;
     ice_media_stream_t *media;
-    int32_t i, j, status;
+    int32_t i, j, status = STUN_INVALID_PARAMS;
 
     if ((h_inst == NULL) || (h_session == NULL) || (valid_pairs == NULL))
         return STUN_INVALID_PARAMS;

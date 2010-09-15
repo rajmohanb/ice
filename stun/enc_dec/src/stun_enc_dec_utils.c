@@ -42,6 +42,8 @@ extern "C" {
 #define STUN_ALLOCATE_ERROR_RESP    0x0113
 
 
+
+#ifdef ENABLE_TURN
 int32_t stun_tlv_utils_get_hmac_key(handle h_msg, u_char *key)
 {
     handle h_username, h_realm;
@@ -112,6 +114,9 @@ int32_t stun_tlv_utils_get_hmac_key(handle h_msg, u_char *key)
 
     return STUN_OK;
 }
+#endif
+
+
 
 uint16_t stun_tlv_utils_get_stun_msg_type(stun_msg_t *msg)
 {

@@ -319,6 +319,9 @@ int32_t ice_utils_set_peer_media_params(
     uint32_t j, k, x = 0;
     ice_candidate_t *cand;
 
+    /** store the number of components of peer */
+    media->num_peer_comp = media_params->num_comps;
+
     for (j = 0; j < media_params->num_comps; j++)
     {
         ice_media_comp_t *peer_comp = &media_params->comps[j];
@@ -436,7 +439,7 @@ int32_t ice_utils_compute_foundation(ice_candidate_t *cand)
     if (cand == NULL) return STUN_INVALID_PARAMS;
 
     stun_snprintf((char *)cand->foundation, 
-                    ICE_FOUNDATION_MAX_LEN, "candidate:%d", count);
+                    ICE_FOUNDATION_MAX_LEN, "%d", count);
 
     count++;
 
@@ -1248,6 +1251,10 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
     ice_cand_pair_t *valid;
 
     rtp_valid = rtcp_valid = false;
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Number of peer components[%d] for  media handle %p", 
+            media->num_peer_comp, media);
     
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
@@ -1261,6 +1268,9 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
     }
 
     ICE_LOG(LOG_SEV_DEBUG, "returning from ice_media_utils_have_valid_list()");
+
+    if ((rtp_valid == true) && (media->num_peer_comp == 1))
+        return true;
 
     if ((rtp_valid == true) && (rtcp_valid == true))
         return true;
@@ -1421,9 +1431,12 @@ int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media,
                         ICE_IP_ADDR_MAX_LEN - 1);
         valid_pair->peer.port = cand_pair->remote->transport.port;
 
+        valid_pair->nominated = cand_pair->nominated;
+
         j += 1;
     }
 
+    valid_pairs->h_media = media;
     valid_pairs->num_valid = j;
 
     return STUN_OK;
@@ -1435,7 +1448,7 @@ int32_t ice_utils_determine_session_state(ice_session_t *session)
 {
     int32_t status = STUN_OK, index;
     ice_media_stream_state_t lowest_state = ICE_MEDIA_CC_STATE_MAX;
-    ice_session_state_t new_session_state;
+    ice_session_state_t new_session_state = ICE_SES_STATE_MAX;
     ice_media_stream_t *media;
 
     /**

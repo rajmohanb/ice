@@ -172,6 +172,7 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
     return STUN_TERMINATED;
 }
 
+
 int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
 {
     int32_t status;

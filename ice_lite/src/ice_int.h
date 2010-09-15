@@ -169,6 +169,9 @@ typedef struct
     uint32_t num_comp;
     uint32_t num_comp_gathered;
 
+    /** count of peer components */
+    uint32_t num_peer_comp;
+
     char local_ufrag[ICE_MAX_UFRAG_LEN];
     char local_pwd[ICE_MAX_PWD_LEN];
 

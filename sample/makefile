@@ -51,7 +51,7 @@ STUN_BIND_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_stun_binding.a \
 	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lm -lrt -ldl
 
 
-CFLAGS += -g -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX
+CFLAGS += -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX
 
 OBJ:=$(SRC:c=o)
 
@@ -64,17 +64,17 @@ $(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT)
 $(ICE_LITE_AGENT) :
 	@echo "Creating ice lite sample... " $(TARGET) 
 	$(CC) $(CFLAGS) $(ICE_LITE_INC) -o ice_lite_agent.o ice_lite_agent.c
-	$(CC) ice_lite_agent.o -o $(ICE_LITE_AGENT)  $(ICE_LITE_LIBRARY)
+	$(CC) ice_lite_agent.o -o $(ICE_LITE_AGENT) -Wl,-Map,ice_lite.map $(ICE_LITE_LIBRARY)
 
 $(ICE_FULL_AGENT) :
 	@echo "Creating ice full sample... " $(TARGET)
 	$(CC) $(CFLAGS) $(ICE_FULL_INC) -o ice_full_agent.o ice_full_agent.c
-	$(CC) ice_full_agent.o -o $(ICE_FULL_AGENT)  $(ICE_FULL_LIBRARY)
+	$(CC) ice_full_agent.o -o $(ICE_FULL_AGENT)  -Wl,-Map,ice_full.map  $(ICE_FULL_LIBRARY)
 
 $(STUN_KEEPALIVE):
 	@echo "Creating stun keepalive sample... " $(TARGET)
 	$(CC) $(CFLAGS) -o stun_keepalive.o stun_keepalive.c
-	$(CC) stun_keepalive.o -o $(STUN_KEEPALIVE)  $(STUN_BIND_LIBRARY)
+	$(CC) stun_keepalive.o -o $(STUN_KEEPALIVE)  -Wl,-Map,keep_alive.map $(STUN_BIND_LIBRARY)
 
 clean_obj:
 	rm -rf $(OBJ)

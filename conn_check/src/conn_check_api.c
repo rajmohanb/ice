@@ -80,7 +80,7 @@ handle cc_start_timer(uint32_t duration, handle arg)
     status = stun_txn_timer_get_txn_handle(arg, &h_txn, &h_txn_inst);
     if (status != STUN_OK) goto ERROR_EXIT;
 
-    status = stun_txn_get_app_param(h_txn_inst, h_txn, (handle *)&session);
+    status = stun_txn_get_app_param(h_txn_inst, h_txn, (handle)&session);
     if (status != STUN_OK) goto ERROR_EXIT;
 
     timer->h_instance = session->instance;

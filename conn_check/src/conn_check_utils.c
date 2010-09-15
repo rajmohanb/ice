@@ -61,28 +61,58 @@ int32_t cc_utils_create_request_msg(
 
 #if 0
     status = stun_attr_create(STUN_ATTR_PRIORITY, &(h_attr[0]));
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "creation of priority attribute failed");
+        goto ERROR_EXIT_PT1;
+    }
 
     status = stun_attr_priority_set_priority(h_attr[0], session->priority);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
     status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Adding of priority attribute failed");
+        goto ERROR_EXIT_PT2;
+    }
 #endif
 
     /** message integrity */
     status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[0]));
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "creation of message integrity attribute failed");
+        goto ERROR_EXIT_PT1;
+    }
 
     status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Adding of message integrity attribute failed");
+        goto ERROR_EXIT_PT2;
+    }
 
     /** fingerprint */
     status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(h_attr[0]));
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "creation of fingerprint attribute failed");
+        goto ERROR_EXIT_PT1;
+    }
 
     status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Adding of fingerprint attribute failed");
+        goto ERROR_EXIT_PT2;
+    }
 
     *h_req = h_msg;
 

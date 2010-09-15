@@ -142,15 +142,23 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 else
                 {
                     valid_pair->local = 
-                        ice_utils_get_local_cand_for_transport_param(media, stun_pkt->transport_param);
+                        ice_utils_get_local_cand_for_transport_param(media, 
+                                stun_pkt->transport_param);
                     valid_pair->remote = 
-                        ice_utils_get_peer_cand_for_pkt_src(media, &(stun_pkt->src));
+                        ice_utils_get_peer_cand_for_pkt_src(media, 
+                                &(stun_pkt->src));
 
                     if (valid_pair->remote == NULL)
                     {
                         ICE_LOG (LOG_SEV_WARNING, 
                             "Ignored binding request from unknown source");
                     }
+
+                    ICE_LOG (LOG_SEV_WARNING, 
+                        "Connectivity check succeeded for component ID %d "\
+                        "of media %p", valid_pair->local->comp_id, media);
+
+                    valid_pair->nominated = true;
                 }
 
                 if(ice_media_utils_have_valid_list(media) == true)

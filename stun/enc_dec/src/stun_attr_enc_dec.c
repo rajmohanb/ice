@@ -383,7 +383,11 @@ int32_t stun_attr_decode_username(u_char *buf_head, u_char **buf,
     pkt += 2;
 
     username->username = stun_calloc(1, username->hdr.length);
-    if(username->username == NULL) return STUN_MEM_ERROR;
+    if(username->username == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto ERROR_EXIT;
+    }
 
     memcpy(username->username, pkt, username->hdr.length);
     pkt +=  username->hdr.length;
@@ -397,6 +401,11 @@ int32_t stun_attr_decode_username(u_char *buf_head, u_char **buf,
     *buf = pkt;
 
     return STUN_OK;
+
+ERROR_EXIT:
+
+    stun_free(username);
+    return status;
 }
 
 /*============================================================================*/
@@ -1005,6 +1014,7 @@ int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf,
 
     stun_software_attr_t *software;
     uint16_t val16;
+    int32_t status;
     u_char *pkt = *buf;
 
     software = (stun_software_attr_t *) 
@@ -1018,7 +1028,11 @@ int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf,
     pkt += 2;
 
     software->software = stun_calloc(1, software->hdr.length);
-    if(software->software == NULL) return STUN_MEM_ERROR;
+    if(software->software == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto ERROR_EXIT;
+    }
 
     memcpy(software->software, pkt, software->hdr.length);
     pkt +=  software->hdr.length;
@@ -1032,7 +1046,13 @@ int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf,
     *buf = pkt;
 
     return STUN_OK;
+
+ERROR_EXIT:
+
+    stun_free(software);
+    return status;
 }
+
 
 /*============================================================================*/
 
