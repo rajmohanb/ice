@@ -18,7 +18,8 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_txn_api.h"
 #include "stun_enc_dec_api.h"
@@ -27,6 +28,7 @@ extern "C" {
 #include "ice_int.h"
 #include "ice_session_fsm.h"
 #include "ice_utils.h"
+
 
 #define ICE_VALIDATE_SESSION_HANDLE(h_session) { \
     for (i = 0; i < ICE_MAX_CONCURRENT_SESSIONS; i++) \

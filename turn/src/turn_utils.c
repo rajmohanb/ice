@@ -18,10 +18,12 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "turn_api.h"
 #include "turn_int.h"
+
 
 int32_t turn_utils_create_request_msg(
                             stun_method_type_t method, handle *h_msg)

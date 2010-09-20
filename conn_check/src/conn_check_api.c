@@ -18,7 +18,7 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_txn_api.h"
 #include "conn_check_api.h"
@@ -235,7 +235,8 @@ int32_t conn_check_create_session(handle h_inst,
 
 
 int32_t conn_check_session_set_peer_transport_params(
-        handle h_inst, handle h_session, u_char *stun_svr_ip, uint32_t port)
+        handle h_inst, handle h_session, stun_inet_addr_type_t stun_svr_type, 
+        u_char *stun_svr_ip, uint32_t port)
 {
     conn_check_instance_t *instance;
     conn_check_session_t *session;
@@ -247,7 +248,8 @@ int32_t conn_check_session_set_peer_transport_params(
     session = (conn_check_session_t *) h_session;
 
     /** TODO - make sure the session exists */
-
+    
+    session->stun_server_type = stun_svr_type;
     stun_memcpy(session->stun_server, stun_svr_ip, STUN_IP_ADDR_MAX_LEN);
     session->stun_port = port;
 

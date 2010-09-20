@@ -18,14 +18,16 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
 #include <netinet/in.h>
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_msg.h"
 #include "stun_enc_dec_api.h"
 #include "stun_enc_dec_int.h"
 #include "stun_attr_enc_dec.h"
 #include "stun_enc_dec_utils.h"
+
 
 static stun_attr_tlv_ops_t stun_attr_ops[] = {
     {
@@ -370,6 +372,7 @@ int32_t stun_attr_decode_username(u_char *buf_head, u_char **buf,
 
     stun_username_attr_t *username;
     uint16_t val16;
+    int32_t status;
     u_char *pkt = *buf;
 
     username = (stun_username_attr_t *) 

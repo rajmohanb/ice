@@ -96,7 +96,8 @@ int32_t conn_check_create_session(handle h_inst,
                 cc_session_type_t sess_type, handle *h_session);
 
 int32_t conn_check_session_set_peer_transport_params(
-        handle h_inst, handle h_session, u_char *stun_svr_ip, uint32_t port);
+        handle h_inst, handle h_session, stun_inet_addr_type_t stun_svr_type, 
+        u_char *stun_svr_ip, uint32_t port);
 
 int32_t conn_check_session_get_app_param(handle h_inst, 
                                     handle h_session, handle *h_param);

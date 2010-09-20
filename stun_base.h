@@ -12,8 +12,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef ICE_TYPES__H
-#define ICE_TYPES__H
+#ifndef STUN_BASE__H
+#define STUN_BASE__H
 
 #ifdef __cplusplus
 extern "C" {

@@ -21,7 +21,8 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 
 
 #define STUN_TXN_ID_BYTES           12

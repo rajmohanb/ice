@@ -85,6 +85,7 @@ typedef struct
     u_char peer_pwd[STUN_MAX_PASSWORD_LEN];
 
     /** peer stun server */
+    stun_inet_addr_type_t stun_server_type;
     u_char stun_server[STUN_IP_ADDR_MAX_LEN];
     uint32_t stun_port;
 

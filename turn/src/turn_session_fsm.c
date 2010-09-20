@@ -18,13 +18,16 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_txn_api.h"
 #include "turn_api.h"
 #include "turn_int.h"
 #include "turn_utils.h"
 #include "turn_session_fsm.h"
+
+
 
 static turn_session_fsm_handler 
     turn_session_fsm[TURN_STATE_MAX][TURN_EVENT_MAX] =

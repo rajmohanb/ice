@@ -20,7 +20,7 @@ extern "C" {
 
 
 #include <math.h>
-#include "types.h"
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"
@@ -967,6 +967,7 @@ int32_t ice_utils_init_connectivity_check(
 
     status = conn_check_session_set_peer_transport_params(h_cc_inst, 
                             pair->h_cc_session, 
+                            pair->remote->transport.type, 
                             pair->remote->transport.ip_addr, 
                             pair->remote->transport.port);
     if (status != STUN_OK)
@@ -1072,6 +1073,7 @@ int32_t ice_utils_create_conn_check_session(
 
     status = conn_check_session_set_peer_transport_params(h_cc_inst, 
                             media->h_cc_svr_session,
+                            pkt->src.host_type,
                             pkt->src.ip_addr,
                             pkt->src.port);
     if (status != STUN_OK)
@@ -1133,7 +1135,8 @@ int32_t ice_utils_nominate_candidate_pair(
 
     status = conn_check_session_set_peer_transport_params(h_cc_inst, 
                             pair->h_cc_session, 
-                            pair->remote->transport.ip_addr, 
+                            pair->remote->transport.type,
+                            pair->remote->transport.ip_addr,
                             pair->remote->transport.port);
     if (status != STUN_OK)
     {

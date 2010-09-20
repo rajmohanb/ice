@@ -21,7 +21,8 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 
 
 #define MAX_STUN_ATTRIBUTES         12
@@ -103,6 +104,7 @@ typedef enum {
 
 
 typedef enum {
+    STUN_ADDR_FAMLY_INVALID = 0x00,
     STUN_ADDR_FAMILY_IPV4 = 0x01,
     STUN_ADDR_FAMILY_IPV6,
 } stun_addr_family_type_t;

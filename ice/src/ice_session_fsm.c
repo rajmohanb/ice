@@ -18,7 +18,8 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"

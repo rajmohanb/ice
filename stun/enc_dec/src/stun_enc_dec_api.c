@@ -19,7 +19,7 @@ extern "C" {
 /******************************************************************************/
 
 #include <netinet/in.h>
-#include "types.h"
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_msg.h"
 #include "stun_enc_dec_int.h"

@@ -20,7 +20,7 @@ extern "C" {
 
 #include <string.h>
 
-#include "types.h"
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_msg.h"
 #include "stun_utils.h"

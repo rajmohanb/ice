@@ -21,7 +21,8 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 
 
 #define STUN_MSG_HDR_MSG_LENGTH_OFFSET      2

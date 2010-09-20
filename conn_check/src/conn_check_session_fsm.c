@@ -18,13 +18,16 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+
+#include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_txn_api.h"
 #include "conn_check_api.h"
 #include "conn_check_int.h"
 #include "conn_check_utils.h"
 #include "conn_check_session_fsm.h"
+
+
 
 static conn_check_session_fsm_handler 
     conn_check_session_fsm[CC_STATE_MAX][CONN_CHECK_EVENT_MAX] =
@@ -72,6 +75,7 @@ static conn_check_session_fsm_handler
         cc_ignore_event,
     }
 };
+
 
 int32_t cc_initiate (conn_check_session_t *session, handle h_msg)
 {

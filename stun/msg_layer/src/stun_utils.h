@@ -21,7 +21,7 @@ extern "C" {
 
 /******************************************************************************/
 
-#include "types.h"
+#include "stun_base.h"
 
 
 handle stun_utils_create_attr(stun_attribute_type_t attr_type);
