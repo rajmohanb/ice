@@ -61,8 +61,8 @@ typedef struct
 
 
 typedef int32_t (*conn_check_session_nwk_send_cb) (handle h_msg, 
-                        u_char *ip_addr, uint32_t port, handle transport_param, 
-                        handle app_param);
+                    stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+                    uint32_t port, handle transport_param, handle app_param);
 typedef handle (*conn_check_session_start_timer_cb) (uint32_t duration, handle arg);
 typedef int32_t (*conn_check_session_stop_timer_cb) (handle timer_id);
 typedef void (*conn_check_session_state_change_cb) (handle h_inst, 

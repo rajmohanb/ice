@@ -58,9 +58,8 @@ int32_t cc_nwk_send_cb_fxn(handle h_msg, handle h_param)
     conn_check_session_t *session = (conn_check_session_t *) h_param;
 
     return session->instance->nwk_send_cb (h_msg, 
-                                    session->stun_server, session->stun_port, 
-                                    session->transport_param, 
-                                    session->app_param);
+            session->stun_server_type, session->stun_server, 
+            session->stun_port, session->transport_param, session->app_param);
 }
 
 

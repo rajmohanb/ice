@@ -65,6 +65,7 @@ int32_t turn_nwk_cb_fxn (handle h_msg, handle h_param)
     /* TODO - what about when sending rtp data? */
 
     return session->instance->nwk_send_cb(h_msg, 
+                    session->cfg.server.host_type,
                     session->cfg.server.ip_addr,
                     session->cfg.server.port, 
                     session->transport_param,

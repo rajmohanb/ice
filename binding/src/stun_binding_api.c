@@ -41,7 +41,7 @@ int32_t stun_binding_create_instance(handle *h_inst)
             (sizeof(handle) * STUN_BINDING_MAX_CONCURRENT_SESSIONS));
 
     status = stun_txn_create_instance(
-                        STUN_BINDING_TXN_TABLE_SIZE, &(instance->h_txn_inst));
+                    STUN_BINDING_TXN_TABLE_SIZE, &(instance->h_txn_inst));
     if (status == STUN_OK)
     {
         *h_inst = (handle) instance;
@@ -65,9 +65,8 @@ int32_t stun_binding_nwk_send_cb_fxn(handle h_msg, handle h_param)
                                 (stun_binding_session_t *) h_param;
 
     return session->instance->nwk_send_cb (h_msg, 
-                                    session->stun_server, session->stun_port, 
-                                    session->transport_param, 
-                                    session->app_param);
+            session->server_type, session->stun_server, session->stun_port, 
+            session->transport_param, session->app_param);
 }
 
 
@@ -247,7 +246,8 @@ int32_t stun_binding_session_get_app_param(handle h_inst,
 }
 
 int32_t stun_binding_session_set_stun_server(handle h_inst, 
-                handle h_session, u_char *stun_srvr, uint32_t stun_port)
+                    handle h_session, stun_inet_addr_type_t stun_srvr_type, 
+                    u_char *stun_srvr, uint32_t stun_port)
 {
     stun_binding_instance_t *instance;
     stun_binding_session_t *session;
@@ -265,6 +265,7 @@ int32_t stun_binding_session_set_stun_server(handle h_inst,
 
     if (i == STUN_BINDING_MAX_CONCURRENT_SESSIONS) return STUN_INVALID_PARAMS;
 
+    session->server_type = stun_srvr_type;
     stun_strncpy((char *)session->stun_server, 
                         (char *)stun_srvr, STUN_IP_ADDR_MAX_LEN - 1);
     session->stun_port = stun_port;

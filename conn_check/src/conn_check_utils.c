@@ -312,7 +312,6 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     uint32_t num;
     s_char software[MAX_STR_LEN];
     handle h_msg, h_req_attr[1], h_resp_attr[1];
-    stun_addr_family_type_t family;
     stun_addr_family_type_t addr_family;
 
     h_msg = NULL;
@@ -374,9 +373,9 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
         goto ERROR_EXIT_PT1;
     }
 
-    if (session->stun_server_type == HOST_ADDR_IPV4) {
+    if (session->stun_server_type == STUN_INET_ADDR_IPV4) {
         addr_family = STUN_ADDR_FAMILY_IPV4;
-    } else if (session->stun_server_type == HOST_ADDR_IPV6) {
+    } else if (session->stun_server_type == STUN_INET_ADDR_IPV6) {
         addr_family = STUN_ADDR_FAMILY_IPV6;
     }
 

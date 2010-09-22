@@ -150,7 +150,7 @@ int32_t turn_utils_extract_data_from_alloc_resp(
     if (status != STUN_OK) return status;
 
     /** turn rfc supports IPv4 only */
-    session->mapped_addr.host_type = HOST_ADDR_IPV4;
+    session->mapped_addr.host_type = STUN_INET_ADDR_IPV4;
 
 
     num = 1;
@@ -168,7 +168,7 @@ int32_t turn_utils_extract_data_from_alloc_resp(
     if (status != STUN_OK) return status;
 
     /** turn rfc supports IPv4 only */
-    session->relay_addr.host_type = HOST_ADDR_IPV4;
+    session->relay_addr.host_type = STUN_INET_ADDR_IPV4;
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 

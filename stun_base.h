@@ -120,9 +120,9 @@ typedef enum
 
 typedef enum
 {
-    HOST_ADDR_IPV4,
-    HOST_ADDR_IPV6,
-    HOST_ADDR_MAX,
+    STUN_INET_ADDR_IPV4,
+    STUN_INET_ADDR_IPV6,
+    STUN_INET_ADDR_MAX,
 } stun_inet_addr_type_t;
 
 

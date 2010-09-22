@@ -103,7 +103,8 @@ void app_timer_expiry_cb (void *timer_id, void *arg)
     return;
 }
 
-int32_t app_nwk_send_msg (handle h_msg, u_char *ip_addr, 
+int32_t app_nwk_send_msg (handle h_msg, 
+        stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
         uint32_t port, handle transport_param, handle app_param)
 {
     unsigned int sent_bytes, buf_len;
@@ -182,14 +183,17 @@ int main (int argc, char *argv[])
     bool_t o_error = false;
     struct addrinfo hints, *servinfo, *p;
     char temp_port[10] = {0};
+    stun_inet_addr_type_t addr_type;
 
     /** initialize platform library */
     platform_init();
 
 #ifdef TEST_IPV6
     printf("Running in IPv6 mode...\n");
+    addr_type = STUN_INET_ADDR_IPV6;
 #else
     printf("Running in IPv4 mode...\n");
+    addr_type = STUN_INET_ADDR_IPV4;
 #endif
 
     memset(&hints, 0, sizeof(hints));
@@ -223,13 +227,6 @@ int main (int argc, char *argv[])
             perror("connect: ");
             continue;
         }
-#if 0
-        if (platform_bind_socket(sockfd_stun, p->ai_addr, p->ai_addrlen) == -1) {
-            close(sockfd_stun);
-            perror("listener: bind");
-            continue;
-        }
-#endif
 
         break;
     }
@@ -243,25 +240,6 @@ int main (int argc, char *argv[])
 
     printf("listener: waiting to recvfrom...\n");
     
-#if 0
-    /** create a transport blob */
-    sockfd_stun = platform_create_socket(AF_INET, SOCK_DGRAM, 0);
-    if (sockfd_stun == -1) return STUN_INT_ERROR;
-
-    memset(&local_addr, 0, sizeof(local_addr));
-    local_addr.sin_family = AF_INET;
-    local_addr.sin_port = htons(LOCAL_STUN_HOST_PORT);
-    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    status = platform_bind_socket(sockfd_stun, 
-            (struct sockaddr *)&local_addr, sizeof(local_addr));
-    if (status == -1)
-    {
-        app_log (LOG_SEV_ERROR, 
-                "binding to port failed... perhaps port already being used?\n");
-        return 0;
-    }
-#endif
-
     app_log(LOG_SEV_DEBUG, 
             "Transport param for binding connection :-> %d", sockfd_stun);
 
@@ -301,7 +279,7 @@ int main (int argc, char *argv[])
         }
 
         status = stun_binding_session_set_stun_server(
-                h_inst, h_session, (u_char *)STUN_SRV_IP, STUN_SRV_PORT);
+                h_inst, h_session, addr_type, (u_char *)STUN_SRV_IP, STUN_SRV_PORT);
         if (status != STUN_OK)
         {
             app_log (LOG_SEV_ERROR, 

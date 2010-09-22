@@ -139,6 +139,7 @@ int32_t ice_utils_get_media_params_in_running_state(
                 media_cand->protocol = ice_cand->transport.protocol;
                 media_cand->priority = ice_cand->priority;
 
+                media_cand->ip_addr_type = ice_cand->transport.type;
                 stun_memcpy(media_cand->ip_addr, 
                                         ice_cand->transport.ip_addr,
                                         ICE_IP_ADDR_MAX_LEN);
@@ -229,6 +230,7 @@ int32_t ice_utils_get_media_params_in_completed_state(
         cand_param->protocol = prio_pair->local->transport.protocol;
         cand_param->priority = prio_pair->local->priority;
 
+        cand_param->ip_addr_type = prio_pair->local->transport.type;
         stun_memcpy(cand_param->ip_addr, 
                                 prio_pair->local->transport.ip_addr,
                                 ICE_IP_ADDR_MAX_LEN);
@@ -342,9 +344,8 @@ int32_t ice_utils_set_peer_media_params(
              * attribute. This has to be identified by the ice agent
              * by looking at the length of the ip address string and
              * by parsing it.
-             * TODO - till we support IPv6 
              */
-            cand->transport.type = HOST_ADDR_IPV4;
+            cand->transport.type = peer_cand->ip_addr_type;
 
             stun_memcpy(cand->transport.ip_addr, 
                             peer_cand->ip_addr, ICE_IP_ADDR_MAX_LEN);
@@ -358,8 +359,10 @@ int32_t ice_utils_set_peer_media_params(
                     peer_cand->foundation, ICE_FOUNDATION_MAX_LEN);
             cand->comp_id = peer_cand->component_id;
 
-            /** TODO - should we care about the following */
-            /** base, transport_param, default_cand */
+            /** 
+             * should we care about the following?
+             * base, transport_param, default_cand 
+             */
 
             x++;
         }
@@ -722,10 +725,10 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
             if (cand->cand_type == INVALID_CAND_TYPE)
                 continue;
 
-            ICE_LOG(LOG_SEV_INFO, "a=%s %d %d %lld %s %d typ %d %s %d",
+            ICE_LOG(LOG_SEV_INFO, "a=%s %d %d %lld %d %s %d typ %d %s %d",
                     cand->foundation, cand->component_id,
-                    cand->protocol, cand->priority,
-                    cand->ip_addr, cand->port,
+                    cand->protocol, cand->priority, 
+                    cand->ip_addr_type, cand->ip_addr, cand->port,
                     cand->cand_type, cand->rel_addr,
                     cand->rel_port);
         }
@@ -1258,6 +1261,20 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
     }
 
     ICE_LOG(LOG_SEV_DEBUG, "returning from ice_media_utils_have_valid_list()");
+
+    if (rtp_valid == true)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Connectivity check for RTP component has succeeded "\
+                "for media %p", media);
+    }
+
+    if (rtcp_valid == true)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Connectivity check for RTCP component has succeeded "\
+                "for media %p", media);
+    }
 
     if ((rtp_valid == true) && (media->num_peer_comp == 1))
         return true;

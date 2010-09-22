@@ -14,7 +14,11 @@
 12. Verifying checksum(fingerprint) for incoming messages which have fingerprint attribute in them - DONE = June 30, 2010
 13. Move ice session handle and media handle validation for ice lite api into a macro. This will move repeated code into a single place, reduce number of lines and aid modularity - DONE = July 05, 2010.
 14. Rename stun_bind sample program to stun_keepalive? - DONE = July 12, 2010
-10. instead of using max allowed static buffers in attributes, use pointers and allocate as needed. For eg: struct_stun_realm_attr uses realm as char arrary of size MAX_REALM_VAL_BYTES(763) bytes. In reality, this will be significantly less. So using a pointer and allocating as required will significantly reduce the memory used during running. Especially good for memory startved hosts and servers - DONE = July 25, 2010
+15. instead of using max allowed static buffers in attributes, use pointers and allocate as needed. For eg: struct_stun_realm_attr uses realm as char arrary of size MAX_REALM_VAL_BYTES(763) bytes. In reality, this will be significantly less. So using a pointer and allocating as required will significantly reduce the memory used during running. Especially good for memory startved hosts and servers - DONE = July 25, 2010
+16. update the ice_lite sample to demonstrate the ice media restart functionality.
+17. update the ice_lite sample to demostrate the addition and deletion of media streams.
+18. Add ip address type in nwk_send_callback as one more parameter.
+19. rename the values of the enumerator stun_inet_addr_type_t.
 
 
 
@@ -28,18 +32,18 @@
 7. Write a utility routine to dump the STUN messages, so that all incoming and outgoing messages can be dumped. This will help in inter-op debugging.
 8. replace inet_aton() with inet_pton()?
 9. replace all platform calls with macros that is malloc() with stun_malloc()
-10. update the ice_lite sample to demonstrate the ice media restart functionality.
-11. update the ice_lite sample to demostrate the addition and deletion of media streams.
-12. Is it possible to make use of existing candidate pairs to store the valid and nominated ones than storing them as separate array in another copy?
-13. Add filename, line number and function name to the log parameters before passing to application log function.
-14. Remove "TODO - till we support IPv6" in ice_utils_set_peer_media_params() api in ice_utils.c
-15 In most of the layers, especially stun encoder and decoder layer, sizeof() is used multiple times for data structures like uint16. Instead of calculating this every time, better to keep it calculated once and just reuse. This will speed up the execution ana avoid unnecessary computation. This must be done for all such things.
-16. support rfc3484 - priority for multiple IPv6 candidates
-17. Need to validate the media handle before passing to media fsm. This needs to be done at multiple places in ice_session_fsm.c especially when media handle is passed directly by the application via an api.
-18. Provision to build both release and debug mode from makefile
-19. Add an api in msg_layer to add multiple headers at once, rather than one by one
-20. Extend the main makefile to take architecture endian type (little endian or big endian) and build type (debug or release) and pass on the CFLAGS related parameters accordingly.
-21. replace remaining usage's of inet_aton() with inet_pton() in stun encoder and decoder library source
+10. Is it possible to make use of existing candidate pairs to store the valid and nominated ones than storing them as separate array in another copy?
+11. Add filename, line number and function name to the log parameters before passing to application log function.
+12. Remove "TODO - till we support IPv6" in ice_utils_set_peer_media_params() api in ice_utils.c
+13 In most of the layers, especially stun encoder and decoder layer, sizeof() is used multiple times for data structures like uint16. Instead of calculating this every time, better to keep it calculated once and just reuse. This will speed up the execution ana avoid unnecessary computation. This must be done for all such things.
+14. support rfc3484 - priority for multiple IPv6 candidates
+15. Need to validate the media handle before passing to media fsm. This needs to be done at multiple places in ice_session_fsm.c especially when media handle is passed directly by the application via an api.
+16. Provision to build both release and debug mode from makefile
+17. Add an api in msg_layer to add multiple headers at once, rather than one by one
+18. Extend the main makefile to take architecture endian type (little endian or big endian) and build type (debug or release) and pass on the CFLAGS related parameters accordingly.
+19. replace remaining usage's of inet_aton() with inet_pton() in stun encoder and decoder library source
+
+20. rename ice_cand_type_t enumerator values to be more appropriate.
 
 ICE Full?
 1. As per ICE spec, the IP address version type needs to be cross checked while forming candidates?

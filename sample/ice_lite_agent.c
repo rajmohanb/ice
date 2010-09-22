@@ -113,13 +113,27 @@ void app_timer_expiry_cb (void *timer_id, void *arg)
 }
 
 int32_t app_nwk_send_msg (u_char *buf, uint32_t buf_len, 
-                u_char *ip_addr, uint32_t port, handle param)
+                    stun_inet_addr_type_t ip_addr_type, u_char *ip_addr,
+                    uint32_t port, handle param)
 {
-    int sent_bytes;
+    int sent_bytes = 0;
     int sock_fd = (int) param;
 
-    sent_bytes = platform_socket_sendto(sock_fd, buf, 
+    if (ip_addr_type == STUN_INET_ADDR_IPV4)
+    {
+        sent_bytes = platform_socket_sendto(sock_fd, buf, 
                             buf_len, 0, AF_INET, port, (char *)ip_addr);
+    } 
+    else if (ip_addr_type == STUN_INET_ADDR_IPV6) 
+    {
+        sent_bytes = platform_socket_sendto(sock_fd, buf, 
+                            buf_len, 0, AF_INET6, port, (char *)ip_addr);
+    }
+    else
+    {
+        app_log (LOG_SEV_INFO, 
+                "Invalid IP address family type. Sending of STUN message failed");
+    }
 
     return sent_bytes;
 }
@@ -185,9 +199,9 @@ static void encode_session(handle h_inst, handle h_session)
             /** log the default candidate for each component */
             if (media_comp->comp_id == RTP_COMPONENT_ID)
             {
-                if (media_comp->default_dest.host_type == HOST_ADDR_IPV4)
+                if (media_comp->default_dest.host_type == STUN_INET_ADDR_IPV4)
                     printf ("c=IN IP4 %s\n", media_comp->default_dest.ip_addr);
-                else if (media_comp->default_dest.host_type == HOST_ADDR_IPV6)
+                else if (media_comp->default_dest.host_type == STUN_INET_ADDR_IPV6)
                     printf ("c=IN IP6 %s\n", media_comp->default_dest.ip_addr);
                 else
                 {
@@ -198,11 +212,11 @@ static void encode_session(handle h_inst, handle h_session)
             }
             else if (media_comp->comp_id == RTCP_COMPONENT_ID)
             {
-                if (media_comp->default_dest.host_type == HOST_ADDR_IPV4)
+                if (media_comp->default_dest.host_type == STUN_INET_ADDR_IPV4)
                     printf ("a=rtcp:%d IN IP4 %s\n", 
                                     media_comp->default_dest.port, 
                                     media_comp->default_dest.ip_addr);
-                else if (media_comp->default_dest.host_type == HOST_ADDR_IPV6)
+                else if (media_comp->default_dest.host_type == STUN_INET_ADDR_IPV6)
                     printf ("a=rtcp:%d IN IP6 %s\n", 
                                     media_comp->default_dest.port, 
                                     media_comp->default_dest.ip_addr);
@@ -255,8 +269,8 @@ static void encode_session(handle h_inst, handle h_session)
             {
                 stun_inet_addr_t *rem = &media_comp->remote_cands[cand_count];
 
-                if((rem->host_type == HOST_ADDR_IPV4) || 
-                        (rem->host_type == HOST_ADDR_IPV6))
+                if((rem->host_type == STUN_INET_ADDR_IPV4) || 
+                        (rem->host_type == STUN_INET_ADDR_IPV6))
                 {
                     printf ("a=remote-candidates:%d %s %d\n", 
                             media_comp->comp_id, rem->ip_addr, rem->port);
@@ -420,7 +434,7 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
                 strcpy((char *)cand->foundation, foundation);
                 cand->priority = prio;
 
-                cand->protocol = HOST_ADDR_IPV4;
+                cand->protocol = STUN_INET_ADDR_IPV4;
                 
                 strcpy((char *)cand->ip_addr, ipaddr);
                 cand->port = port;
@@ -712,9 +726,9 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     sockfd_ice[num_fds++] = temp_sockfd;
 
 #ifdef ICE_IPV6
-    media->host_cands[0].type = HOST_ADDR_IPV6;
+    media->host_cands[0].type = STUN_INET_ADDR_IPV6;
 #else
-    media->host_cands[0].type = HOST_ADDR_IPV4;
+    media->host_cands[0].type = STUN_INET_ADDR_IPV4;
 #endif
     strcpy((char *)media->host_cands[0].ip_addr, LOCAL_IP);
     media->host_cands[0].port = rtp_port;
@@ -749,9 +763,9 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     sockfd_ice[num_fds++] = temp_sockfd;
 
 #ifdef ICE_IPV6
-    media->host_cands[1].type = HOST_ADDR_IPV6;
+    media->host_cands[1].type = STUN_INET_ADDR_IPV6;
 #else
-    media->host_cands[1].type = HOST_ADDR_IPV4;
+    media->host_cands[1].type = STUN_INET_ADDR_IPV4;
 #endif
     strcpy((char *)media->host_cands[1].ip_addr, LOCAL_IP);
     media->host_cands[1].port = rtcp_port;
@@ -995,7 +1009,7 @@ int main (int argc, char *argv[])
                 {
                     pkt.h_msg = h_rcvdmsg;
                     pkt.transport_param = (handle) fd_list[i];
-                    pkt.src.host_type = HOST_ADDR_IPV4;
+                    pkt.src.host_type = STUN_INET_ADDR_IPV4;
                     strncpy((char *)pkt.src.ip_addr, (char *)address, 16);
                     pkt.src.port = port;
 

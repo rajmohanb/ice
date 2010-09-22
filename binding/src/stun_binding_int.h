@@ -43,6 +43,7 @@ typedef struct
 {
     stun_binding_instance_t *instance;
 
+    stun_inet_addr_type_t server_type;
     u_char stun_server[STUN_IP_ADDR_MAX_LEN];
     uint32_t stun_port;
 

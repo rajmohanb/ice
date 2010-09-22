@@ -202,8 +202,8 @@ static int32_t ice_stop_timer(handle timer_id)
 
 
 static int32_t ice_format_and_send_message(handle h_msg, 
-                            u_char *ip_addr, uint32_t port,
-                            handle transport_param, handle app_param)
+                stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+                uint32_t port, handle transport_param, handle app_param)
 {
     u_char *buf;
     uint32_t sent_bytes, buf_len, status;
@@ -215,7 +215,8 @@ static int32_t ice_format_and_send_message(handle h_msg,
     if ((h_msg == NULL) || (ip_addr == NULL) || 
                             (port == 0) || (transport_param == NULL))
     {
-        ICE_LOG (LOG_SEV_ERROR, "Invalid parameter, hence not sending message");
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Invalid parameter, hence not sending message");
         return STUN_INVALID_PARAMS;
     }
 
@@ -249,8 +250,8 @@ static int32_t ice_format_and_send_message(handle h_msg,
         return STUN_INVALID_PARAMS;
     }
 
-    sent_bytes = ice_session->instance->nwk_send_cb(
-                            buf, buf_len, ip_addr, port, transport_param);
+    sent_bytes = ice_session->instance->nwk_send_cb(buf, 
+                    buf_len, ip_addr_type, ip_addr, port, transport_param);
 
     stun_free(buf);
 

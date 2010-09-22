@@ -81,7 +81,8 @@ typedef struct
 
 
 typedef int32_t (*ice_session_nwk_send_cb) (u_char *buf, 
-            uint32_t buf_len, u_char *ip_addr, uint32_t port, handle param);
+                        uint32_t buf_len, stun_inet_addr_type_t ip_addr_type, 
+                        u_char *ip_addr, uint32_t port, handle param);
 typedef handle (*ice_session_start_timer_cb) (uint32_t duration, handle arg);
 typedef int32_t (*ice_session_stop_timer_cb) (handle timer_id);
 
@@ -189,6 +190,7 @@ typedef struct
     uint32_t component_id;
     ice_transport_type_t protocol;
     uint64_t priority;
+    stun_inet_addr_type_t ip_addr_type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
     uint32_t port;
     ice_cand_type_t cand_type;
