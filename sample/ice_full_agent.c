@@ -241,7 +241,7 @@ static void encode_session(handle h_inst, handle h_session)
             {
                 ice_cand_params_t *cand = &media_comp->cands[cand_count];
 
-                if (cand->cand_type == INVALID_CAND_TYPE) continue;
+                if (cand->cand_type == ICE_CAND_TYPE_INVALID) continue;
 
                 printf ("a=candidate:%s %u", cand->foundation, cand->component_id);
                 if (cand->protocol == ICE_TRANSPORT_UDP)
@@ -252,18 +252,18 @@ static void encode_session(handle h_inst, handle h_session)
                 printf (" %lld %s %d",  cand->priority, 
                                         cand->ip_addr, cand->port);
 
-                if (cand->cand_type == HOST_CANDIDATE)
+                if (cand->cand_type == ICE_CAND_TYPE_HOST)
                     printf (" typ host\n"); 
-                else if (cand->cand_type == SERVER_REFLEXIVE_CANDIDATE)
+                else if (cand->cand_type == ICE_CAND_TYPE_SRFLX)
                     printf (" typ srflx"); 
-                else if (RELAYED_CANDIDATE == cand->cand_type)
+                else if (ICE_CAND_TYPE_RELAYED == cand->cand_type)
                     printf (" typ relay"); 
-                else if (PEER_REFLEXIVE_CANDIDATE == cand->cand_type)
+                else if (ICE_CAND_TYPE_PRFLX == cand->cand_type)
                     printf (" typ prflx"); 
                 else
                     printf ("Invalid ICE candidate type\n");
 
-                if (cand->cand_type != HOST_CANDIDATE)
+                if (cand->cand_type != ICE_CAND_TYPE_HOST)
                     printf (" raddr %s rport %d\n", 
                                 cand->rel_addr, cand->rel_port);
             }
@@ -424,11 +424,11 @@ static void ice_input_remote_sdp(handle h_inst, handle h_session, handle h_media
                 comp->num_cands++;
                 
                 if (strcmp(type, "host")==0)
-                    cand->cand_type = HOST_CANDIDATE;
+                    cand->cand_type = ICE_CAND_TYPE_HOST;
                 else if (strcmp(type, "srflx")==0)
-                    cand->cand_type = SERVER_REFLEXIVE_CANDIDATE;
+                    cand->cand_type = ICE_CAND_TYPE_SRFLX;
                 else if (strcmp(type, "relay")==0)
-                    cand->cand_type = RELAYED_CANDIDATE;
+                    cand->cand_type = ICE_CAND_TYPE_RELAYED;
                 else {
                     printf ("Error: invalid candidate type '%s'", type);
                     goto on_error;
@@ -594,15 +594,15 @@ void app_parse_candidate_line(u_char *cand_line, ice_cand_params_t *cand)
     if (!strcasecmp(protocol, "UDP")) { cand->protocol = ICE_TRANSPORT_UDP; }
 
     if (!strcasecmp(hosttype, "host"))
-        cand->cand_type = HOST_CANDIDATE;
+        cand->cand_type = ICE_CAND_TYPE_HOST;
     else if (!strcasecmp(hosttype, "srflx"))
-        cand->cand_type = SERVER_REFLEXIVE_CANDIDATE;
+        cand->cand_type = ICE_CAND_TYPE_SRFLX;
     else if (!strcasecmp(hosttype, "relay"))
-        cand->cand_type = RELAYED_CANDIDATE;
+        cand->cand_type = ICE_CAND_TYPE_RELAYED;
     else if (!strcasecmp(hosttype, "prflx"))
-        cand->cand_type = PEER_REFLEXIVE_CANDIDATE;
+        cand->cand_type = ICE_CAND_TYPE_PRFLX;
     else 
-        cand->cand_type = INVALID_CAND_TYPE;
+        cand->cand_type = ICE_CAND_TYPE_INVALID;
 
     return;
 }

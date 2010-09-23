@@ -416,13 +416,13 @@ uint64_t ice_utils_compute_priority(ice_candidate_t *cand)
 
     if (cand == NULL) return STUN_INVALID_PARAMS;
 
-    if (cand->type == HOST_CANDIDATE)
+    if (cand->type == ICE_CAND_TYPE_HOST)
         type_pref = CAND_TYPE_PREF_HOST_CANDIDATE;
-    else if (cand->type == PEER_REFLEXIVE_CANDIDATE)
+    else if (cand->type == ICE_CAND_TYPE_PRFLX)
         type_pref = CAND_TYPE_PREF_PRFLX_CANDIDATE;
-    else if (cand->type == SERVER_REFLEXIVE_CANDIDATE)
+    else if (cand->type == ICE_CAND_TYPE_SRFLX)
         type_pref = CAND_TYPE_PREF_SRFLX_CANDIDATE;
-    else if (cand->type == RELAYED_CANDIDATE)
+    else if (cand->type == ICE_CAND_TYPE_RELAYED)
         type_pref = CAND_TYPE_PREF_RELAY_CANDIDATE;
     else 
         return STUN_INVALID_PARAMS;
@@ -501,14 +501,14 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media)
     /** form the candidate pairs */
     for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
     {
-        if (media->as_local_cands[i].type == INVALID_CAND_TYPE)
+        if (media->as_local_cands[i].type == ICE_CAND_TYPE_INVALID)
             continue;
 
         local = &media->as_local_cands[i];
 
         for (j = 0; j < ICE_CANDIDATES_MAX_SIZE; j++)
         {
-            if (media->as_remote_cands[j].type == INVALID_CAND_TYPE)
+            if (media->as_remote_cands[j].type == ICE_CAND_TYPE_INVALID)
                 continue;
 
             remote = &media->as_remote_cands[j];
@@ -722,7 +722,7 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
         {
             ice_cand_params_t *cand = &media_comp->cands[k];
 
-            if (cand->cand_type == INVALID_CAND_TYPE)
+            if (cand->cand_type == ICE_CAND_TYPE_INVALID)
                 continue;
 
             ICE_LOG(LOG_SEV_INFO, "a=%s %d %d %lld %d %s %d typ %d %s %d",
@@ -987,7 +987,7 @@ int32_t ice_utils_copy_media_host_candidates(
         cand->transport_param = host_comp->transport_param;
 
         /** initialize the rest */
-        cand->type = HOST_CANDIDATE;
+        cand->type = ICE_CAND_TYPE_HOST;
         cand->priority = ice_utils_compute_priority(cand);
 
         /**
@@ -1134,14 +1134,14 @@ void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
         cand1 = &media->as_local_cands[i];
         found_similar = false;
 
-        if (cand1->type == INVALID_CAND_TYPE)
+        if (cand1->type == ICE_CAND_TYPE_INVALID)
             continue;
 
         for (j = 0; j < i; j++)
         {
             cand2 = &media->as_local_cands[j];
 
-            if (cand2->type == INVALID_CAND_TYPE)
+            if (cand2->type == ICE_CAND_TYPE_INVALID)
                 continue;
 
             /** check for same stun server and same host */
@@ -1178,7 +1178,7 @@ handle ice_media_utils_get_base_cand_for_comp_id(
     for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
     {
         if ((media->as_local_cands[i].comp_id == comp_id) &&
-            (media->as_local_cands[i].type == HOST_CANDIDATE))
+            (media->as_local_cands[i].type == ICE_CAND_TYPE_HOST))
         {
             base = (handle) &media->as_local_cands[i];
             break;
@@ -1199,7 +1199,7 @@ ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
     for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
     {
         cand = &media->as_remote_cands[i];
-        if (cand->type == INVALID_CAND_TYPE) continue;
+        if (cand->type == ICE_CAND_TYPE_INVALID) continue;
 
         if ((cand->transport.type == src->host_type) &&
             (cand->transport.port == src->port) &&
@@ -1224,7 +1224,7 @@ ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
     for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
     {
         cand = &media->as_local_cands[i];
-        if (cand->type == INVALID_CAND_TYPE) continue;
+        if (cand->type == ICE_CAND_TYPE_INVALID) continue;
 
         if (cand->transport_param == transport_param)
         {
