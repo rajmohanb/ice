@@ -4,7 +4,7 @@ their functionality
 
 1. readme - this file
 
-2. types.h - provides platform abstraction
+2. stun_base.h - provides platform abstraction
 
 3. makefile - top level makefile
 
