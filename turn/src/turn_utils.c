@@ -128,6 +128,117 @@ int32_t turn_utils_create_alloc_req_msg_with_credential(
 }
 
 
+
+int32_t turn_utils_create_dealloc_req_msg(
+                            turn_session_t *session, handle *h_newmsg)
+{
+    int32_t status;
+    handle h_attr[5], h_msg;
+
+    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);
+    if (status != STUN_OK) return status;
+
+#if 0
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(h_attr[0]));
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_username_set_user_name(h_attr[0], 
+                            session->cfg.username, 
+                            strlen((char *)session->cfg.username));
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[0]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_NONCE, &(h_attr[1]));
+    if (status != STUN_OK) return status;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                                session->h_resp, STUN_ATTR_NONCE, &h_temp, &num);
+    if (status != STUN_OK) return status;
+
+    len = 1000;
+    status = stun_attr_nonce_get_nonce(h_temp, buf, &len);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_nonce_set_nonce(h_attr[1], buf, len);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[1]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_REALM, &(h_attr[2]));
+    if (status != STUN_OK) return status;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    session->h_resp, STUN_ATTR_REALM, &h_temp, &num);
+    if (status != STUN_OK) return status;
+
+    len = 1000;
+    status = stun_attr_realm_get_realm(h_temp, buf, &len);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_realm_set_realm(h_attr[2], buf, len);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[2]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, &(h_attr[3]));
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_requested_transport_set_protocol(
+                                        h_attr[3], STUN_TRANSPORT_UDP);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[3]);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[4]));
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[4]);
+    if (status != STUN_OK) return status;
+#endif
+
+    status = stun_attr_create(STUN_ATTR_LIFETIME, &(h_attr[0]));
+    if (status != STUN_OK)
+    {
+        goto ERROR_EXIT_PT1;
+    }
+
+    status = stun_attr_lifetime_set_duration(h_attr[0], 0);
+    if (status != STUN_OK)
+    {
+        goto ERROR_EXIT_PT2;
+    }
+
+    status = stun_msg_add_attribute(h_msg, h_attr[0]);
+    if (status != STUN_OK)
+    {
+        goto ERROR_EXIT_PT2;
+    }
+
+    *h_newmsg = h_msg;
+
+    return status;
+
+ERROR_EXIT_PT2:
+    stun_attr_destroy(h_attr[0]);
+
+ERROR_EXIT_PT1:
+    stun_msg_destroy(h_msg);
+
+    return status;
+}
+
+
+
 int32_t turn_utils_extract_data_from_alloc_resp(
                                 turn_session_t *session, handle h_msg)
 {
@@ -188,55 +299,31 @@ int32_t turn_utils_extract_data_from_alloc_resp(
 
 
 
-#if 0
-int32_t turn_utils_get_app_data_for_current_state(
-                                turn_session_t *session, handle *data)
-{
-    switch(session->state)
-    {
-        case TURN_OG_ALLOCATED:
-        {
-            turn_alloc_resp_t *state_data;
-
-            state_data = (turn_alloc_resp_t *) 
-                        stun_malloc (sizeof(turn_alloc_resp_t));
-            if (state_data == NULL)
-                return STUN_MEM_ERROR;
-
-            stun_memcpy(state_data->relay_cand_ip, 
-                        session->relay_ip_addr, TURN_SVR_IP_ADDR_MAX_LEN);
-            state_data->relay_cand_port = session->relay_port;
-
-            stun_memcpy(state_data->srflx_cand_ip, 
-                        session->srflx_ip_addr, TURN_SVR_IP_ADDR_MAX_LEN);
-            state_data->srflx_cand_port = session->srflx_port;
-
-            state_data->lifetime = session->lifetime;
-
-            state_data->h_session = session;
-
-            *data = state_data;
-        }
-        break;
-        
-        case TURN_IDLE:
-        case TURN_OG_ALLOCATING:
-        case TURN_OG_CREATING_PERM:
-        case TURN_OG_ACTIVE:
-        default:
-            break;
-    }
-
-    return STUN_OK;
-}
-#endif
-
-
 int32_t turn_session_utils_notify_state_change_event(turn_session_t *session)
 {
+    int32_t i, status = STUN_OK;
+    turn_instance_t *instance = session->instance;
+
     session->instance->state_change_cb(
                     session->instance, session,  session->state);
-    return STUN_OK;
+   
+    /** 
+     * once the execution control goes back to the application via callback,
+     * the application might destroy the session within the handler function.
+     * Hence check for the validity of the session after returning from the
+     * app callback handler. But the assumption is that the instance is intact.
+     */
+    for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++)
+        if (instance->ah_session[i] == session) break;
+
+    if (i == TURN_MAX_CONCURRENT_SESSIONS) {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Invalid TURN session handle. Probably application destroyed "\
+                "the session in the notification handler routine");
+        status = STUN_TERMINATED;
+    }
+
+    return status;
 }
 
 

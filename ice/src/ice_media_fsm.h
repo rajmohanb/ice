@@ -32,6 +32,11 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg);
 int32_t ice_media_stream_check_gather_resp(
                                 ice_media_stream_t *media, handle h_msg);
 
+
+int32_t ice_media_stream_gather_failed(
+                                ice_media_stream_t *media, handle h_msg);
+
+
 int32_t ice_media_stream_form_checklist(
                                 ice_media_stream_t *media, handle h_msg);
 

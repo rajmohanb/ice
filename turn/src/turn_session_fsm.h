@@ -26,9 +26,13 @@ int32_t send_alloc_req (turn_session_t *session, handle h_msg);
 
 int32_t process_alloc_resp (turn_session_t *session, handle h_msg);
 
+int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg);
+
 int32_t send_perm_req (turn_session_t *session, handle h_msg);
 
 int32_t process_perm_resp (turn_session_t *session, handle h_msg);
+
+int32_t turn_init_dealloc (turn_session_t *session, handle h_msg);
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
 

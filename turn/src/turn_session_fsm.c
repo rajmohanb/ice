@@ -41,6 +41,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATING */
     {
@@ -50,6 +52,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_allocation_timeout,
         turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATED */
@@ -61,6 +65,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_init_dealloc,
     },
     /** TURN_OG_CREATING_PERM */
     {
@@ -71,9 +77,25 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_init_dealloc,
     },
     /** TURN_OG_ACTIVE */
     {
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
+        turn_init_dealloc,
+    },
+    /** TURN_OG_DEALLOCATING */
+    {
+        turn_ignore_msg,
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -91,8 +113,12 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
     }
 };
+
+
 
 int32_t send_alloc_req (turn_session_t *session, handle h_msg)
 {
@@ -112,8 +138,6 @@ int32_t send_alloc_req (turn_session_t *session, handle h_msg)
 
 
     status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
-    //status = stun_txn_set_app_transport_param(h_txn_inst, 
-    //                                    h_txn, session->transport_param);
     if (status != STUN_OK) return status;
 
     status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
@@ -247,6 +271,22 @@ ERROR_EXIT_PT1:
 
 
 
+int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg)
+{
+    ICE_LOG (LOG_SEV_ERROR, "TURN transaction timed out");
+
+    /** 
+     * no timers would have been started at 
+     * this stage, so no need to stop any timers 
+     */
+
+    session->state = TURN_OG_FAILED;
+
+    return STUN_TERMINATED;
+}
+
+
+
 int32_t send_perm_req (turn_session_t *session, handle h_msg)
 {
     return STUN_OK;
@@ -257,6 +297,40 @@ int32_t send_perm_req (turn_session_t *session, handle h_msg)
 int32_t process_perm_resp (turn_session_t *session, handle h_msg)
 {
     return STUN_TERMINATED;
+}
+
+
+int32_t turn_init_dealloc (turn_session_t *session, handle h_msg)
+{
+    int32_t status;
+    handle h_txn, h_txn_inst;
+
+    /** TODO - delete an existing transaction, if any */
+
+    status = turn_utils_create_dealloc_req_msg(session, &session->h_req);
+    if (status != STUN_OK)
+        return status;
+
+    h_txn_inst = session->instance->h_txn_inst;
+
+    status = stun_create_txn(h_txn_inst,
+                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_req);
+    if (status != STUN_OK) return status;
+
+    session->h_txn = h_txn;
+    session->state = TURN_OG_DEALLOCATING;
+
+    return status;
 }
 
 
@@ -285,7 +359,7 @@ int32_t turn_session_fsm_inject_msg(turn_session_t *session,
 
     if (cur_state != session->state)
     {
-        turn_session_utils_notify_state_change_event(session);
+        status = turn_session_utils_notify_state_change_event(session);
     }
 
     return status;

@@ -63,7 +63,7 @@ static ice_session_fsm_handler
     {
         ice_ignore_msg,
         handle_gather_result,
-        ice_ignore_msg,
+        turn_alloc_failed,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
@@ -72,7 +72,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        ice_ignore_msg,
+        ice_remove_media_stream,
     },
     /** ICE_SES_GATHERED */
     {
@@ -87,7 +87,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_remote_params,
         ice_ignore_msg,
-        ice_ignore_msg,
+        ice_remove_media_stream,
     },
     /** ICE_SES_CC_RUNNING */
     {
@@ -194,8 +194,6 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
         ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
     }
 
-    //session->state = ICE_SES_GATHERING;
-
     return status;
 }
 
@@ -219,6 +217,42 @@ int32_t handle_gather_result(ice_session_t *session,
 
     status = ice_media_stream_fsm_inject_msg(media, 
                                         ICE_MEDIA_GATHER_RESP, h_msg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "processing of gathered candidates by media fsm failed");
+        goto EXIT_PT;
+    }
+
+    status = ice_utils_determine_session_state(session);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+    }
+
+EXIT_PT:
+    return status;
+}
+
+
+
+int32_t turn_alloc_failed(ice_session_t *session, handle h_msg, handle *h_param)
+{
+    int32_t status;
+    ice_int_params_t *param = (ice_int_params_t *)h_msg;
+    ice_media_stream_t *media;
+
+    status = turn_session_get_app_param(
+                        param->h_inst, param->h_session, (handle *)&media);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "unable to get application param from TURN handle");
+        return status;
+    }
+
+    status = ice_media_stream_fsm_inject_msg(media, 
+                                        ICE_MEDIA_GATHER_FAILED, h_msg);
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
@@ -644,7 +678,7 @@ EXIT_PT:
 int32_t ice_remove_media_stream (ice_session_t *session, 
                                             handle h_msg, handle *h_param)
 {
-    int32_t i;
+    int32_t i, status;
     ice_media_stream_t *media = (ice_media_stream_t *) h_msg;
 
     /** verify media handle */
@@ -652,7 +686,29 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 
     session->aps_media_streams[i] = NULL;
 
-    /** initiate removing of the media */
+    /** clean up all turn sessions, if any */
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->h_turn_sessions[i] == NULL) continue;
+
+        status = turn_destroy_session(
+                session->instance->h_turn_inst, media->h_turn_sessions[i]);
+
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Destroying of TURN session failed %d", status);
+        }
+    }
+
+    /** TODO clean up all STUN binding sessions, if any */
+
+    /** TODO clean up all connectivity check sessions, if any */
+
+    /** TODO stop running timers, if any */
+
+    /** free the memory for media context */
+    media->ice_session = NULL;
     stun_free(media);
 
     session->num_media_streams--;

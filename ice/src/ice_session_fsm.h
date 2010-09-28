@@ -28,6 +28,9 @@ int32_t gather_candidates(ice_session_t *session,
 int32_t handle_gather_result(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 
+int32_t turn_alloc_failed(ice_session_t *session, 
+                                            handle h_msg, handle *h_param);
+
 int32_t process_relay_server_msg (ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 

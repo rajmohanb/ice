@@ -31,6 +31,9 @@ int32_t turn_utils_create_response_msg(handle *h_inst);
 int32_t turn_utils_create_alloc_req_msg_with_credential(
                             turn_session_t *session, handle *h_newmsg);
 
+int32_t turn_utils_create_dealloc_req_msg(
+                            turn_session_t *session, handle *h_newmsg);
+
 int32_t turn_utils_get_app_data_for_current_state(
                                 turn_session_t *session, handle *data);
 

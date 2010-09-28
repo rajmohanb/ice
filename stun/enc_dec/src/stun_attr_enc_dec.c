@@ -1192,6 +1192,31 @@ int32_t stun_attr_decode_channel_number(u_char *buf_head, u_char **buf,
 
 int32_t stun_attr_encode_lifetime(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+
+    stun_lifetime_attr_t *lifetime;
+    uint16_t val16;
+    uint32_t value;
+
+    lifetime = (stun_lifetime_attr_t *) attr;
+    lifetime->hdr.length = STUN_ATTR_LIFETIME_VAL_SIZE;
+
+    /** attribute type */
+    val16 = htons(STUN_ATTR_LIFETIME);
+    memcpy(buf, &val16, sizeof(uint16_t));
+    buf += sizeof(uint16_t);
+
+    /** length */
+    val16 = htons(lifetime->hdr.length);
+    memcpy(buf, &val16, sizeof(uint16_t));
+    buf += sizeof(uint16_t);
+
+    value = htonl(lifetime->lifetime);
+
+    /** copy the lifetime duration */
+    stun_memcpy(buf, &value, sizeof(uint32_t));
+
+    *len = lifetime->hdr.length + 4;
+    
     return STUN_OK;
 }
 

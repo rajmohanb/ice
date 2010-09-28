@@ -30,6 +30,7 @@ extern "C" {
 #define MSG_INTEGRITY_HMAC_BYTES    20
 
 #define STUN_ATTR_FINGERPRINT_SIZE  4
+#define STUN_ATTR_LIFETIME_VAL_SIZE 4
 
 #define DEFAULT_MTU                 1500
 

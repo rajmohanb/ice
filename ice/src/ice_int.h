@@ -162,6 +162,7 @@ typedef enum
     ICE_MEDIA_GATHER = 0,
     ICE_MEDIA_RELAY_MSG,
     ICE_MEDIA_GATHER_RESP,
+    ICE_MEDIA_GATHER_FAILED,
     ICE_MEDIA_FORM_CHECKLIST,
     ICE_MEDIA_UNFREEZE,
     ICE_MEDIA_CHECKLIST_TIMER,
@@ -169,7 +170,7 @@ typedef enum
     ICE_MEDIA_RESTART,
     ICE_MEDIA_REMOTE_PARAMS,
     ICE_MEDIA_BOTH_LITE,
-    ICE_MEDIA_CC_EVENT_MAX,
+    ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 
 typedef enum
@@ -181,7 +182,7 @@ typedef enum
     ICE_MEDIA_CC_RUNNING,
     ICE_MEDIA_CC_COMPLETED,
     ICE_MEDIA_CC_FAILED,
-    ICE_MEDIA_CC_STATE_MAX,
+    ICE_MEDIA_STATE_MAX,
 } ice_media_stream_state_t;
 
 /** forward declaration */

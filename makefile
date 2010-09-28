@@ -13,7 +13,7 @@
 #******************************************************************************/
 
 # build customization flags
-ENABLE_ICE_DEBUG := y 
+ENABLE_ICE_DEBUG := y
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
@@ -31,22 +31,13 @@ ICE_APP_INCLUDE_PATH := .
 ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN 
 
 ifeq ($(strip $(ENABLE_ICE_DEBUG)), y)
-ICE_APP_CFLAGS += -DDEBUG
+ICE_APP_CFLAGS += -g -DDEBUG
 endif
 
 export ICE_APP_INCLUDE_PATH
 export ICE_LIB_DEST_PATH
 export ICE_APP_CFLAGS
 
-
-lite:
-	make -C stun/enc_dec/src/
-	make -C stun/msg_layer/src/
-	make -C stun/txn/src/
-	make -C conn_check/src/
-	make -C ice_lite/src/
-	make -C binding/src/
-	make -C platform/src/
 
 full:
 	make -C stun/enc_dec/src/
@@ -57,6 +48,16 @@ full:
 	make -C ice/src/
 	make -C binding/src/
 	make -C platform/src/
+
+lite:
+	make -C stun/enc_dec/src/
+	make -C stun/msg_layer/src/
+	make -C stun/txn/src/
+	make -C conn_check/src/
+	make -C ice_lite/src/
+	make -C binding/src/
+	make -C platform/src/
+
 
 clean:
 	make -C stun/enc_dec/src/ clean

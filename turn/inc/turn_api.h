@@ -38,6 +38,7 @@ typedef enum
     TURN_OG_ALLOCATED,
     TURN_OG_CREATING_PERM,
     TURN_OG_ACTIVE,
+    TURN_OG_DEALLOCATING,
     TURN_OG_FAILED,
     TURN_STATE_MAX,
 } turn_session_state_t;

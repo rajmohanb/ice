@@ -46,6 +46,8 @@ typedef enum
     TURN_REFRESH_REQ,
     TURN_REFRESH_RESP,
     TURN_DATA_IND,
+    TURN_TXN_TIMEOUT,
+    TURN_DEALLOC_REQ,
     TURN_EVENT_MAX,
 } turn_event_t;
 

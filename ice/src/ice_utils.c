@@ -1622,7 +1622,9 @@ int32_t ice_media_utils_notify_state_change_event(
 
     status = ice_utils_get_media_state_change_event(media, &event);
 
-    if (status == STUN_OK)
+    if ((status == STUN_OK) && (media->ice_session) &&
+        (media->ice_session->instance) && 
+        (media->ice_session->instance->media_state_event_cb))
     {
         media->ice_session->instance->media_state_event_cb(
                     media->ice_session->instance, media->ice_session, 

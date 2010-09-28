@@ -220,6 +220,8 @@ int32_t stun_attr_xor_peer_addr_get_port(handle h_attr, uint32_t *port);
 
 int32_t stun_attr_lifetime_get_duration(handle h_attr, uint32_t *duration);
 
+int32_t stun_attr_lifetime_set_duration(handle h_attr, uint32_t duration);
+
 /* ========================================================================== */
 
 int32_t stun_attr_error_code_get_error_code(handle h_attr, uint32_t *error_code);

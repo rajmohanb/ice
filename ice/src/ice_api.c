@@ -49,7 +49,8 @@ static char* turn_states[] =
     "TURN_OG_ALLOCATING",
     "TURN_OG_ALLOCATED",
     "TURN_OG_CREATING_PERM",
-    "TURN_OG_ACTIVE"
+    "TURN_OG_ACTIVE",
+    "TURN_OG_FAILED",
 };
 
 
@@ -1070,12 +1071,10 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
 
     if(timer->type == ICE_TURN_TIMER)
     {
-        /** not valid for ice lite mode */
-        status = STUN_INVALID_PARAMS;
+        status = turn_session_inject_timer_message(timer_id, timer->arg);
     }
     else if (timer->type == ICE_CC_TIMER)
     {
-        /** not valid for ice lite mode */
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CC_TIMER");
         status = STUN_INVALID_PARAMS;
     }

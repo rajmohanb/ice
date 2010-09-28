@@ -28,6 +28,17 @@ extern "C" {
 #include "turn_utils.h"
 
 
+#define TURN_VALIDATE_SESSION_HANDLE(h_session) { \
+    for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++) \
+        if (instance->ah_session[i] == h_session) { break; } \
+\
+    if (i == TURN_MAX_CONCURRENT_SESSIONS) { \
+        ICE_LOG(LOG_SEV_ERROR, "Invalid TURN session handle"); \
+        return STUN_INVALID_PARAMS; \
+    } \
+} \
+
+
 
 int32_t turn_create_instance(handle *h_inst)
 {
@@ -307,6 +318,7 @@ int32_t turn_session_get_app_param(handle h_inst,
 
 int32_t turn_destroy_session(handle h_inst, handle h_session)
 {
+    int32_t i;
     turn_instance_t *instance;
     turn_session_t *session;
 
@@ -316,16 +328,19 @@ int32_t turn_destroy_session(handle h_inst, handle h_session)
     instance = (turn_instance_t *) h_inst;
     session = (turn_session_t *) h_session;
 
-    /** TODO - make sure session exists by looking up the table */
+    /** make sure session exists by looking up the table */
+    TURN_VALIDATE_SESSION_HANDLE(h_session);
 
-    if (session->h_txn != NULL)
-    {
-        /** TODO - destroy transaction */
-    }
+#ifdef TURN_FORCEFUL_DESTROY
 
     stun_free(session);
+    instance->ah_session[i] = NULL;
 
     return STUN_OK;
+
+#else
+    return turn_session_fsm_inject_msg(session, TURN_DEALLOC_REQ, NULL);
+#endif
 }
 
 
@@ -489,16 +504,23 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
     int32_t status;
     handle h_txn;
     turn_timer_params_t *timer;
+    turn_session_t *session;
 
     if ((h_timerid == NULL) || (h_timer_arg == NULL))
         return STUN_INVALID_PARAMS;
 
     timer = (turn_timer_params_t *) h_timer_arg;
+    session = (turn_session_t *)timer->h_turn_session;
 
     if (timer->type == TURN_STUN_TXN_TIMER)
     {
         status = stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
-        if (status == STUN_TERMINATED) {}
+        if (status == STUN_TERMINATED)
+        {
+            /** turn associated transaction timed out */
+            return turn_session_fsm_inject_msg(
+                                    session, TURN_TXN_TIMEOUT, h_txn);
+        }
     }
     else
     {

@@ -309,6 +309,24 @@ int32_t stun_attr_lifetime_get_duration(handle h_attr, uint32_t *duration)
 
     return STUN_OK;
 }
+
+
+int32_t stun_attr_lifetime_set_duration(handle h_attr, uint32_t duration)
+{
+    stun_lifetime_attr_t *attr;
+
+    if (h_attr == NULL) return STUN_INVALID_PARAMS;
+
+    attr = (stun_lifetime_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_LIFETIME)
+        return STUN_INVALID_PARAMS;
+
+    attr->lifetime = duration;
+
+    return STUN_OK;
+}
+
 #endif
 
 

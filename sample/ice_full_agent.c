@@ -537,6 +537,8 @@ void app_media_state_change_handler(handle h_inst,
 void app_session_state_change_handler(handle h_inst, 
                                     handle h_session, ice_state_t state)
 {
+    uint32_t status;
+
     if ((state >= ICE_GATHERED) && (state <= ICE_CC_FAILED))
     {
         app_log (LOG_SEV_INFO, 
@@ -554,7 +556,9 @@ void app_session_state_change_handler(handle h_inst,
             encode_session(h_inst, h_session);
             break;
 
-        case ICE_CC_FAILED: break;
+        case ICE_CC_RUNNING:
+            break;
+
         case ICE_CC_COMPLETED:
         {
             static int val = 1;
@@ -568,6 +572,18 @@ void app_session_state_change_handler(handle h_inst,
             }
             val=0;
             g_cc_done = true;
+        }
+        break;
+
+        case ICE_CC_FAILED:
+        {
+            app_log (LOG_SEV_INFO, "ICE session failed, destroying session");
+
+            status = ice_destroy_session(h_inst, h_session);
+            if(status != STUN_OK)
+            {
+                app_log (LOG_SEV_ERROR, "Destroying of ICE session failed %d", status);
+            }
         }
         break;
 
@@ -845,7 +861,6 @@ int main (int argc, char *argv[])
 
     my_buf = (unsigned char *) platform_calloc (1, TRANSPORT_MTU_SIZE);
 
-    //ice_lite_input_remote_sdp(h_inst, h_session, h_audio);
     ic_msg_count = 0;
 
     while (g_gather_done == false) {
@@ -882,6 +897,7 @@ int main (int argc, char *argv[])
                             "No ICE session found for received message on transport fd %d", fd_list[i]);
                     app_log(LOG_SEV_ERROR, 
                             "Dropping the received message on transport fd %d", fd_list[i]);
+                    stun_msg_destroy(h_rcvdmsg);
                 }
                 else if (status == STUN_OK)
                 {
@@ -895,11 +911,21 @@ int main (int argc, char *argv[])
                     if (status != STUN_OK)
                     {
                         app_log (LOG_SEV_ERROR, "ice_session_inject_received_msg() returned error %d\n", status);
-                        stun_msg_destroy(h_rcvdmsg);
+                        if (status == STUN_INVALID_PARAMS) stun_msg_destroy(h_rcvdmsg);
                     }
                 }
             }
         }
+    }
+
+
+    app_log (LOG_SEV_ERROR, "OKKKK lets destroy the session now");
+    status = ice_destroy_session(h_inst, h_session);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "ice_destroy_session() returned error %d\n", status);
+        return -1;
     }
 
     ice_input_remote_sdp(h_inst, h_session, h_audio);
@@ -955,6 +981,7 @@ int main (int argc, char *argv[])
                             "No ICE session found for received message on transport fd %d", fd_list[i]);
                     app_log(LOG_SEV_ERROR, 
                             "Dropping the received message on transport fd %d", fd_list[i]);
+                    stun_msg_destroy(h_rcvdmsg);
                 }
                 else if (status == STUN_OK)
                 {

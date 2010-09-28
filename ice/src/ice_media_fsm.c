@@ -31,11 +31,12 @@ extern "C" {
 
 
 static ice_media_stream_fsm_handler 
-    ice_media_stream_fsm[ICE_MEDIA_CC_STATE_MAX][ICE_MEDIA_CC_EVENT_MAX] =
+    ice_media_stream_fsm[ICE_MEDIA_STATE_MAX][ICE_MEDIA_EVENT_MAX] =
 {
     /** ICE_MEDIA_CC_IDLE */
     {
         ice_media_stream_gather_cands,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -51,6 +52,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_process_relay_msg,
         ice_media_stream_check_gather_resp,
+        ice_media_stream_gather_failed,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -251,6 +253,29 @@ int32_t ice_media_stream_check_gather_resp(
 
     return STUN_OK;
 }
+
+
+
+int32_t ice_media_stream_gather_failed(
+                        ice_media_stream_t *media, handle h_msg)
+{
+    uint32_t comp_id;
+    int32_t status;
+    ice_int_params_t *param = (ice_int_params_t *)h_msg;
+
+    status = ice_utils_validate_turn_session_handle(
+                                    media, param->h_session, &comp_id);
+    if (status != STUN_OK) return status;
+
+    ICE_LOG(LOG_SEV_ERROR,
+            "Gathering of candidates failed for component %d of media %p", 
+            comp_id, media);
+
+    media->state = ICE_MEDIA_CC_FAILED;
+
+    return STUN_OK;
+}
+
 
 
 int32_t ice_media_stream_form_checklist(
@@ -675,6 +700,8 @@ int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media,
         return STUN_INVALID_PARAMS;
 
     status = handler(media, h_msg);
+
+    /** validate media handle */
 
     if (cur_state != media->state)
     {

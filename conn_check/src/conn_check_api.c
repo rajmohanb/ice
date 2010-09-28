@@ -435,6 +435,8 @@ int32_t conn_check_session_initiate_check(handle h_inst, handle h_session)
     return status;
 }
 
+
+
 int32_t conn_check_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg)
 {
@@ -491,26 +493,9 @@ int32_t conn_check_session_inject_received_msg(
     session->h_resp = h_msg;
 
     cur_state = session->state;
-    status = conn_check_session_fsm_inject_msg(session, event, h_msg);
-
-#if 0
-    if (cur_state != session->state)
-    {
-        handle data;
-
-        status = cc_utils_get_app_data_for_current_state(session, &data);
-        if (status != STUN_OK)
-        {
-            ICE_LOG (LOG_SEV_ERROR, 
-                    "conn_check_utils_get_app_data_for_current_state return error\n");
-        }
-
-        instance->state_change_cb(h_inst, h_session, session->state, data);
-    }
-#endif
-
-    return status;
+    return conn_check_session_fsm_inject_msg(session, event, h_msg);
 }
+
 
 
 int32_t conn_check_find_session_for_recv_msg(handle h_inst, 

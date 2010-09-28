@@ -76,22 +76,40 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
             break;
 
 #ifdef ENABLE_TURN
-        /** TODO */
         case STUN_ATTR_CHANNEL_NUMBER:
+            size = sizeof(stun_channel_number_attr_t);
+            break;
+
         case STUN_ATTR_LIFETIME:
+            size = sizeof(stun_lifetime_attr_t);
+            break;
+
         case STUN_ATTR_XOR_PEER_ADDR:
+            size = sizeof(stun_xor_peer_addr_attr_t);
+            break;
+
         case STUN_ATTR_DATA:
+            size = sizeof(stun_data_attr_t);
+            break;
+
         case STUN_ATTR_XOR_RELAYED_ADDR:
+            size = sizeof(stun_xor_relayed_addr_attr_t);
+            break;
+
         case STUN_ATTR_EVEN_PORT:
+            size = sizeof(stun_even_port_attr_t);
             break;
 
         case STUN_ATTR_REQUESTED_TRANSPORT:
             size = sizeof(stun_req_transport_attr_t);
             break;
 
-        /** TODO */
         case STUN_ATTR_DONT_FRAGMENT:
+            size = sizeof(stun_dont_fragment_attr_t);
+            break;
+
         case STUN_ATTR_RESERVATION_TOKEN:
+            size = sizeof(stun_reservation_token_attr_t);
             break;
 
 #endif
