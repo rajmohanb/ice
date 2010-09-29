@@ -50,6 +50,7 @@ static char* turn_states[] =
     "TURN_OG_ALLOCATED",
     "TURN_OG_CREATING_PERM",
     "TURN_OG_ACTIVE",
+    "TURN_OG_DEALLOCATING",
     "TURN_OG_FAILED",
 };
 
@@ -118,6 +119,7 @@ void ice_turn_callback_fxn (handle h_turn_inst,
         case TURN_OG_ALLOCATING:
         case TURN_OG_CREATING_PERM:
         case TURN_OG_ACTIVE:
+        case TURN_OG_DEALLOCATING:
         default:
             event = ICE_SES_EVENT_MAX;
             break;
@@ -633,8 +635,10 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
         }
     }
 
+#if 0
     instance->aps_sessions[i] = NULL;
     stun_free(session);
+#endif
 
     return STUN_OK;
 }

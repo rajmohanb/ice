@@ -431,19 +431,67 @@ int32_t turn_session_inject_received_msg(
         case STUN_METHOD_ALLOCATE:
         {
             if (class == STUN_REQUEST)
+            {
+                /** a turn client does not handle incoming ALLOCATE requests */
                 event = TURN_ALLOC_REQ;
+                status = STUN_INVALID_PARAMS;
+            }
             else if ((class == STUN_SUCCESS_RESP) ||
                      (class == STUN_ERROR_RESP))
+            {
                 event = TURN_ALLOC_RESP;
+            }
             else 
+            {
                 status = STUN_INVALID_PARAMS;
+            }
             break;
         }
 
         case STUN_METHOD_REFRESH:
+        {
+            if (class == STUN_REQUEST)
+            {
+                /** a turn client does not handle incoming REFRESH requests */
+                event = TURN_REFRESH_REQ;
+                status = STUN_INVALID_PARAMS;
+            }
+            else if ((class == STUN_SUCCESS_RESP) ||
+                     (class == STUN_ERROR_RESP))
+            {
+                event = TURN_REFRESH_RESP;
+            }
+            else 
+            {
+                status = STUN_INVALID_PARAMS;
+            }
+            
+            break;
+        }
+
+        case STUN_METHOD_CREATE_PERMISSION:
+        {
+            if (class == STUN_REQUEST)
+            {
+                /** a turn client does not handle incoming REFRESH requests */
+                event = TURN_CREATE_PERM_REQ;
+                status = STUN_INVALID_PARAMS;
+            }
+            else if ((class == STUN_SUCCESS_RESP) ||
+                     (class == STUN_ERROR_RESP))
+            {
+                event = TURN_CREATE_PERM_RESP;
+            }
+            else 
+            {
+                status = STUN_INVALID_PARAMS;
+            }
+            
+            break;
+        }
+
         case STUN_METHOD_SEND:
         case STUN_METHOD_DATA:
-        case STUN_METHOD_CREATE_PERMISSION:
         case STUN_METHOD_CHANNEL_BIND:
         default:
             status = STUN_INVALID_PARAMS;

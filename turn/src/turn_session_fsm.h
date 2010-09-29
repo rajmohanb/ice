@@ -34,6 +34,8 @@ int32_t process_perm_resp (turn_session_t *session, handle h_msg);
 
 int32_t turn_init_dealloc (turn_session_t *session, handle h_msg);
 
+int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg);
+
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
 
 int32_t turn_session_fsm_inject_msg(turn_session_t *session, 

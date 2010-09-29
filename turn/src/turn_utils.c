@@ -299,6 +299,101 @@ int32_t turn_utils_extract_data_from_alloc_resp(
 
 
 
+int32_t turn_utils_create_refresh_req_msg_with_credential(
+                            turn_session_t *session, handle *h_newmsg)
+{
+    int32_t status;
+    uint32_t num, len;
+    handle h_attr[6], h_temp, h_msg;
+    u_char buf[1000];
+
+    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(h_attr[0]));
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_username_set_user_name(h_attr[0], 
+                            session->cfg.username, 
+                            strlen((char *)session->cfg.username));
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[0]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_NONCE, &(h_attr[1]));
+    if (status != STUN_OK) return status;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                                session->h_resp, STUN_ATTR_NONCE, &h_temp, &num);
+    if (status != STUN_OK) return status;
+
+    len = 1000;
+    status = stun_attr_nonce_get_nonce(h_temp, buf, &len);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_nonce_set_nonce(h_attr[1], buf, len);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[1]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_REALM, &(h_attr[2]));
+    if (status != STUN_OK) return status;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    session->h_resp, STUN_ATTR_REALM, &h_temp, &num);
+    if (status != STUN_OK) return status;
+
+    len = 1000;
+    status = stun_attr_realm_get_realm(h_temp, buf, &len);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_realm_set_realm(h_attr[2], buf, len);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[2]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, &(h_attr[3]));
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_requested_transport_set_protocol(
+                                        h_attr[3], STUN_TRANSPORT_UDP);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[3]);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_create(STUN_ATTR_LIFETIME, &(h_attr[4]));
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_lifetime_set_duration(h_attr[4], 0);
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[4]);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[5]));
+    if (status != STUN_OK) return status;
+
+    status = stun_msg_add_attribute(h_msg, h_attr[5]);
+    if (status != STUN_OK) return status;
+
+    *h_newmsg = h_msg;
+
+    return status;
+}
+
+
+
+
 int32_t turn_session_utils_notify_state_change_event(turn_session_t *session)
 {
     int32_t i, status = STUN_OK;

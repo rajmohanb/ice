@@ -393,16 +393,10 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     stun_method_type_t method;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) pkt;
     ice_media_stream_t *media;
+    ice_media_stream_event_t event;
 
     stun_msg_get_class(stun_pkt->h_msg, &msg_class);
     stun_msg_get_method(stun_pkt->h_msg, &method);
-
-    /** 
-     * at this stage, we only entertain responses to connectivity checks 
-     * initiated by this session and new incoming stun binding requests
-     */
-    if (method != STUN_METHOD_BINDING) return STUN_INVALID_PARAMS;
-    if (msg_class == STUN_INDICATION) return STUN_INVALID_PARAMS;
 
     status = ice_utils_find_media_for_transport_handle(
                                 session, stun_pkt->transport_param, &index);
@@ -419,7 +413,12 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
 
     media = session->aps_media_streams[index];
 
-    status = ice_media_stream_fsm_inject_msg(media, ICE_MEDIA_CC_MSG, pkt);
+    if (method == STUN_METHOD_BINDING)
+        event = ICE_MEDIA_CC_MSG; /** TODO - this is not right */
+    else
+        event = ICE_MEDIA_RELAY_MSG;
+
+    status = ice_media_stream_fsm_inject_msg(media, event, pkt);
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Injecting of received stun message failed.");
@@ -675,6 +674,7 @@ EXIT_PT:
 }
 
 
+
 int32_t ice_remove_media_stream (ice_session_t *session, 
                                             handle h_msg, handle *h_param)
 {
@@ -684,7 +684,9 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     /** verify media handle */
     ICE_VALIDATE_MEDIA_HANDLE(media);
 
+#if 0
     session->aps_media_streams[i] = NULL;
+#endif
 
     /** clean up all turn sessions, if any */
     for (i = 0; i < ICE_MAX_COMPONENTS; i++)
@@ -708,10 +710,12 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     /** TODO stop running timers, if any */
 
     /** free the memory for media context */
+#if 0
     media->ice_session = NULL;
     stun_free(media);
 
     session->num_media_streams--;
+#endif
 
     /** no change in session state */
     

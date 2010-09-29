@@ -40,6 +40,9 @@ int32_t turn_utils_get_app_data_for_current_state(
 int32_t turn_utils_extract_data_from_alloc_resp(
                                 turn_session_t *session, handle h_msg);
 
+int32_t turn_utils_create_refresh_req_msg_with_credential(
+                            turn_session_t *session, handle *h_newmsg);
+
 int32_t turn_session_utils_notify_state_change_event(turn_session_t *session);
 
 

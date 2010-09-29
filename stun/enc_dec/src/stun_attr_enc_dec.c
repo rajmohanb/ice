@@ -442,7 +442,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     buf += MSG_INTEGRITY_HMAC_BYTES;
 
 #ifdef ENABLE_TURN
-    if (method == STUN_METHOD_ALLOCATE)
+    if (method != STUN_METHOD_BINDING)
     {
         /** compute the hmac key - long term credentials */
         stun_tlv_utils_get_hmac_key(h_msg, md5_key);

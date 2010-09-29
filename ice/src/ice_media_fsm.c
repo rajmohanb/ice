@@ -64,7 +64,7 @@ static ice_media_stream_fsm_handler
     /** ICE_MEDIA_GATHERED */
     {
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_process_relay_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_form_checklist,
         ice_media_stream_ignore_msg,
