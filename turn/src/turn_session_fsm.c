@@ -214,9 +214,13 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                                             h_error_code_attr, &error_code);
         if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
-        if (error_code == 401)
+        if ((error_code == 401) || (error_code == 438))
         {
             handle h_sendmsg;
+
+            /** cache the authentication parameters for subsequent requests */
+            status = turn_utils_cache_auth_params(session, h_rcvdmsg);
+            if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
             status = turn_utils_create_alloc_req_msg_with_credential(
                                                         session, &h_sendmsg);
@@ -246,7 +250,6 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
         }
         else 
         {
-            /** to be handled */
             session->state = TURN_OG_FAILED;
             session->h_txn = session->h_req = session->h_resp = NULL;
         }
@@ -256,7 +259,11 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
         status = turn_utils_extract_data_from_alloc_resp(session, h_rcvdmsg);
 
         if (status == STUN_OK)
+        {
             session->state = TURN_OG_ALLOCATED;
+
+            /** start allocation refresh timer */
+        }
 
         session->h_txn = session->h_req = session->h_resp = NULL;
     }
@@ -352,11 +359,6 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
     handle h_txn, h_new_txn, h_txn_inst = session->instance->h_txn_inst;
     bool_t txn_terminated = false;
 
-    /** 
-     * note: 
-     * split up the response based on 1xx, 2xx etc to split up this huge handler
-     */
-
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
     if (status != STUN_OK)
     {
@@ -405,9 +407,13 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
                                             h_error_code_attr, &error_code);
         if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
-        if (error_code == 401)
+        if (error_code == 438)
         {
             handle h_sendmsg;
+
+            /** cache the authentication parameters for subsequent requests */
+            status = turn_utils_cache_auth_params(session, h_rcvdmsg);
+            if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
             status = turn_utils_create_refresh_req_msg_with_credential(
                                                         session, &h_sendmsg);
@@ -444,10 +450,17 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
     }
     else
     {
-        status = turn_utils_extract_data_from_alloc_resp(session, h_rcvdmsg);
+        status = turn_utils_extract_data_from_refresh_resp(session, h_rcvdmsg);
 
         if (status == STUN_OK)
-            session->state = TURN_OG_ALLOCATED;
+        {
+            if (session->lifetime == 0)
+            {
+                session->state = TURN_OG_FAILED; /** TODO */
+            
+                ICE_LOG (LOG_SEV_ERROR, "TURN session de-allocated");
+            }
+        }
 
         session->h_txn = session->h_req = session->h_resp = NULL;
     }

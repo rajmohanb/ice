@@ -28,6 +28,8 @@ int32_t turn_utils_create_indication(handle *h_msg);
 
 int32_t turn_utils_create_response_msg(handle *h_inst);
 
+int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg);
+
 int32_t turn_utils_create_alloc_req_msg_with_credential(
                             turn_session_t *session, handle *h_newmsg);
 
@@ -38,6 +40,9 @@ int32_t turn_utils_get_app_data_for_current_state(
                                 turn_session_t *session, handle *data);
 
 int32_t turn_utils_extract_data_from_alloc_resp(
+                                turn_session_t *session, handle h_msg);
+
+int32_t turn_utils_extract_data_from_refresh_resp(
                                 turn_session_t *session, handle h_msg);
 
 int32_t turn_utils_create_refresh_req_msg_with_credential(

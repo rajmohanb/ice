@@ -86,6 +86,14 @@ typedef struct
     handle h_req;
     handle h_resp;
 
+    /** nonce */
+    uint32_t nonce_len;
+    u_char *nonce;
+
+    /** realm */
+    uint32_t realm_len;
+    u_char *realm;
+
     /** relayed address */
     stun_inet_addr_t relay_addr;
 
