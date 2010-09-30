@@ -438,6 +438,25 @@ int32_t stun_attr_username_set_user_name(handle h_attr,
 
 }
 
+
+int32_t stun_attr_nonce_get_nonce_length(handle h_attr, uint32_t *len)
+{
+    stun_nonce_attr_t *nonce;
+
+    if ((h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    nonce = (stun_nonce_attr_t *) h_attr;
+
+    if (nonce->hdr.type != STUN_ATTR_NONCE)
+        return STUN_INVALID_PARAMS;
+
+    *len = nonce->hdr.length;
+
+    return STUN_OK;
+}
+
+
 int32_t stun_attr_nonce_get_nonce(handle h_attr, 
                                         u_char *nonce_val, uint32_t *len)
 {
@@ -451,7 +470,11 @@ int32_t stun_attr_nonce_get_nonce(handle h_attr,
     if (nonce->hdr.type != STUN_ATTR_NONCE)
         return STUN_INVALID_PARAMS;
 
-    if (*len < nonce->hdr.length) return STUN_MEM_INSUF;
+    if (*len < nonce->hdr.length)
+    {
+        *len = nonce->hdr.length;
+        return STUN_MEM_INSUF;
+    }
 
     stun_memcpy(nonce_val, nonce->nonce, nonce->hdr.length);
     *len = nonce->hdr.length;
@@ -486,6 +509,25 @@ int32_t stun_attr_nonce_set_nonce(handle h_attr,
 
 
 
+int32_t stun_attr_realm_get_realm_length(handle h_attr, uint32_t *len)
+{
+    stun_realm_attr_t *realm;
+
+    if ((h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    realm = (stun_realm_attr_t *) h_attr;
+
+    if (realm->hdr.type != STUN_ATTR_REALM)
+        return STUN_INVALID_PARAMS;
+
+    *len = realm->hdr.length;
+
+    return STUN_OK;
+}
+
+
+
 int32_t stun_attr_realm_get_realm(handle h_attr, 
                                         u_char *realm_val, uint32_t *len)
 {
@@ -499,7 +541,11 @@ int32_t stun_attr_realm_get_realm(handle h_attr,
     if (realm->hdr.type != STUN_ATTR_REALM)
         return STUN_INVALID_PARAMS;
 
-    if (*len < realm->hdr.length) return STUN_MEM_INSUF;
+    if (*len < realm->hdr.length)
+    {
+        *len = realm->hdr.length;
+        return STUN_MEM_INSUF;
+    }
 
     stun_memcpy(realm_val, realm->realm, realm->hdr.length);
     *len = realm->hdr.length;

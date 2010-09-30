@@ -241,6 +241,8 @@ int32_t stun_attr_username_set_user_name(handle h_attr,
 
 /* ========================================================================== */
 
+int32_t stun_attr_realm_get_realm_length(handle h_attr, uint32_t *len);
+
 int32_t stun_attr_realm_get_realm(
                             handle h_attr, u_char *realm_val, uint32_t *len);
 int32_t stun_attr_realm_set_realm(
@@ -255,6 +257,9 @@ int32_t stun_attr_unknown_attributes_add_attr_type(
 
 int32_t stun_attr_nonce_set_nonce(
                             handle h_attr, u_char *nonce_val, uint32_t len);
+
+int32_t stun_attr_nonce_get_nonce_length(handle h_attr, uint32_t *len);
+
 int32_t stun_attr_nonce_get_nonce(
                             handle h_attr, u_char *nonce_val, uint32_t *len);
 
