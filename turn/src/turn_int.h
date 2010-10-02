@@ -24,7 +24,13 @@ extern "C" {
 
 typedef enum
 {
+    /** timer started by turn transactions */
     TURN_STUN_TXN_TIMER = 0,
+    
+    /** timers internal to turn */
+    TURN_ALLOC_REFRESH_TIMER,
+    TURN_BIND_REFRESH_TIMER,
+
     /** that's all we have as of now */
 } turn_timer_type_t;
 
@@ -48,6 +54,7 @@ typedef enum
     TURN_DATA_IND,
     TURN_TXN_TIMEOUT,
     TURN_DEALLOC_REQ,
+    TURN_ALLOC_REFRESH_EXPIRY,
     TURN_EVENT_MAX,
 } turn_event_t;
 
@@ -79,7 +86,6 @@ typedef struct
     turn_server_cfg_t cfg;
 
     handle app_param;
-
     handle transport_param;
 
     handle h_txn;
@@ -102,6 +108,10 @@ typedef struct
     
     /** allocation expiry time in seconds */
     uint32_t lifetime;
+
+    /** handle to allocation refresh timer */
+    handle   h_alloc_refresh;
+    turn_timer_params_t *alloc_refresh_timer_params;
 
 } turn_session_t;
 

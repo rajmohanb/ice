@@ -353,7 +353,7 @@ int32_t turn_utils_extract_data_from_refresh_resp(
 
 
 
-int32_t turn_utils_create_refresh_req_msg_with_credential(
+int32_t turn_utils_create_refresh_req_msg(
                             turn_session_t *session, handle *h_newmsg)
 {
     int32_t status, i, attr_count = 0;
@@ -405,7 +405,7 @@ int32_t turn_utils_create_refresh_req_msg_with_credential(
     attr_count++;
 
     /** put in default refresh duration */
-    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 600);
+    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 60);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
@@ -466,6 +466,48 @@ int32_t turn_session_utils_notify_state_change_event(turn_session_t *session)
     }
 
     return status;
+}
+
+
+
+int32_t turn_utils_start_alloc_refresh_timer(
+                                turn_session_t *session, uint32_t duration)
+{
+    turn_timer_params_t *timer;
+
+    if(session->alloc_refresh_timer_params == NULL)
+    {
+        session->alloc_refresh_timer_params = (turn_timer_params_t *) 
+                                stun_calloc (1, sizeof(turn_timer_params_t));
+
+        if (session->alloc_refresh_timer_params == NULL)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Memory allocation failed for TURN Allocation refresh timer");
+            return STUN_MEM_ERROR;
+        }
+    }
+
+    timer = session->alloc_refresh_timer_params;
+
+    timer->h_instance = session->instance;
+    timer->h_turn_session = session;
+    timer->arg = NULL;
+    timer->type = TURN_ALLOC_REFRESH_TIMER;
+
+    timer->timer_id = session->instance->start_timer_cb(duration, timer);
+
+    if(!timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Starting of timer failed");
+        return STUN_NO_RESOURCE;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Started TURN session %p allocation "\
+            "refresh timer for duration %d seconds timer %p ", 
+            session, duration, timer->timer_id);
+
+    return STUN_OK;
 }
 
 

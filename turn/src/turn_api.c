@@ -85,7 +85,7 @@ int32_t turn_nwk_cb_fxn (handle h_msg, handle h_param)
 
 
 
-handle turn_start_timer(uint32_t duration, handle arg)
+handle turn_start_txn_timer(uint32_t duration, handle arg)
 {
     handle h_txn, h_txn_inst;
     int32_t status;
@@ -116,7 +116,7 @@ handle turn_start_timer(uint32_t duration, handle arg)
 
 
 
-int32_t turn_stop_timer(handle timer_id)
+int32_t turn_stop_txn_timer(handle timer_id)
 {
     turn_timer_params_t *timer = (turn_timer_params_t *) timer_id;
     turn_session_t *session;
@@ -165,8 +165,8 @@ int32_t turn_instance_set_callbacks(handle h_inst,
 
     /** propagate app callbacks to stun txn */
     app_cbs.nwk_cb = turn_nwk_cb_fxn;
-    app_cbs.start_timer_cb = turn_start_timer;
-    app_cbs.stop_timer_cb = turn_stop_timer;
+    app_cbs.start_timer_cb = turn_start_txn_timer;
+    app_cbs.stop_timer_cb = turn_stop_txn_timer;
 
     status = stun_txn_instance_set_callbacks(instance->h_txn_inst, &app_cbs);
 
@@ -560,20 +560,31 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
     timer = (turn_timer_params_t *) h_timer_arg;
     session = (turn_session_t *)timer->h_turn_session;
 
-    if (timer->type == TURN_STUN_TXN_TIMER)
+    switch (timer->type)
     {
-        status = stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
-        if (status == STUN_TERMINATED)
+        case TURN_STUN_TXN_TIMER:
         {
-            /** turn associated transaction timed out */
-            return turn_session_fsm_inject_msg(
-                                    session, TURN_TXN_TIMEOUT, h_txn);
+            status = stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
+            if (status == STUN_TERMINATED)
+            {
+                /** turn associated transaction timed out */
+                status = turn_session_fsm_inject_msg(
+                                        session, TURN_TXN_TIMEOUT, h_txn);
+            }
+            break;
         }
-    }
-    else
-    {
-        /** TODO - what else? */
-        status = STUN_OK;
+
+        case TURN_ALLOC_REFRESH_TIMER:
+            status= turn_session_fsm_inject_msg(
+                                        session, TURN_ALLOC_REFRESH_EXPIRY, NULL);
+            break;
+
+        case TURN_BIND_REFRESH_TIMER:
+            break;
+
+        default:
+            status = STUN_INVALID_PARAMS;
+            break;
     }
 
     return status;

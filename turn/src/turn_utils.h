@@ -45,10 +45,13 @@ int32_t turn_utils_extract_data_from_alloc_resp(
 int32_t turn_utils_extract_data_from_refresh_resp(
                                 turn_session_t *session, handle h_msg);
 
-int32_t turn_utils_create_refresh_req_msg_with_credential(
+int32_t turn_utils_create_refresh_req_msg(
                             turn_session_t *session, handle *h_newmsg);
 
 int32_t turn_session_utils_notify_state_change_event(turn_session_t *session);
+
+int32_t turn_utils_start_alloc_refresh_timer(
+                                turn_session_t *session, uint32_t duration);
 
 
 /******************************************************************************/

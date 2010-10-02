@@ -43,6 +43,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATING */
     {
@@ -54,6 +55,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_allocation_timeout,
+        turn_ignore_msg,
         turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATED */
@@ -67,6 +69,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_init_dealloc,
+        turn_refresh_allocation,
     },
     /** TURN_OG_CREATING_PERM */
     {
@@ -79,6 +82,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_init_dealloc,
+        turn_refresh_allocation,
     },
     /** TURN_OG_ACTIVE */
     {
@@ -91,6 +95,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_init_dealloc,
+        turn_refresh_allocation,
     },
     /** TURN_OG_DEALLOCATING */
     {
@@ -103,9 +108,11 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_FAILED */
     {
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -260,9 +267,24 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
 
         if (status == STUN_OK)
         {
-            session->state = TURN_OG_ALLOCATED;
+            if (session->lifetime == 0)
+            {
+                session->state = TURN_OG_FAILED;
+            }
+            else
+            {
+                session->state = TURN_OG_ALLOCATED;
 
-            /** start allocation refresh timer */
+                /** start allocation refresh timer */
+                status = turn_utils_start_alloc_refresh_timer(session, 60);
+                if (status != STUN_OK)
+                {
+                    ICE_LOG (LOG_SEV_ERROR, 
+                            "Starting of TURN alloc refresh timer failed %d",
+                            status);
+                    session->state = TURN_OG_FAILED;
+                }
+            }
         }
 
         session->h_txn = session->h_req = session->h_resp = NULL;
@@ -415,8 +437,7 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
             status = turn_utils_cache_auth_params(session, h_rcvdmsg);
             if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
-            status = turn_utils_create_refresh_req_msg_with_credential(
-                                                        session, &h_sendmsg);
+            status = turn_utils_create_refresh_req_msg(session, &h_sendmsg);
             if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
             status = stun_create_txn(h_txn_inst, 
@@ -478,6 +499,45 @@ ERROR_EXIT_PT1:
 
     return status;
 }
+
+
+
+int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg)
+{
+    int32_t status;
+    handle h_txn, h_txn_inst;
+    
+    h_txn_inst = session->instance->h_txn_inst;
+
+    /** TODO = session should be capable of supporting multiple concurrent transactions and so has to store multiple txn handles */
+    /** delete an existing transaction, if any */
+    stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
+
+    status = turn_utils_create_refresh_req_msg(session, &session->h_req);
+    if (status != STUN_OK)
+        return status;
+
+    status = stun_create_txn(h_txn_inst,
+                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_req);
+    if (status != STUN_OK) return status;
+
+    session->h_txn = h_txn;
+
+    /** no change in state */
+
+    return status;
+}
+
 
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg)
