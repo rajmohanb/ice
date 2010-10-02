@@ -111,59 +111,76 @@ int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg)
 int32_t turn_utils_create_alloc_req_msg_with_credential(
                             turn_session_t *session, handle *h_newmsg)
 {
-    int32_t status;
-    handle ah_attr[6], h_msg;
+    int32_t status, i, attr_count = 0;
+    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
     
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_ALLOCATE, &h_msg);
     if (status != STUN_OK) return status;
 
      
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[0]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_username_set_user_name(ah_attr[0], 
+    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
                             session->cfg.username, 
                             strlen((char *)session->cfg.username));
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
     
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[1]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_nonce_set_nonce(ah_attr[1], 
+    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
                             session->nonce, session->nonce_len);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[2]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_realm_set_realm(ah_attr[2], 
+    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
                             session->realm, session->realm_len);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, &(ah_attr[3]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, 
+                                                &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
     status = stun_attr_requested_transport_set_protocol(
-                                        ah_attr[3], STUN_TRANSPORT_UDP);
-    if (status != STUN_OK) return status;
+                                ah_attr[attr_count - 1], STUN_TRANSPORT_UDP);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(ah_attr[4]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
+                                                &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
 
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[5]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
 
-    status = stun_msg_add_attributes(h_msg, ah_attr, 6);
+    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
     if (status != STUN_OK) return status;
 
     *h_newmsg = h_msg;
+
+    return status;
+
+ERROR_EXIT_PT:
+
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
+    stun_msg_destroy(h_msg);
 
     return status;
 }
@@ -173,80 +190,84 @@ int32_t turn_utils_create_alloc_req_msg_with_credential(
 int32_t turn_utils_create_dealloc_req_msg(
                             turn_session_t *session, handle *h_newmsg)
 {
-    int32_t status;
-    handle ah_attr[7], h_msg;
+    int32_t status, i, attr_count = 0;
+    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);
     if (status != STUN_OK) return status;
 
 
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[0]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_username_set_user_name(ah_attr[0], 
+    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
                             session->cfg.username, 
                             strlen((char *)session->cfg.username));
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[1]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_nonce_set_nonce(ah_attr[1], 
+    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
                                 session->nonce, session->nonce_len);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[2]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_realm_set_realm(ah_attr[2], 
+    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
                                 session->realm, session->realm_len);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, &(ah_attr[3]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, 
+                                                &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
     status = stun_attr_requested_transport_set_protocol(
-                                        ah_attr[3], STUN_TRANSPORT_UDP);
-    if (status != STUN_OK) return status;
+                            ah_attr[attr_count - 1], STUN_TRANSPORT_UDP);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_LIFETIME, &(ah_attr[4]));
-    if (status != STUN_OK)
-    {
-        goto ERROR_EXIT_PT1;
-    }
+    status = stun_attr_create(STUN_ATTR_LIFETIME, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_lifetime_set_duration(ah_attr[4], 0);
-    if (status != STUN_OK)
-    {
-        goto ERROR_EXIT_PT2;
-    }
+    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 0);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(ah_attr[5]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
+                                            &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
 
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[6]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
 
-    status = stun_msg_add_attributes(h_msg, ah_attr, 7);
-    if (status != STUN_OK) goto ERROR_EXIT_PT2;
+    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
     *h_newmsg = h_msg;
 
     return status;
 
-ERROR_EXIT_PT2:
-    stun_attr_destroy(ah_attr[0]);
+ERROR_EXIT_PT:
 
-ERROR_EXIT_PT1:
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
     stun_msg_destroy(h_msg);
 
     return status;
@@ -325,13 +346,8 @@ int32_t turn_utils_extract_data_from_refresh_resp(
                                 STUN_ATTR_LIFETIME, &h_attr, &num);
     if (status != STUN_OK) return status;
 
-    if (num > 0)
-    {
-        status = stun_attr_lifetime_get_duration(
-                                    h_attr, &session->lifetime);
-        if (status != STUN_OK) return status;
-    }
-
+    status = stun_attr_lifetime_get_duration(
+                                h_attr, &session->lifetime);
     return status;
 }
 
@@ -340,97 +356,84 @@ int32_t turn_utils_extract_data_from_refresh_resp(
 int32_t turn_utils_create_refresh_req_msg_with_credential(
                             turn_session_t *session, handle *h_newmsg)
 {
-    int32_t status;
-    handle ah_attr[7], h_msg;
+    int32_t status, i, attr_count;
+    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);
     if (status != STUN_OK) return status;
 
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[0]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_username_set_user_name(ah_attr[0], 
+    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
                             session->cfg.username, 
                             strlen((char *)session->cfg.username));
-    if (status != STUN_OK) return status;
-
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK) return status;
-#endif
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[1]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_nonce_set_nonce(ah_attr[1], 
+    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
                             session->nonce, session->nonce_len);
-    if (status != STUN_OK) return status;
-
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[1]);
-    if (status != STUN_OK) return status;
-#endif
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[2]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_attr_realm_set_realm(ah_attr[2], 
+    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
                             session->realm, session->realm_len);
-    if (status != STUN_OK) return status;
-
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[2]);
-    if (status != STUN_OK) return status;
-#endif
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, &(ah_attr[3]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, 
+                                            &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
     status = stun_attr_requested_transport_set_protocol(
-                                        ah_attr[3], STUN_TRANSPORT_UDP);
-    if (status != STUN_OK) return status;
-
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[3]);
-    if (status != STUN_OK) return status;
-#endif
-
-    status = stun_attr_create(STUN_ATTR_LIFETIME, &(ah_attr[4]));
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_lifetime_set_duration(ah_attr[4], 0);
-    if (status != STUN_OK) return status;
-
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[4]);
-    if (status != STUN_OK) return status;
-#endif
+                                ah_attr[attr_count - 1], STUN_TRANSPORT_UDP);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(ah_attr[5]));
-    if (status != STUN_OK) return status;
+    status = stun_attr_create(STUN_ATTR_LIFETIME, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[5]);
-    if (status != STUN_OK) return status;
-#endif
+    /** put in default refresh duration */
+    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 600);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[6]));
-    if (status != STUN_OK) return status;
 
-#if 0
-    status = stun_msg_add_attribute(h_msg, h_attr[6]);
-    if (status != STUN_OK) return status;
-#endif
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
+                                                &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
 
-    status = stun_msg_add_attributes(h_msg, ah_attr, 7);
-    if (status != STUN_OK) return status;
+
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+
+    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
     *h_newmsg = h_msg;
+
+    return status;
+
+ERROR_EXIT_PT:
+
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
+    stun_msg_destroy(h_msg);
 
     return status;
 }
