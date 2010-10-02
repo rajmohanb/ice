@@ -126,17 +126,17 @@ typedef struct {
     /**
      * username if relay server requires authentication.
      */
-    u_char              username[TURN_MAX_USERNAME_LEN];
+    u_char                username[TURN_MAX_USERNAME_LEN];
 
     /**
      * credentials if relay server requires authentication.
      */
-    u_char              credential[TURN_MAX_PASSWORD_LEN];
+    u_char                credential[TURN_MAX_PASSWORD_LEN];
 
     /**
      * realm if relay server requires authentication
      */
-    u_char              realm[TURN_MAX_REALM_LEN];
+    u_char                realm[TURN_MAX_REALM_LEN];
 
 } ice_relay_server_cfg_t;
 

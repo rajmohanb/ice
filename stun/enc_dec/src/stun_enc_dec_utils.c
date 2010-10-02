@@ -45,76 +45,136 @@ extern "C" {
 
 
 #ifdef ENABLE_TURN
-int32_t stun_tlv_utils_get_hmac_key(handle h_msg, u_char *key)
+
+int32_t stun_enc_dec_utils_get_long_term_cred_hmac_key(handle h_msg, 
+                                stun_auth_params_t *auth_params, u_char *key)
 {
     handle h_username, h_realm;
-    u_char username[MAX_USERNAME_LEN] = {0}, realm[MAX_REALM_VAL_BYTES] = {0};
-    /** TODO - remove magic value 100 for password */
+    u_char *username, *realm;
+#if 0
     u_char *ptr, concat_str[MAX_USERNAME_LEN+MAX_REALM_VAL_BYTES+100];
+#endif
     int32_t status;
-    uint32_t num = 1, realm_len, username_len;
-    MD5_CTX ctx;
+    uint32_t num, realm_len, username_len;
+    stun_MD5_CTX ctx;
 
-    MD5_Init(&ctx);
+    stun_MD5_Init(&ctx);
 
+#if 0
     ptr = concat_str;
+#endif
 
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_USERNAME, &h_username, &num);
-    if (status != STUN_OK) return status;
-
-    if (num == 0)
-    {
-        return STUN_INVALID_PARAMS;
-    }
-
-    username_len = MAX_USERNAME_LEN;
-    status = stun_attr_username_get_user_name(
-                                    h_username, username, &username_len);
-    if (status != STUN_OK) return status;
-
+    /** username */
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_REALM, &h_realm, &num);
-    if (status != STUN_OK) return status;
-
-    if (num == 0)
+                                STUN_ATTR_USERNAME, &h_username, &num);
+    if (status != STUN_OK)
     {
-        return STUN_INVALID_PARAMS;
+        ICE_LOG(LOG_SEV_ERROR, "USERNAME attribute missing in the message?");
+        return status;
     }
 
-    MD5_Update(&ctx, username, username_len);
-    MD5_Update(&ctx, ":", 1);
+    status = stun_attr_username_get_username_length(
+                                    h_username, &username_len);
+    if (status != STUN_OK) return status;
 
+    username = (u_char *) stun_calloc (1, username_len);
+    if (username == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Memory allocation for username failed %d bytes.", username_len);
+
+        return STUN_MEM_ERROR;
+    }
+
+    status = stun_attr_username_get_username(
+                                    h_username, username, &username_len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Retrieving username from attribute failed %d", status);
+        goto ERROR_EXIT_PT_1;
+    }
+
+    stun_MD5_Update(&ctx, username, username_len);
+    stun_MD5_Update(&ctx, ":", 1);
+
+#if 0
     stun_memcpy(ptr, username, username_len);
     ptr += username_len;
 
     *ptr = ':';
     ptr++;
+#endif
 
-    realm_len = MAX_REALM_VAL_BYTES;
+
+    /** realm */
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_REALM, &h_realm, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "REALM attribute missing in the message?");
+        goto ERROR_EXIT_PT_1;
+    }
+
+    status = stun_attr_realm_get_realm_length(h_realm, &realm_len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT_1;
+
+    realm = (u_char *) stun_calloc (1, realm_len);
+    if (realm == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Memory allocation for realm failed %d bytes.", realm_len);
+        status = STUN_MEM_ERROR;
+        goto ERROR_EXIT_PT_1;
+    }
+
     status = stun_attr_realm_get_realm(h_realm, realm, &realm_len);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Retrieving realm from attribute failed %d", status);
+        goto ERROR_EXIT_PT_2;
+    }
 
-    MD5_Update(&ctx, realm, realm_len);
-    MD5_Update(&ctx, ":", 1);
+    stun_MD5_Update(&ctx, realm, realm_len);
+    stun_MD5_Update(&ctx, ":", 1);
 
+#if 0
     stun_memcpy(ptr, realm, realm_len);
     ptr += realm_len;
 
     *ptr = ':';
     ptr++;
+#endif
 
-    MD5_Update(&ctx, "password", strlen("password"));
+    //stun_MD5_Update(&ctx, "password", strlen("password"));
+    stun_MD5_Update(&ctx, auth_params->password, auth_params->len);
 
+#if 0
     stun_memcpy(ptr, "password", strlen("password"));
     ptr += strlen("password");
+#endif
 
-    //platform_md5((unsigned char*) concat_str, (ptr - concat_str), key);
-    MD5_Final(key, &ctx);
+#if 0
+    platform_md5((unsigned char*) concat_str, (ptr - concat_str), key);
+#endif
+    stun_MD5_Final(key, &ctx);
+
+    stun_free(username);
+    stun_free(realm);
 
     return STUN_OK;
+
+ERROR_EXIT_PT_2:
+    stun_free(realm);
+ERROR_EXIT_PT_1:
+    stun_free(username);
+
+    return status;
 }
+
 #endif
 
 

@@ -162,7 +162,7 @@ int32_t cc_utils_create_binding_req_msg_with_credential(
         goto ERROR_EXIT;
     }
 
-    status = stun_attr_username_set_user_name(h_attr[0], 
+    status = stun_attr_username_set_username(h_attr[0], 
             session->local_user, session->local_user_len);
     if (status != STUN_OK)
     {
@@ -565,7 +565,7 @@ int32_t conn_check_utils_verify_request_msg(
     int32_t status;
     uint32_t num, local_len, peer_len;
     handle h_username_attr, h_fingerprint_attr, h_msg_int_attr, h_unknown;
-    u_char username[MAX_USERNAME_LEN] = {0};
+    u_char *username = NULL;
     u_char *localuser, *peeruser;
 
     /** fingerprint is a MUST in the request */
@@ -668,13 +668,29 @@ int32_t conn_check_utils_verify_request_msg(
      *   an error response. This response must use an error code of i
      *   401 (Unauthorized)
      */
-    num = MAX_USERNAME_LEN;
-    status = stun_attr_username_get_user_name(h_username_attr, username, &num);
+    status = stun_attr_username_get_username_length(h_username_attr, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Extracting username length from USERNAME attribute failed");
+        return STUN_VALIDATON_FAIL;
+    }
+
+    username = (u_char *) stun_calloc(1, num);
+    if (username == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Memory allocation failed while extracting username value");
+        return STUN_MEM_ERROR;
+    }
+
+    status = stun_attr_username_get_username(h_username_attr, username, &num);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Extracting username value from USERNAME attribute failed");
-        return STUN_VALIDATON_FAIL;
+        status = STUN_VALIDATON_FAIL;
+        goto ERROR_EXIT_PT;
     }
 
     status = conn_check_utils_extract_username_components(
@@ -685,7 +701,8 @@ int32_t conn_check_utils_verify_request_msg(
                 "username value validation failed. Sending 400 Bad Request");
         conn_check_utils_send_error_resp(session, 
                                         400, STUN_REJECT_RESPONSE_400);
-        return STUN_VALIDATON_FAIL;
+        status = STUN_VALIDATON_FAIL;
+        goto ERROR_EXIT_PT;
     }
 
     ICE_LOG(LOG_SEV_INFO, 
@@ -703,10 +720,13 @@ int32_t conn_check_utils_verify_request_msg(
                 "401 Unauthorized");
         conn_check_utils_send_error_resp(session, 
                                         401, STUN_REJECT_RESPONSE_401);
-        return STUN_VALIDATON_FAIL;
+
+        status = STUN_VALIDATON_FAIL;
+        goto ERROR_EXIT_PT;
     }
 
     ICE_LOG(LOG_SEV_INFO, "username is valid for this session");
+    stun_free(username);
 
     /*
      * rfc5389 sec 10.1.2 Receiving a request or indication
@@ -769,6 +789,11 @@ int32_t conn_check_utils_verify_request_msg(
 
 
     return STUN_OK;
+
+ERROR_EXIT_PT:
+
+    if (username) stun_free(username);
+    return status;
 }
 
 

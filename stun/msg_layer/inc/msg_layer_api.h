@@ -170,18 +170,24 @@ int32_t stun_msg_validate_message_integrity(
 int32_t stun_msg_validate_fingerprint(handle h_msg);
 
 
+/* ========================================================================== */
+
 /** generic attribute apis */
 int32_t stun_attr_create(stun_attribute_type_t attr_type, handle *h_attr);
 
 int32_t stun_attr_destroy(handle h_attr);
 
 
+/* ========================================================================== */
+
 /** attribute specific apis */
 int32_t stun_attr_software_set_value(handle h_attr, 
                                             s_char *value, uint16_t len);
 
+int32_t stun_attr_software_get_value_length(handle h_attr, uint32_t *len);
+
 int32_t stun_attr_software_get_value(handle h_attr, 
-                                            s_char *value, uint16_t *len);
+                                        s_char *value, uint16_t *len);
 
 /* ========================================================================== */
 
@@ -233,11 +239,13 @@ int32_t stun_attr_error_code_set_error_reason(
 
 /* ========================================================================== */
 
-int32_t stun_attr_username_get_user_name(
-                    handle h_attr, u_char *user_name, uint32_t *len);
+int32_t stun_attr_username_get_username_length(handle h_attr, uint32_t *len);
 
-int32_t stun_attr_username_set_user_name(handle h_attr, 
-                                                u_char *name, uint32_t len);
+int32_t stun_attr_username_get_username(handle h_attr, 
+                                            u_char *name, uint32_t *len);
+
+int32_t stun_attr_username_set_username(handle h_attr, 
+                                            u_char *name, uint32_t len);
 
 /* ========================================================================== */
 

@@ -445,7 +445,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     if (method != STUN_METHOD_BINDING)
     {
         /** compute the hmac key - long term credentials */
-        stun_tlv_utils_get_hmac_key(h_msg, md5_key);
+        stun_enc_dec_utils_get_long_term_cred_hmac_key(h_msg, auth, md5_key);
         key_len = 16;
     }
     else

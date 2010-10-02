@@ -80,6 +80,25 @@ int32_t stun_attr_software_set_value(handle h_attr, s_char *value, uint16_t len)
 }
 
 
+int32_t stun_attr_software_get_value_length(handle h_attr, uint32_t *len)
+{
+    stun_software_attr_t *vendor;
+
+    if ((h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    vendor = (stun_software_attr_t *) h_attr;
+
+    if (vendor->hdr.type != STUN_ATTR_SOFTWARE)
+        return STUN_INVALID_PARAMS;
+
+    *len = vendor->hdr.length;
+
+    return STUN_OK;
+}
+
+
+
 int32_t stun_attr_software_get_value(handle h_attr, 
                                         s_char *value, uint16_t *len)
 {
@@ -93,7 +112,11 @@ int32_t stun_attr_software_get_value(handle h_attr,
     if (attr->hdr.type != STUN_ATTR_SOFTWARE)
         return STUN_INVALID_PARAMS;
 
-    if (*len < attr->hdr.length) return STUN_MEM_INSUF;
+    if (*len < attr->hdr.length)
+    { 
+        *len = attr->hdr.length;
+        return STUN_MEM_INSUF;
+    }
 
     stun_memcpy(value, attr->software, attr->hdr.length);
     *len = attr->hdr.length;
@@ -391,12 +414,12 @@ int32_t stun_attr_error_code_set_error_reason(
 }
 
 
-int32_t stun_attr_username_get_user_name(
-                    handle h_attr, u_char *user_name, uint32_t *len)
+
+int32_t stun_attr_username_get_username_length(handle h_attr, uint32_t *len)
 {
     stun_username_attr_t *name;
 
-    if ((h_attr == NULL) || (user_name == NULL) || (len == NULL))
+    if ((h_attr == NULL) || (len == NULL))
         return STUN_INVALID_PARAMS;
 
     name = (stun_username_attr_t *) h_attr;
@@ -404,16 +427,40 @@ int32_t stun_attr_username_get_user_name(
     if (name->hdr.type != STUN_ATTR_USERNAME)
         return STUN_INVALID_PARAMS;
 
-    if (*len < name->hdr.length) return STUN_MEM_INSUF;
-
-    stun_memcpy(user_name, name->username, name->hdr.length);
     *len = name->hdr.length;
 
     return STUN_OK;
 }
 
 
-int32_t stun_attr_username_set_user_name(handle h_attr, 
+
+int32_t stun_attr_username_get_username(
+                    handle h_attr, u_char *username, uint32_t *len)
+{
+    stun_username_attr_t *name;
+
+    if ((h_attr == NULL) || (username == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    name = (stun_username_attr_t *) h_attr;
+
+    if (name->hdr.type != STUN_ATTR_USERNAME)
+        return STUN_INVALID_PARAMS;
+
+    if (*len < name->hdr.length)
+    {
+        *len = name->hdr.length;
+        return STUN_MEM_INSUF;
+    }
+
+    stun_memcpy(username, name->username, name->hdr.length);
+    *len = name->hdr.length;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_username_set_username(handle h_attr, 
                                                 u_char *name, uint32_t len)
 {
     stun_username_attr_t *username;

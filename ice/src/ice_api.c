@@ -323,6 +323,7 @@ int32_t ice_format_and_send_message(handle h_msg,
     ice_media_stream_t *media = (ice_media_stream_t *) app_param;
     ice_session_t *ice_session;
     stun_auth_params_t auth = {0};
+    stun_method_type_t method;
 
     if ((h_msg == NULL) || (ip_addr == NULL) || 
                             (port == 0) || (transport_param == NULL))
@@ -332,26 +333,46 @@ int32_t ice_format_and_send_message(handle h_msg,
         return STUN_INVALID_PARAMS;
     }
 
-    /** for ice_lite, this wil always be a connectivity check session */
     if (!app_param) return STUN_INT_ERROR;
 
     ice_session = media->ice_session;
 
-    buf = (u_char *) platform_calloc(1, TRANSPORT_MTU_SIZE);
-    buf_len = TRANSPORT_MTU_SIZE;
-
     /** authentication parameters for message integrity */
-    auth.len = strlen(media->local_pwd);
-    if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-        auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+    status = stun_msg_get_method(h_msg, &method);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Invalid message!! unable to retrieve STUN method type");
+        return STUN_INVALID_PARAMS;
+    }
 
-    stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+    if (method == STUN_METHOD_BINDING)
+    {
+        /** connectivity check mesages - short term credential */
+        auth.len = stun_strlen(media->local_pwd);
+        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+        stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+    }
+    else
+    {
+        /** turn messages - long term credential */
+        auth.len = stun_strlen((char *)ice_session->turn_cfg.credential);
+        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+        stun_memcpy((char *)auth.password, 
+                        ice_session->turn_cfg.credential, auth.len);
+    }
+
+    buf = (u_char *) stun_calloc(1, TRANSPORT_MTU_SIZE);
+    buf_len = TRANSPORT_MTU_SIZE;
 
     status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
                 "stun_msg_format() returned error %d\n", status);
+        stun_free(buf);
         return STUN_INT_ERROR;
     }
 
@@ -359,6 +380,7 @@ int32_t ice_format_and_send_message(handle h_msg,
     {
         ICE_LOG (LOG_SEV_ERROR, 
                 "some error! transport socket handle is NULL\n");
+        stun_free(buf);
         return STUN_INVALID_PARAMS;
     }
 
@@ -601,10 +623,6 @@ int32_t ice_session_set_stun_server_cfg(handle h_inst,
 
     if (session->stun_cfg.server.port == 0)
         session->stun_cfg.server.port = STUN_SERVER_DEFAULT_PORT;
-
-#if 0
-    /** TODO - propagate this configuration to stun binding module */
-#endif
 
     return STUN_OK;
 }

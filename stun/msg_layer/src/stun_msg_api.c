@@ -234,6 +234,9 @@ int32_t stun_msg_get_specified_attributes(handle h_msg,
         }
     }
 
+    if (count == 0) 
+        return STUN_NOT_FOUND;
+
     *size = count;
 
     return STUN_OK;

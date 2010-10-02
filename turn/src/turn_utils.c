@@ -356,7 +356,7 @@ int32_t turn_utils_extract_data_from_refresh_resp(
 int32_t turn_utils_create_refresh_req_msg_with_credential(
                             turn_session_t *session, handle *h_newmsg)
 {
-    int32_t status, i, attr_count;
+    int32_t status, i, attr_count = 0;
     handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);

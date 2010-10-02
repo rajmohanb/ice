@@ -21,7 +21,8 @@ extern "C" {
 
 /******************************************************************************/
 
-int32_t stun_tlv_utils_get_hmac_key(handle h_msg, u_char *key);
+int32_t stun_enc_dec_utils_get_long_term_cred_hmac_key(handle h_msg, 
+                                stun_auth_params_t *auth_params, u_char *key);
 
 uint16_t stun_tlv_utils_get_stun_msg_type(stun_msg_t *msg);
 

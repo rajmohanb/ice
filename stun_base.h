@@ -90,6 +90,10 @@ typedef     void*           handle;
 #define stun_memset platform_memset
 #define stun_memcpy platform_memcpy
 #define stun_memcmp platform_memcmp
+#define stun_MD5_CTX MD5_CTX
+#define stun_MD5_Init MD5_Init
+#define stun_MD5_Update MD5_Update
+#define stun_MD5_Final MD5_Final
 #define platform_md5 MD5
 #define platform_hmac_sha platform_hmac_sha
 #define stun_strcpy strcpy
