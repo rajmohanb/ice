@@ -405,7 +405,7 @@ int32_t turn_utils_create_refresh_req_msg(
     attr_count++;
 
     /** put in default refresh duration */
-    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 60);
+    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 2000);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 

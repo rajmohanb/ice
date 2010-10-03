@@ -111,6 +111,10 @@ handle turn_start_txn_timer(uint32_t duration, handle arg)
 
     timer->timer_id = session->instance->start_timer_cb(duration, timer);
 
+    ICE_LOG(LOG_SEV_INFO, 
+            "Started TURN transaction timer for %d msec duration. TURN timer "\
+            "handle is %p", duration, timer);
+
     return timer;
 }
 
@@ -133,6 +137,15 @@ int32_t turn_stop_txn_timer(handle timer_id)
     {
         /** timer stopped successfully, so free the memory for turn timer */
         stun_free(timer);
+
+        ICE_LOG(LOG_SEV_INFO, 
+                "Stopped TURN transaction timer with timer id %p", timer_id);
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+                "Unable to stop TURN transaction timer with timer id %p", 
+                timer_id);
     }
 
     return status;

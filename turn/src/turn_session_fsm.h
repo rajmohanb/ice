@@ -36,6 +36,8 @@ int32_t turn_init_dealloc (turn_session_t *session, handle h_msg);
 
 int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg);
 
+int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg);
+
 int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg);
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);

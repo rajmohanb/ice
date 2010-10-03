@@ -65,7 +65,7 @@ static turn_session_fsm_handler
         send_perm_req,
         turn_ignore_msg,
         turn_ignore_msg,
-        turn_ignore_msg,
+        turn_refresh_resp,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_init_dealloc,
@@ -104,7 +104,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
-        turn_refresh_resp,
+        turn_dealloc_resp,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -276,7 +276,7 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                 session->state = TURN_OG_ALLOCATED;
 
                 /** start allocation refresh timer */
-                status = turn_utils_start_alloc_refresh_timer(session, 60);
+                status = turn_utils_start_alloc_refresh_timer(session, 60000);
                 if (status != STUN_OK)
                 {
                     ICE_LOG (LOG_SEV_ERROR, 
@@ -373,8 +373,148 @@ int32_t turn_init_dealloc (turn_session_t *session, handle h_msg)
 
 
 
-
 int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
+{
+    int32_t status;
+    stun_msg_type_t class_type;
+    handle h_txn, h_new_txn, h_txn_inst = session->instance->h_txn_inst;
+    bool_t txn_terminated = false;
+
+    status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "STUN Transaction not found, ignoring the message");
+        return status;
+    }
+
+    status = stun_txn_inject_received_msg(h_txn_inst, h_txn, h_rcvdmsg);
+    if (status == STUN_TERMINATED)
+    { 
+        txn_terminated = true;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "STUN Transaction returned error %d", status);
+        goto ERROR_EXIT_PT1;
+    }
+
+    status = stun_msg_get_class(h_rcvdmsg, &class_type);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Error while extracting message class %d", status);
+        goto ERROR_EXIT_PT1;
+    }
+
+    if (class_type == STUN_ERROR_RESP)
+    {
+        uint32_t error_code, num = 1;
+        handle h_error_code_attr;
+
+        status = stun_msg_get_specified_attributes(h_rcvdmsg, 
+                                STUN_ATTR_ERROR_CODE, &h_error_code_attr, &num);
+        if (status != STUN_OK) goto ERROR_EXIT_PT1;
+
+        if (num == 0)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "Error code attribute missing in the received response");
+            goto ERROR_EXIT_PT1;
+        }
+
+        status = stun_attr_error_code_get_error_code(
+                                            h_error_code_attr, &error_code);
+        if (status != STUN_OK) goto ERROR_EXIT_PT1;
+
+        if (error_code == 438)
+        {
+            handle h_sendmsg;
+
+            /** cache the authentication parameters for subsequent requests */
+            status = turn_utils_cache_auth_params(session, h_rcvdmsg);
+            if (status != STUN_OK) goto ERROR_EXIT_PT1;
+
+            status = turn_utils_create_refresh_req_msg(session, &h_sendmsg);
+            if (status != STUN_OK) goto ERROR_EXIT_PT1;
+
+            status = stun_create_txn(h_txn_inst, 
+                        STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_new_txn);
+            if (status != STUN_OK)
+            { 
+                stun_msg_destroy(h_sendmsg);
+                goto ERROR_EXIT_PT1;
+            }
+
+            status = stun_txn_set_app_transport_param(h_txn_inst, 
+                                                        h_new_txn, session);
+            if (status != STUN_OK) goto ERROR_EXIT_PT2;
+
+            status = stun_txn_set_app_param(h_txn_inst, h_new_txn, (handle)session);
+            if (status != STUN_OK) goto ERROR_EXIT_PT2;
+
+            status = stun_txn_send_stun_message(h_txn_inst, h_new_txn, h_sendmsg);
+            if (status != STUN_OK) goto ERROR_EXIT_PT2;
+
+            session->h_req = h_sendmsg;
+            session->h_txn = h_new_txn;
+            session->h_resp = NULL;
+        }
+        else 
+        {
+            /** to be handled */
+            session->state = TURN_OG_FAILED;
+            session->h_txn = session->h_req = session->h_resp = NULL;
+        }
+    }
+    else
+    {
+        status = turn_utils_extract_data_from_refresh_resp(session, h_rcvdmsg);
+
+        if (status == STUN_OK)
+        {
+            if (session->lifetime == 0)
+            {
+                session->state = TURN_OG_FAILED; /** TODO */
+            
+                ICE_LOG (LOG_SEV_ERROR, "TURN session de-allocated");
+            }
+            else
+            {
+                /** (re)start allocation refresh timer */
+                status = turn_utils_start_alloc_refresh_timer(session, 60000);
+                if (status != STUN_OK)
+                {
+                    ICE_LOG (LOG_SEV_ERROR, 
+                            "Starting of TURN alloc refresh timer failed %d",
+                            status);
+                    session->state = TURN_OG_FAILED;
+                }
+            }
+        }
+
+        session->h_txn = session->h_req = session->h_resp = NULL;
+    }
+
+    if (txn_terminated == true)
+        stun_destroy_txn(h_txn_inst, h_txn, false, false);
+
+    return status;
+
+ERROR_EXIT_PT2:
+    stun_destroy_txn(h_txn_inst, h_new_txn, false, false);
+ERROR_EXIT_PT1:
+    if (txn_terminated == true)
+        stun_destroy_txn(h_txn_inst, h_txn, false, false);
+
+    return status;
+}
+
+
+
+
+int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg)
 {
     int32_t status;
     stun_msg_type_t class_type;
@@ -564,6 +704,9 @@ int32_t turn_session_fsm_inject_msg(turn_session_t *session,
 
     if (cur_state != session->state)
     {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "TURN session %p moved to state %d from %d", 
+                session, session->state, cur_state);
         status = turn_session_utils_notify_state_change_event(session);
     }
 

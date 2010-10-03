@@ -308,6 +308,8 @@ int32_t stun_destroy_txn(handle h_inst,
 
     stun_free(txn_ctxt);
 
+    ICE_LOG(LOG_SEV_DEBUG, "Destroyed transaction with handle %p", h_txn);
+
     return STUN_OK;
 }
 
