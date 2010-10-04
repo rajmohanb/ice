@@ -572,19 +572,19 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_FINGERPRINT, &h_fingerprint_attr, &num);
-    if (status != STUN_OK)
+    if (status == STUN_NOT_FOUND)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "FingerPrint attribute missing. Message validation failed");
+        return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Extracting FingerPrint attribute from the message failed");
         return status;
     }
 
-    if (num == 0)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "FingerPrint attribute missing. Message validation failed");
-        return STUN_VALIDATON_FAIL;
-    }
 
     ICE_LOG(LOG_SEV_INFO, 
             "FINGERPRINT attribute is present in the received message");
@@ -615,14 +615,7 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_MESSAGE_INTEGRITY, &h_msg_int_attr, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Extracting Message Integrity attribute from the message failed");
-        return status;
-    }
-
-    if (num == 0)
+    if (status == STUN_NOT_FOUND)
     { 
         ICE_LOG(LOG_SEV_ERROR, 
                 "Message Integrity attribute missing. Message validation "\
@@ -630,6 +623,12 @@ int32_t conn_check_utils_verify_request_msg(
         conn_check_utils_send_error_resp(session, 
                                         400, STUN_REJECT_RESPONSE_400);
         return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Extracting Message Integrity attribute from the message failed");
+        return status;
     }
 
     ICE_LOG(LOG_SEV_INFO, 
@@ -639,14 +638,7 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_USERNAME, &h_username_attr, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting Username attribute from the message failed");
-        return status;
-    }
-
-    if (num == 0)
+    if (status == STUN_NOT_FOUND)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Username attribute missing. Message validation "\
@@ -655,6 +647,13 @@ int32_t conn_check_utils_verify_request_msg(
                                         400, STUN_REJECT_RESPONSE_400);
         return STUN_VALIDATON_FAIL;
     }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Extracting Username attribute from the message failed");
+        return status;
+    }
+
 
     ICE_LOG(LOG_SEV_INFO, 
             "USERNAME attribute is present in the received message");
@@ -767,16 +766,7 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
                     STUN_ATTR_UNKNOWN_COMP_REQUIRED, &h_unknown, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting unknown comprehension required attributes "\
-                "from the message failed");
-
-        return status;
-    }
-
-    if (num > 0)
+    if ((status == STUN_OK) && (num > 0))
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "%d Unknown comprehension required attributes are present "\
@@ -785,6 +775,14 @@ int32_t conn_check_utils_verify_request_msg(
         conn_check_utils_send_error_resp(session,
                                         420, STUN_REJECT_RESPONSE_420);
         return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_NOT_FOUND)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Extracting unknown comprehension required attributes "\
+                "from the message failed");
+
+        return status;
     }
 
 
@@ -807,12 +805,15 @@ int32_t conn_check_utils_extract_info_from_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_USE_CANDIDATE, h_attrs, &num);
-    if (status != STUN_OK) return status;
-
-    if (num == 1)
+    if (status == STUN_OK)
+    {
         session->nominated_flag = true;
-    else
+    }
+    else if (status == STUN_NOT_FOUND)
+    {
         session->nominated_flag = false;
+        status = STUN_OK;
+    }
 
     return status;
 }

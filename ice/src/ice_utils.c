@@ -1943,6 +1943,54 @@ int32_t ice_utils_copy_turn_gathered_candidates(
 }
 
 
+
+int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
+{
+    int32_t status;
+    uint32_t cc_timer_value;
+    ice_timer_params_t *timer = media->cc_timer;
+
+    if(timer == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE] Media conn check timer param is NULL");
+        return STUN_INT_ERROR;
+    }
+
+    /** 
+     * start the check timer. This is a common timer 
+     * for both ordinary and triggered checks.
+     */
+    cc_timer_value = ice_utils_get_conn_check_timer_duration(media);
+
+    timer->h_instance = media->ice_session->instance;
+    timer->h_session = media->ice_session;
+    timer->h_media = media;
+    timer->arg = NULL;
+    timer->type = ICE_CHECK_LIST_TIMER;
+
+    timer->timer_id = media->ice_session->instance->start_timer_cb(
+                                            cc_timer_value, media->cc_timer);
+    if (timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[ICE] Started check list timer for %d msec for media %p. "\
+                "timer id %p", cc_timer_value, media, timer->timer_id);
+        status =  STUN_OK;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[ICE] Starting of check list timer for %d msec for media %p "\
+                "failed", cc_timer_value, media);
+        status = STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

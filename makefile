@@ -31,7 +31,7 @@ ICE_APP_INCLUDE_PATH := .
 ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN 
 
 ifeq ($(strip $(ENABLE_ICE_DEBUG)), y)
-ICE_APP_CFLAGS += -g -DDEBUG
+ICE_APP_CFLAGS += -g #-DDEBUG
 endif
 
 export ICE_APP_INCLUDE_PATH
@@ -48,6 +48,7 @@ full:
 	make -C ice/src/
 	make -C binding/src/
 	make -C platform/src/
+	make -C ice_lite/src/
 
 lite:
 	make -C stun/enc_dec/src/

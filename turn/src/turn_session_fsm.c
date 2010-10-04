@@ -221,6 +221,10 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                                             h_error_code_attr, &error_code);
         if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
+        ICE_LOG (LOG_SEV_INFO, 
+                "[TURN] Received ALLOCATE error response with error code %d", 
+                error_code);
+
         if ((error_code == 401) || (error_code == 438))
         {
             handle h_sendmsg;
@@ -263,6 +267,10 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
     }
     else
     {
+
+        ICE_LOG (LOG_SEV_INFO, 
+                "[TURN] Received ALLOCATE success response with error code");
+
         status = turn_utils_extract_data_from_alloc_resp(session, h_rcvdmsg);
 
         if (status == STUN_OK)
@@ -276,7 +284,8 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                 session->state = TURN_OG_ALLOCATED;
 
                 /** start allocation refresh timer */
-                status = turn_utils_start_alloc_refresh_timer(session, 60000);
+                status = turn_utils_start_alloc_refresh_timer(
+                                        session, (session->lifetime * 1000/2));
                 if (status != STUN_OK)
                 {
                     ICE_LOG (LOG_SEV_ERROR, 
@@ -483,7 +492,8 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
             else
             {
                 /** (re)start allocation refresh timer */
-                status = turn_utils_start_alloc_refresh_timer(session, 60000);
+                status = turn_utils_start_alloc_refresh_timer(
+                                        session, (session->lifetime * 1000/2));
                 if (status != STUN_OK)
                 {
                     ICE_LOG (LOG_SEV_ERROR, 

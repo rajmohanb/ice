@@ -142,6 +142,8 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
 int32_t ice_utils_copy_turn_gathered_candidates(
         ice_media_stream_t *media, ice_int_params_t *param, uint32_t comp_id);
 
+int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media);
+
 
 /******************************************************************************/
 

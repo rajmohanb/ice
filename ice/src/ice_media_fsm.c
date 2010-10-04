@@ -66,6 +66,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_process_relay_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
         ice_media_stream_form_checklist,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -80,6 +81,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
         ice_media_unfreeze,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -89,6 +91,7 @@ static ice_media_stream_fsm_handler
     },
     /** ICE_MEDIA_CC_RUNNING */
     {
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -109,12 +112,14 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
         ice_media_stream_restart,
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
     },
     /** ICE_CC_MEDIA_FAILED */
     {
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -349,7 +354,6 @@ int32_t ice_media_stream_form_checklist(
 int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
 {
     int32_t status;
-    uint32_t cc_timer_val;
     ice_cand_pair_t *pair;
 
     /** 
@@ -365,7 +369,9 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     status = ice_media_utils_initialize_cand_pairs(media);
     if (status != STUN_OK) return status;
 
+#ifdef DEBUG
     ice_media_utils_dump_cand_pair_stats(media);
+#endif
 
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status != STUN_OK) return status;
@@ -376,41 +382,23 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     /** as soon as we have sent out the first conn check, move the state */
     media->state = ICE_MEDIA_CC_RUNNING;
 
-    /** 
-     * start the check timer. This is a common timer for both 
-     * ordinary and triggered checks 
-     */
-    cc_timer_val = ice_utils_get_conn_check_timer_duration(media);
-
+    /** allocate memory for conn checka timer params */
     media->cc_timer = (ice_timer_params_t *) 
                 stun_calloc (1, sizeof(ice_timer_params_t));
-    if (media->cc_timer == NULL) return 0;
-
-    media->cc_timer->h_instance = media->ice_session->instance;
-    media->cc_timer->h_session = media->ice_session;
-    media->cc_timer->h_media = media;
-    media->cc_timer->arg = NULL;
-    media->cc_timer->type = ICE_CHECK_LIST_TIMER;
-
-    media->cc_timer->timer_id = 
-        media->ice_session->instance->start_timer_cb(cc_timer_val, media->cc_timer);
-    if (media->cc_timer->timer_id)
+    if (media->cc_timer == NULL)
     {
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "Started check list timer for %d msec for media %p. timer id %p",
-                cc_timer_val, media, media->cc_timer->timer_id);
-        status =  STUN_OK;
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE MEDIA] Memory allocation failed for ICE conn "\
+                "check timer");
+        return STUN_NO_RESOURCE;
     }
-    else
-    {
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "Starting of check list timer for %d msec for media %p failed", 
-                cc_timer_val, media);
-        status = STUN_INT_ERROR;
-    }
+
+    status = ice_media_utils_start_check_list_timer(media);
 
     return status;
 }
+
+
 
 int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 {
@@ -540,38 +528,8 @@ int32_t ice_media_stream_checklist_timer_expiry(
     status = ice_utils_init_connectivity_check(media, pair); 
     if (status != STUN_OK) return status;
 
-    /** 
-     * start the check timer. This is a common timer for both 
-     * ordinary and triggered checks 
-     */
-    cc_timer_val = ice_utils_get_conn_check_timer_duration(media);
-
-    /** 
-     * memory for this timer was allocated when the 
-     * first connectivity check was sent out 
-     */
-    media->cc_timer->h_instance = media->ice_session->instance;
-    media->cc_timer->h_session = media->ice_session;
-    media->cc_timer->h_media = media;
-    media->cc_timer->arg = NULL;
-    media->cc_timer->type = ICE_CHECK_LIST_TIMER;
-
-    media->cc_timer->timer_id = 
-        media->ice_session->instance->start_timer_cb(cc_timer_val, media->cc_timer);
-    if (media->cc_timer->timer_id)
-    {
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "Started check list timer for %d msec for media %p. timer id %p",
-                cc_timer_val, media, media->cc_timer->timer_id);
-        status =  STUN_OK;
-    }
-    else
-    {
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "Starting of check list timer for %d msec for media %p failed", 
-                cc_timer_val, media);
-        status = STUN_INT_ERROR;
-    }
+    /** restart the timer */
+    status = ice_media_utils_start_check_list_timer(media);
 
     return status;
 }
