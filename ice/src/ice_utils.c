@@ -414,6 +414,7 @@ int32_t ice_utils_set_peer_media_params(
 uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand)
 {
     uint32_t type_pref;
+    uint32_t local_pref;
     uint64_t prio;
 
     if (cand == NULL) return STUN_INVALID_PARAMS;
@@ -427,10 +428,17 @@ uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand)
     else if (cand->type == ICE_CAND_TYPE_RELAYED)
         type_pref = CAND_TYPE_PREF_RELAY_CANDIDATE;
     else 
-        return STUN_INVALID_PARAMS;
+        return 0;
+
+    if(cand->transport.type == STUN_INET_ADDR_IPV4)
+        local_pref = LOCAL_PREF_IPV4;
+    else if (cand->transport.type == STUN_INET_ADDR_IPV6)
+        local_pref = LOCAL_PREF_IPV6;
+    else
+        return 0;
 
     prio = (pow(2, 24) * type_pref) + 
-           (pow(2, 8) * LOCAL_IP_PRECEDENCE) + 
+           (pow(2, 8) * local_pref) + 
            (256 - cand->comp_id);
 
     return prio;
