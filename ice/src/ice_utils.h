@@ -21,9 +21,12 @@ extern "C" {
 
 /******************************************************************************/
 
-uint64_t ice_utils_compute_priority(ice_candidate_t *cand);
+uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand);
 
-int32_t ice_utils_compute_foundation(ice_candidate_t *cand);
+uint64_t ice_utils_compute_peer_reflexive_candidate_priority(
+                                                    ice_candidate_t *cand);
+
+int32_t ice_utils_compute_candidate_foundation(ice_candidate_t *cand);
 
 int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media);
 

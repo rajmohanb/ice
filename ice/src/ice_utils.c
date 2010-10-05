@@ -411,7 +411,7 @@ int32_t ice_utils_set_peer_media_params(
 
 
 
-uint64_t ice_utils_compute_priority(ice_candidate_t *cand)
+uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand)
 {
     uint32_t type_pref;
     uint64_t prio;
@@ -437,7 +437,34 @@ uint64_t ice_utils_compute_priority(ice_candidate_t *cand)
 }
 
 
-int32_t ice_utils_compute_foundation(ice_candidate_t *cand)
+uint64_t ice_utils_compute_peer_reflexive_candidate_priority(
+                                                    ice_candidate_t *cand)
+{
+    uint32_t type_pref;
+    uint32_t local_pref;
+    uint64_t prio;
+
+    if (cand == NULL) return STUN_INVALID_PARAMS;
+
+    type_pref = CAND_TYPE_PREF_PRFLX_CANDIDATE;
+
+    if(cand->transport.type == STUN_INET_ADDR_IPV4)
+        local_pref = LOCAL_PREF_IPV4;
+    else if (cand->transport.type == STUN_INET_ADDR_IPV6)
+        local_pref = LOCAL_PREF_IPV6;
+    else
+        return 0;
+
+    prio = (pow(2, 24) * type_pref) + 
+           (pow(2, 8) * local_pref) + 
+           (256 - cand->comp_id);
+
+    return prio;
+}
+
+
+
+int32_t ice_utils_compute_candidate_foundation(ice_candidate_t *cand)
 {
     static uint32_t count = 1;
 
@@ -935,6 +962,8 @@ int32_t ice_utils_init_connectivity_check(
 {
     int32_t status;
     handle h_cc_inst;
+    conn_check_credentials_t cred;
+    conn_check_session_params_t cc_params= {0};
 
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
@@ -946,18 +975,6 @@ int32_t ice_utils_init_connectivity_check(
                 "conn_check_create_session() returned error %d", status);
         goto ERROR_EXIT_PT1;
     }
-
-#if 0
-    stun_strncpy(cred.username, TEST_USER_NAME, STUN_MAX_USERNAME_LEN - 1);
-    stun_strncpy(cred.password, "toto", STUN_MAX_PASSWORD_LEN - 1);
-    stun_strncpy(cred.realm, "domain.org", STUN_MAX_REALM_LEN - 1);
-    status = conn_check_session_set_credentials(h_inst, h_session, &cred);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_set_credentials() returned error %d\n", status);
-    }
-#endif
 
     status = conn_check_session_set_transport_param(
                                 h_cc_inst, pair->h_cc_session, 
@@ -991,6 +1008,49 @@ int32_t ice_utils_init_connectivity_check(
     {
         ICE_LOG (LOG_SEV_DEBUG, 
             "conn_check_session_set_app_param() returned error %d", status);
+        goto ERROR_EXIT_PT2;
+    }
+
+    /** TODO following is TEMPORARY = set local credentials */
+    stun_memset(&cred, 0, sizeof(conn_check_credentials_t));
+    stun_memcpy(cred.username, media->local_ufrag, STUN_MAX_USERNAME_LEN);
+    stun_memcpy(cred.password, media->local_pwd, STUN_MAX_PASSWORD_LEN);
+    status = conn_check_session_set_local_credentials(
+                                    h_cc_inst, pair->h_cc_session, &cred);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_DEBUG, 
+            "conn_check_session_set_local_credentials() returned error %d", 
+            status);
+        goto ERROR_EXIT_PT2;
+    }
+
+    /** TODO following is TEMPORARY = set peer credentials */
+    stun_memset(&cred, 0, sizeof(conn_check_credentials_t));
+    stun_memcpy(cred.username, media->peer_ufrag, STUN_MAX_USERNAME_LEN);
+    stun_memcpy(cred.password, media->peer_pwd, STUN_MAX_PASSWORD_LEN);
+    status = conn_check_session_set_peer_credentials(
+                                    h_cc_inst, pair->h_cc_session, &cred);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_DEBUG, 
+            "conn_check_session_set_peer_credentials() returned error %d", 
+            status);
+        goto ERROR_EXIT_PT2;
+    }
+
+    /** TODO following is TEMPORARY = set session behavioral parameters  */
+    cc_params.controlling_role = true; // FIXME
+    cc_params.nominated = false;
+    cc_params.prflx_cand_priority = 
+        ice_utils_compute_peer_reflexive_candidate_priority(pair->local);
+    status = conn_check_session_set_session_params(
+                                h_cc_inst, pair->h_cc_session, &cc_params);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_DEBUG, 
+            "conn_check_session_set_session_params() returned error %d", 
+            status);
         goto ERROR_EXIT_PT2;
     }
 
@@ -1199,7 +1259,7 @@ int32_t ice_utils_copy_media_host_candidates(
 
         /** initialize the rest */
         cand->type = ICE_CAND_TYPE_HOST;
-        cand->priority = ice_utils_compute_priority(cand);
+        cand->priority = ice_utils_compute_candidate_priority(cand);
 
         /**
          * when a media is added with host candidate, then set this
@@ -1883,7 +1943,7 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
     cand->default_cand = false;
     cand->transport_param = base_cand->transport_param;
 
-    cand->priority = ice_utils_compute_priority(cand);
+    cand->priority = ice_utils_compute_candidate_priority(cand);
 
     return STUN_OK;
 }

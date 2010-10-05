@@ -349,11 +349,34 @@ int32_t ice_format_and_send_message(handle h_msg,
 
     if (method == STUN_METHOD_BINDING)
     {
+        stun_msg_type_t msg_class;
+
         /** connectivity check mesages - short term credential */
-        auth.len = stun_strlen(media->local_pwd);
-        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-        stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+        status = stun_msg_get_class(h_msg, &msg_class);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "Invalid message!! unable to retrieve STUN msg class");
+            return STUN_INVALID_PARAMS;
+        }
+
+        if (msg_class == STUN_REQUEST)
+        {
+            auth.len = stun_strlen(media->peer_pwd);
+            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.password, media->peer_pwd, auth.len);
+        }
+        else if ((msg_class == STUN_SUCCESS_RESP) || 
+                 (msg_class == STUN_ERROR_RESP))
+        {
+            auth.len = stun_strlen(media->local_pwd);
+            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+        }
+        
+        /** Indications are not authenticated */
     }
     else
     {

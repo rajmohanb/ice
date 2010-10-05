@@ -33,6 +33,8 @@ int32_t cc_utils_create_request_msg(
 {
     handle h_msg, ah_attr[MAX_STUN_ATTRIBUTES] = {0};
     int32_t status, i, attr_count = 0;
+    u_char username[48] = {0}; // better way? no hardcode of size?
+    uint32_t temp; // same as above
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
     if (status != STUN_OK)
@@ -81,6 +83,57 @@ int32_t cc_utils_create_request_msg(
 
     status = stun_attr_priority_set_priority(
                         ah_attr[attr_count - 1], session->prflx_cand_priority);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+
+    /** ice controlling/controlled */
+    if (session->controlling_role == true)
+    {
+        status = stun_attr_create(STUN_ATTR_ICE_CONTROLLING, 
+                                                    &(ah_attr[attr_count]));
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creation of ICE CONTROLLING attribute failed");
+            goto ERROR_EXIT_PT;
+        }
+        attr_count++;
+
+        status = stun_attr_ice_controlling_set_tiebreaker_value(
+                                            ah_attr[attr_count - 1], 123456767);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+    }
+    else
+    {
+        status = stun_attr_create(STUN_ATTR_ICE_CONTROLLED, 
+                                                    &(ah_attr[attr_count]));
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creation of ICE CONTROLLED attribute failed");
+            goto ERROR_EXIT_PT;
+        }
+        attr_count++;
+
+        status = stun_attr_ice_controlled_set_tiebreaker_value(
+                                            ah_attr[attr_count - 1], 123456767);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+    }
+
+    /** username */
+    temp = stun_snprintf((char *)username, 48, "%s:%s", 
+                                session->peer_user, session->local_user);
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[CONN CHECK] Creation of USERNAME attribute failed");
+        goto ERROR_EXIT_PT;
+    }
+    attr_count++;
+
+    status = stun_attr_username_set_username(
+                                ah_attr[attr_count - 1], username, temp);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 

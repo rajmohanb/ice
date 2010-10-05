@@ -771,6 +771,7 @@ int32_t stun_attr_ice_controlling_set_tiebreaker_value(
         return STUN_INVALID_PARAMS;
 
     controlling->random_num = tiebreak;
+    controlling->hdr.length = 8;
 
     return STUN_OK;
 }
