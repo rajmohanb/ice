@@ -25,12 +25,38 @@ extern "C" {
 #include "turn_int.h"
 
 
-int32_t turn_utils_create_request_msg(
-                            stun_method_type_t method, handle *h_msg)
+int32_t turn_utils_create_request_msg(turn_session_t *session, 
+                                    stun_method_type_t method, handle *h_msg)
 {
     int32_t status;
+    handle h_req, h_vendor;
 
-    status = stun_msg_create(STUN_REQUEST, method, h_msg);
+    status = stun_msg_create(STUN_REQUEST, method, &h_req);
+    if (status != STUN_OK) return status;
+
+    /** software attribute */
+    if (session->instance->client_name)
+    {
+        status = stun_attr_create(STUN_ATTR_SOFTWARE, &h_vendor);
+        if (status != STUN_OK) goto ERROR_EXIT_PT1;
+
+        status = stun_attr_software_set_value(h_vendor, 
+                                            session->instance->client_name, 
+                                            session->instance->client_name_len);
+        if (status != STUN_OK) goto ERROR_EXIT_PT2;
+
+        status = stun_msg_add_attribute(h_req, h_vendor);
+        if (status != STUN_OK) goto ERROR_EXIT_PT2;
+    }
+
+    *h_msg = h_req;
+    return status;
+
+ERROR_EXIT_PT2:
+    stun_attr_destroy(h_vendor);
+
+ERROR_EXIT_PT1:
+    stun_msg_destroy(h_req);
 
     return status;
 }
@@ -114,10 +140,9 @@ int32_t turn_utils_create_alloc_req_msg_with_credential(
     int32_t status, i, attr_count = 0;
     handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
-    
-    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_ALLOCATE, &h_msg);
+    status = turn_utils_create_request_msg(session, STUN_METHOD_ALLOCATE, &h_msg);
     if (status != STUN_OK) return status;
-
+    
      
     status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
@@ -194,7 +219,8 @@ int32_t turn_utils_create_dealloc_req_msg(
     handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
 
-    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);
+    status = turn_utils_create_request_msg(session, 
+                                            STUN_METHOD_REFRESH, &h_msg);
     if (status != STUN_OK) return status;
 
 
@@ -359,9 +385,12 @@ int32_t turn_utils_create_refresh_req_msg(
     int32_t status, i, attr_count = 0;
     handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
 
-    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_REFRESH, &h_msg);
+
+    status = turn_utils_create_request_msg(session, 
+                                            STUN_METHOD_REFRESH, &h_msg);
     if (status != STUN_OK) return status;
 
+    
     status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
     attr_count++;
@@ -505,7 +534,7 @@ int32_t turn_utils_start_alloc_refresh_timer(
 
     ICE_LOG(LOG_SEV_INFO, "Started TURN session %p allocation "\
             "refresh timer for duration %d seconds timer %p ", 
-            session, duration, timer->timer_id);
+            session, duration/1000, timer->timer_id);
 
     return STUN_OK;
 }

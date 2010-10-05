@@ -154,6 +154,26 @@ int32_t conn_check_instance_set_callbacks(
 }
 
 
+int32_t conn_check_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len)
+{
+    conn_check_instance_t *instance;
+
+    if ((h_inst == NULL) || (client == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+
+    instance->client_name = (u_char *) stun_calloc (1, len);
+    if (instance->client_name == NULL) return STUN_MEM_ERROR;
+
+    instance->client_name_len = len;
+    stun_memcpy(instance->client_name, client, len);
+
+    return STUN_OK;
+}
+
+
 int32_t conn_check_destroy_instance(handle h_inst)
 {
     conn_check_instance_t *instance;
@@ -172,6 +192,8 @@ int32_t conn_check_destroy_instance(handle h_inst)
     }
 
     stun_txn_destroy_instance(instance->h_txn_inst);
+
+    stun_free(instance->client_name);
 
     stun_free(instance);
 
@@ -224,7 +246,9 @@ int32_t conn_check_create_session(handle h_inst,
         return STUN_NO_RESOURCE;
     }
 
-    session->nominated_flag = false;
+    session->nominated = false;
+    session->controlling_role = false;
+    session->prflx_cand_priority = 0;
     session->cc_succeeded = false;
 
     *h_session = session;
@@ -364,7 +388,8 @@ int32_t conn_check_session_get_app_param(handle h_inst,
     return STUN_OK;
 }
 
-int32_t conn_check_session_set_nominated(handle h_inst, handle h_session)
+int32_t conn_check_session_set_session_params(handle h_inst, 
+                        handle h_session, conn_check_session_params_t *params)
 {
     conn_check_instance_t *instance;
     conn_check_session_t *session;
@@ -377,7 +402,9 @@ int32_t conn_check_session_set_nominated(handle h_inst, handle h_session)
 
     /** TODO - make sure the session still exists */
 
-    session->nominated_flag = true;
+    session->nominated = params->nominated;
+    session->controlling_role = params->controlling_role;
+    session->prflx_cand_priority = params->prflx_cand_priority;
 
     return STUN_OK;
 }
@@ -550,7 +577,7 @@ int32_t conn_check_session_get_nominated_state(
 
     session = (conn_check_session_t *) h_session;
 
-    *nominated = session->nominated_flag;
+    *nominated = session->nominated;
 
     return STUN_OK;
 }

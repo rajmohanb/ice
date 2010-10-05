@@ -273,7 +273,8 @@ int32_t ice_instance_set_callbacks(handle h_inst,
 int32_t ice_instance_register_event_handlers(handle h_inst, 
                         ice_state_event_handlers_t *event_handlers);
 
-int32_t ice_set_client_software_name(handle h_inst, u_char *name);
+int32_t ice_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len);
 
 int32_t ice_destroy_instance(handle h_inst);
 

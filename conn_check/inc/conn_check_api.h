@@ -83,12 +83,29 @@ typedef struct {
 } conn_check_credentials_t;
 
 
+typedef struct {
+
+    /** role: controlling or controlled */
+    bool_t controlling_role;
+
+    /** conn check: nominated one or not */
+    bool_t nominated;
+
+    /** candidate priority for peer reflexive candidate */
+    uint32_t prflx_cand_priority;
+
+} conn_check_session_params_t;
+
+
 /******************************************************************************/
 
 int32_t conn_check_create_instance(handle *h_inst);
 
 int32_t conn_check_instance_set_callbacks(handle h_inst, 
                                 conn_check_instance_callbacks_t *cb);
+
+int32_t conn_check_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len);
 
 int32_t conn_check_destroy_instance(handle h_inst);
 
@@ -124,7 +141,8 @@ int32_t conn_check_find_session_for_recv_msg(handle h_inst,
 
 int32_t conn_check_session_initiate_check(handle h_inst, handle h_session);
 
-int32_t conn_check_session_set_nominated(handle h_inst, handle h_session);
+int32_t conn_check_session_set_session_params(handle h_inst, 
+                        handle h_session, conn_check_session_params_t *params);
 
 int32_t conn_check_session_timer_get_session_handle (
                     handle arg, handle *h_session, handle *h_instance);

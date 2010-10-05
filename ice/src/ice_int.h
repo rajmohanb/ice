@@ -237,7 +237,8 @@ typedef struct
     handle h_turn_inst;
 
     /** software client name and version */
-    u_char client[SOFTWARE_CLIENT_NAME_LEN];
+    uint32_t client_name_len;
+    u_char *client_name;
 
     /** session list */
     handle  h_table;

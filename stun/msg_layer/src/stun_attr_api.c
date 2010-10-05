@@ -55,7 +55,7 @@ int32_t stun_attr_destroy(handle h_attr)
 }
 
 
-int32_t stun_attr_software_set_value(handle h_attr, s_char *value, uint16_t len)
+int32_t stun_attr_software_set_value(handle h_attr, u_char *value, uint16_t len)
 {
     stun_software_attr_t *attr;
 
@@ -100,7 +100,7 @@ int32_t stun_attr_software_get_value_length(handle h_attr, uint32_t *len)
 
 
 int32_t stun_attr_software_get_value(handle h_attr, 
-                                        s_char *value, uint16_t *len)
+                                        u_char *value, uint16_t *len)
 {
     stun_software_attr_t *attr;
 
@@ -696,6 +696,86 @@ int32_t stun_attr_requested_transport_set_protocol(
 
     return STUN_OK;
 }
+#endif
+
+
+#ifdef ENABLE_ICE
+
+int32_t stun_attr_priority_get_priority(handle h_attr, uint32_t *priority)
+{
+    stun_priority_attr_t *prio;
+
+    if ((h_attr == NULL) || (priority == NULL))
+        return STUN_INVALID_PARAMS;
+
+    prio = (stun_priority_attr_t *) h_attr;
+
+    if (prio->hdr.type != STUN_ATTR_PRIORITY)
+        return STUN_INVALID_PARAMS;
+
+    *priority = prio->priority;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_priority_set_priority(handle h_attr, uint32_t priority)
+{
+    stun_priority_attr_t *prio;
+
+    if ((h_attr == NULL) || (priority == 0))
+        return STUN_INVALID_PARAMS;
+
+    prio = (stun_priority_attr_t *) h_attr;
+
+    if (prio->hdr.type != STUN_ATTR_PRIORITY)
+        return STUN_INVALID_PARAMS;
+
+    prio->priority = priority;
+    prio->hdr.length = 4;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlling_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak)
+{
+    stun_ice_controlling_attr_t *controlling;
+
+    if ((h_attr == NULL) || (tiebreak == NULL))
+        return STUN_INVALID_PARAMS;
+
+    controlling = (stun_ice_controlling_attr_t *) h_attr;
+
+    if (controlling->hdr.type != STUN_ATTR_ICE_CONTROLLING)
+        return STUN_INVALID_PARAMS;
+
+    *tiebreak = controlling->random_num;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlling_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak)
+{
+    stun_ice_controlling_attr_t *controlling;
+
+    if ((h_attr == NULL) || (tiebreak == 0))
+        return STUN_INVALID_PARAMS;
+
+    controlling = (stun_ice_controlling_attr_t *) h_attr;
+
+    if (controlling->hdr.type != STUN_ATTR_ICE_CONTROLLING)
+        return STUN_INVALID_PARAMS;
+
+    controlling->random_num = tiebreak;
+
+    return STUN_OK;
+}
+
+
 #endif
 
 

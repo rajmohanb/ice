@@ -30,9 +30,6 @@ int32_t cc_utils_create_indication(handle *h_msg);
 
 int32_t cc_utils_create_response_msg(handle *h_inst);
 
-int32_t cc_utils_create_binding_req_msg_with_credential(
-                    conn_check_session_t *session, handle *h_newmsg);
-
 int32_t conn_check_utils_get_app_data_for_current_state(
                                 conn_check_session_t *session, handle *data);
 

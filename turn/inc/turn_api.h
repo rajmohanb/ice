@@ -111,6 +111,9 @@ int32_t turn_create_instance(handle *h_inst);
 int32_t turn_instance_set_callbacks(handle h_inst, 
                                         turn_instance_callbacks_t *cb);
 
+int32_t turn_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len);
+
 int32_t turn_destroy_instance(handle h_inst);
 
 

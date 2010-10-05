@@ -391,16 +391,7 @@ typedef struct
 } stun_ice_controlled_attr_t;
 
 
-typedef struct
-{
-    /**
-     * common STUN attribute header
-     */
-    stun_attr_hdr_t    hdr;
-
-    uint64_t           random_num;
-
-} stun_ice_controlling_attr_t;
+typedef stun_ice_controlled_attr_t stun_ice_controlling_attr_t;
 
 
 #endif

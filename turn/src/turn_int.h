@@ -67,6 +67,10 @@ typedef struct
     /** session list */
     handle  h_table;
 
+    /** software client name and version */
+    uint32_t client_name_len;
+    u_char *client_name;
+
     turn_session_nwk_send_cb nwk_send_cb;
     turn_session_start_timer_cb start_timer_cb;
     turn_session_stop_timer_cb stop_timer_cb;

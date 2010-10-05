@@ -1104,6 +1104,7 @@ int32_t ice_utils_nominate_candidate_pair(
         ice_session_t *session, ice_cand_pair_t *pair)
 {
     int32_t status = STUN_OK;
+    conn_check_session_params_t cc_params;
 
     handle h_cc_inst;
 
@@ -1116,18 +1117,6 @@ int32_t ice_utils_nominate_candidate_pair(
         ICE_LOG (LOG_SEV_ERROR, 
             "conn_check_create_session() returned error %d\n", status);
     }
-
-#if 0
-    stun_strncpy(cred.username, TEST_USER_NAME, STUN_MAX_USERNAME_LEN - 1);
-    stun_strncpy(cred.password, "toto", STUN_MAX_PASSWORD_LEN - 1);
-    stun_strncpy(cred.realm, "domain.org", STUN_MAX_REALM_LEN - 1);
-    status = conn_check_session_set_credentials(h_inst, h_session, &cred);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_set_credentials() returned error %d\n", status);
-    }
-#endif
 
     //status = conn_check_session_set_transport_param(
     //                        h_cc_inst, pair->h_cc_session, 
@@ -1159,7 +1148,9 @@ int32_t ice_utils_nominate_candidate_pair(
             "conn_check_session_set_app_param() returned error %d\n", status);
     }
 
-    status = conn_check_session_set_nominated(h_cc_inst, pair->h_cc_session);
+    /** TODO = session params - need to fill */
+    status = conn_check_session_set_session_params(h_cc_inst, 
+                                                pair->h_cc_session, &cc_params);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 

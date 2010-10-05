@@ -27,100 +27,101 @@ extern "C" {
 #include "conn_check_utils.h"
 
 
+
 int32_t cc_utils_create_request_msg(
                             conn_check_session_t *session, handle *h_req)
 {
-    handle h_msg, h_attr[4];
-    int32_t status;
+    handle h_msg, ah_attr[MAX_STUN_ATTRIBUTES] = {0};
+    int32_t status, i, attr_count = 0;
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Creating message failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creating BINDING req message failed", status);
         return status;
     }
 
-    if (session->nominated_flag == true)
+    /** software attribute */
+    if (session->instance->client_name)
     {
-        status = stun_attr_create(STUN_ATTR_USE_CANDIDATE, &(h_attr[0]));
+        status = stun_attr_create(STUN_ATTR_SOFTWARE, &(ah_attr[attr_count]));
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+        attr_count++;
+
+        status = stun_attr_software_set_value(ah_attr[attr_count - 1], 
+                                            session->instance->client_name, 
+                                            session->instance->client_name_len);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+    }
+
+    /** use candidate */
+    if (session->nominated == true)
+    {
+        status = stun_attr_create(STUN_ATTR_USE_CANDIDATE, 
+                                                    &(ah_attr[attr_count]));
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of use candidate attribute failed");
-            goto ERROR_EXIT_PT1;
+                "[CONN CHECK] Creation of use candidate attribute failed");
+            goto ERROR_EXIT_PT;
         }
-
-        status = stun_msg_add_attribute(h_msg, h_attr[0]);
-        if (status != STUN_OK)
-        {
-            ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of use candidate attribute failed");
-            goto ERROR_EXIT_PT2;
-        }
+        attr_count++;
     }
 
-#if 0
-    status = stun_attr_create(STUN_ATTR_PRIORITY, &(h_attr[0]));
+    /** priority */
+    status = stun_attr_create(STUN_ATTR_PRIORITY, &(ah_attr[attr_count]));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "creation of priority attribute failed");
-        goto ERROR_EXIT_PT1;
+            "[CONN CHECK] Creation of PRIORITY attribute failed");
+        goto ERROR_EXIT_PT;
     }
+    attr_count++;
 
-    status = stun_attr_priority_set_priority(h_attr[0], session->priority);
-    if (status != STUN_OK) goto ERROR_EXIT_PT1;
+    status = stun_attr_priority_set_priority(
+                        ah_attr[attr_count - 1], session->prflx_cand_priority);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of priority attribute failed");
-        goto ERROR_EXIT_PT2;
-    }
-#endif
 
     /** message integrity */
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[0]));
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
+                                                    &(ah_attr[attr_count]));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "creation of message integrity attribute failed");
-        goto ERROR_EXIT_PT1;
+            "[CONN CHECK] Creation of MESSAGE-INTEGRITY attribute failed");
+        goto ERROR_EXIT_PT;
     }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of message integrity attribute failed");
-        goto ERROR_EXIT_PT2;
-    }
+    attr_count++;
 
     /** fingerprint */
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(h_attr[0]));
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "creation of fingerprint attribute failed");
-        goto ERROR_EXIT_PT1;
+            "[CONN CHECK] Creation of FINGERPRINT attribute failed");
+        goto ERROR_EXIT_PT;
     }
+    attr_count++;
 
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
+    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of fingerprint attribute failed");
-        goto ERROR_EXIT_PT2;
+            "[CONN CHECK] Adding of attributes to BINDING request msg failed");
+        goto ERROR_EXIT_PT;
     }
 
     *h_req = h_msg;
 
     return status;
 
-ERROR_EXIT_PT2:
-    stun_attr_destroy(h_attr[0]);
-ERROR_EXIT_PT1:
+ERROR_EXIT_PT:
+
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
     stun_msg_destroy(h_msg);
 
     return status;
@@ -136,181 +137,13 @@ int32_t cc_utils_create_response_msg(handle *h_inst)
     return STUN_OK;
 }
 
-int32_t cc_utils_create_binding_req_msg_with_credential(
-                    conn_check_session_t *session, handle *h_newmsg)
-{
-    int32_t status;
-    uint32_t num, len, i;
-    handle h_temp, h_msg,  h_attr[5] = {0};
-    u_char buf[1000] = {0};
-
-    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of STUN BINDING request message failed");
-        return status;
-    }
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(h_attr[0]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of username attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_attr_username_set_username(h_attr[0], 
-            session->local_user, session->local_user_len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Setting of user name value to username attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of username attribute to request message failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[0] = NULL;
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_NONCE, &(h_attr[1]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Creation of nonce attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(
-                                session->h_resp, STUN_ATTR_NONCE, &h_temp, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting of nonce attribute from resp msg failed");
-        goto ERROR_EXIT;
-    }
-
-    len = 1000;
-    status = stun_attr_nonce_get_nonce(h_temp, buf, &len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Getting nonce value from nonce attribute in response msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_attr_nonce_set_nonce(h_attr[1], buf, len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of nonce value to nonce attribute in request msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[1]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of nonce attribute to request msg failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[1] = NULL;
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_REALM, &(h_attr[2]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Creation of realm attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(
-                    session->h_resp, STUN_ATTR_REALM, &h_temp, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting of realm attributes from response msg failed");
-        goto ERROR_EXIT;
-    }
-
-    len = 1000;
-    status = stun_attr_realm_get_realm(h_temp, buf, &len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Getting the realm value from real attribute in resp msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_attr_realm_set_realm(h_attr[2], buf, len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Setting the realm value in real attribute in req msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[2]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of realm attribute to request msg failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[2] = NULL;
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[3]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of message integrity attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[3]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of message integrity attribute to request msg failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[3] = NULL;
-    
-    /*------------------------------------------------------------*/
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT:
-    for (i = 0; i < 5; i++)
-        if (h_attr[i]) stun_attr_destroy(h_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
 
 int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
                      handle h_req, stun_msg_type_t msg_type, handle *h_resp)
 {
     int32_t status;
     uint32_t num;
-    s_char software[MAX_STR_LEN];
+    u_char software[MAX_STR_LEN];
     handle h_msg, h_req_attr[1], h_resp_attr[1];
     stun_addr_family_type_t addr_family;
 
@@ -344,8 +177,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
             goto ERROR_EXIT_PT1;
         }
 
-        status = stun_attr_software_set_value(
-                            h_resp_attr[0], (s_char *)software, len);
+        status = stun_attr_software_set_value(h_resp_attr[0], software, len);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, "setting the software value failed");
@@ -543,7 +375,7 @@ int32_t cc_utils_get_app_data_for_current_state(
             if (result == NULL) return STUN_MEM_ERROR;
 
             result->cc_succeeded = session->cc_succeeded;
-            result->nominated = session->nominated_flag;
+            result->nominated = session->nominated;
         }
         break;
 
@@ -807,11 +639,11 @@ int32_t conn_check_utils_extract_info_from_request_msg(
                     h_msg, STUN_ATTR_USE_CANDIDATE, h_attrs, &num);
     if (status == STUN_OK)
     {
-        session->nominated_flag = true;
+        session->nominated = true;
     }
     else if (status == STUN_NOT_FOUND)
     {
-        session->nominated_flag = false;
+        session->nominated = false;
         status = STUN_OK;
     }
 

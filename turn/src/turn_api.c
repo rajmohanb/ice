@@ -187,6 +187,26 @@ int32_t turn_instance_set_callbacks(handle h_inst,
 }
 
 
+int32_t turn_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len)
+{
+    turn_instance_t *instance;
+
+    if ((h_inst == NULL) || (client == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    instance = (turn_instance_t *) h_inst;
+
+    instance->client_name = (u_char *) stun_calloc (1, len);
+    if (instance->client_name == NULL) return STUN_MEM_ERROR;
+
+    instance->client_name_len = len;
+    stun_memcpy(instance->client_name, client, len);
+
+    return STUN_OK;
+}
+
+
 
 int32_t turn_destroy_instance(handle h_inst)
 {
@@ -204,6 +224,10 @@ int32_t turn_destroy_instance(handle h_inst)
 
         turn_destroy_session(h_inst, instance->ah_session[i]);
     }
+
+    stun_txn_destroy_instance(instance->h_txn_inst);
+    
+    stun_free(instance->client_name);
 
     stun_free(instance);
 

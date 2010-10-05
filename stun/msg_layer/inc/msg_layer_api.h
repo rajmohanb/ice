@@ -124,6 +124,7 @@ typedef enum {
 #define STUN_REJECT_RESPONSE_401 "Unauthorized"
 #define STUN_REJECT_RESPONSE_420 "Unknown Attribute"
 #define STUN_REJECT_RESPONSE_438 "Stale Nonce"
+#define STUN_REJECT_RESPONSE_487 "Role Conflict"
 #define STUN_REJECT_RESPONSE_500 "Server Error"
 
 
@@ -182,12 +183,12 @@ int32_t stun_attr_destroy(handle h_attr);
 
 /** attribute specific apis */
 int32_t stun_attr_software_set_value(handle h_attr, 
-                                            s_char *value, uint16_t len);
+                                            u_char *value, uint16_t len);
 
 int32_t stun_attr_software_get_value_length(handle h_attr, uint32_t *len);
 
 int32_t stun_attr_software_get_value(handle h_attr, 
-                                        s_char *value, uint16_t *len);
+                                        u_char *value, uint16_t *len);
 
 /* ========================================================================== */
 
@@ -276,6 +277,29 @@ int32_t stun_attr_nonce_get_nonce(
 int32_t stun_attr_requested_transport_set_protocol(
                         handle h_attr, stun_transport_protocol_type_t proto);
 
+/* ========================================================================== */
+
+
+int32_t stun_attr_priority_get_priority(handle h_attr, uint32_t *priority);
+
+int32_t stun_attr_priority_set_priority(handle h_attr, uint32_t priority);
+
+int32_t stun_attr_ice_controlling_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak);
+
+int32_t stun_attr_ice_controlling_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak);
+
+/* ========================================================================== */
+
+#define stun_attr_ice_controlled_get_tiebreaker_value(h_attr, tiebreak) \
+            stun_attr_ice_controlling_get_tiebreaker_value(h_attr, tiebreak)
+
+#define stun_attr_ice_controlled_set_tiebreaker_value(h_attr, tiebreak) \
+            stun_attr_ice_controlling_set_tiebreaker_value(h_attr, tiebreak)
+        
+/* ========================================================================== */
+/* ========================================================================== */
 /* ========================================================================== */
 
 int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type);

@@ -517,7 +517,6 @@ int32_t ice_media_stream_checklist_timer_expiry(
                                 ice_media_stream_t *media, handle arg)
 {
     int32_t status;
-    uint32_t cc_timer_val;
     ice_cand_pair_t *pair;
 
     ice_media_utils_dump_cand_pair_stats(media);

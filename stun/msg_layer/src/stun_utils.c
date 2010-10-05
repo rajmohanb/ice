@@ -116,6 +116,7 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
 #ifdef ENABLE_ICE
 
         case STUN_ATTR_PRIORITY:
+            size = sizeof(stun_priority_attr_t);
             break;
 
         case STUN_ATTR_USE_CANDIDATE:
@@ -124,6 +125,7 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
 
         case STUN_ATTR_ICE_CONTROLLED:
         case STUN_ATTR_ICE_CONTROLLING:
+            size = sizeof(stun_ice_controlled_attr_t);
             break;
 
 #endif

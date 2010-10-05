@@ -58,6 +58,10 @@ typedef struct
     /** transaction instance handle */
     handle h_txn_inst;
 
+    /** software client name and version */
+    uint32_t client_name_len;
+    u_char *client_name;
+
     conn_check_session_nwk_send_cb nwk_send_cb;
     conn_check_session_start_timer_cb start_timer_cb;
     conn_check_session_stop_timer_cb stop_timer_cb;
@@ -89,11 +93,17 @@ typedef struct
     u_char stun_server[STUN_IP_ADDR_MAX_LEN];
     uint32_t stun_port;
 
-    conn_check_session_state_t state;
-
+    cc_session_type_t sess_type;
     handle app_param;
-
     handle transport_param;
+
+    /** behavioral params */
+    bool_t nominated;
+    bool_t controlling_role;
+    uint32_t prflx_cand_priority;
+
+    /** session state */
+    conn_check_session_state_t state;
 
     handle h_txn;
     handle h_req;
@@ -102,14 +112,8 @@ typedef struct
     u_char prflx_ip_addr[STUN_IP_ADDR_MAX_LEN];
     uint32_t prflx_port;
 
-    cc_session_type_t sess_type;
-
     /** connectivity check result */
     bool_t cc_succeeded;
-
-    uint32_t priority;
-
-    bool_t nominated_flag;
 
 } conn_check_session_t;
 

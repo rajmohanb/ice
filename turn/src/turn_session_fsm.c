@@ -132,7 +132,7 @@ int32_t send_alloc_req (turn_session_t *session, handle h_msg)
     int32_t status;
     handle h_txn, h_txn_inst;
 
-    status = turn_utils_create_request_msg(
+    status = turn_utils_create_request_msg(session, 
                                 STUN_METHOD_ALLOCATE, &session->h_req);
     if (status != STUN_OK)
         return status;

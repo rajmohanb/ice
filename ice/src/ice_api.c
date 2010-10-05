@@ -67,6 +67,7 @@ int32_t ice_create_instance(handle *h_inst)
     instance = (ice_instance_t *) 
                         stun_calloc (1, sizeof(ice_instance_t));
     if (instance == NULL) return STUN_MEM_ERROR;
+
     status = turn_create_instance(&instance->h_turn_inst);
     if (status != STUN_OK)
     {
@@ -468,21 +469,43 @@ int32_t ice_instance_register_event_handlers(handle h_inst,
 
 
 
-int32_t ice_set_client_software_name(handle h_inst, u_char *name)
+int32_t ice_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len)
 {
     ice_instance_t *instance;
+    int32_t status = STUN_OK;
 
-    if ((h_inst == NULL) || (name == NULL))
+    if ((h_inst == NULL) || (client == NULL) || (len == 0))
         return STUN_INVALID_PARAMS;
 
     instance = (ice_instance_t *) h_inst;
 
-    stun_strncpy((char *)instance->client, 
-            (char *)name, (SOFTWARE_CLIENT_NAME_LEN - 1));
+    instance->client_name = (u_char *) stun_calloc (1, len);
+    if (instance->client_name == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE] Memory allocation failed for ICE instance client name");
+        return STUN_MEM_ERROR;
+    }
 
-    /** TODO: propagate to turn instance */
+    stun_memcpy(instance->client_name, client, len);
+    instance->client_name_len = len;
 
-    return STUN_OK;
+    status = turn_instance_set_client_software_name(
+                                        instance->h_turn_inst, client, len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = conn_check_instance_set_client_software_name(
+                                        instance->h_cc_inst, client, len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    return status;
+
+ERROR_EXIT_PT:
+
+    stun_free(instance->client_name);
+
+    return status;
 }
 
 
@@ -504,6 +527,9 @@ int32_t ice_destroy_instance(handle h_inst)
     }
 
     conn_check_destroy_instance(instance->h_cc_inst);
+    turn_destroy_instance(instance->h_turn_inst);
+
+    stun_free(instance->client_name);
 
     stun_free(instance);
 
@@ -572,7 +598,7 @@ int32_t ice_create_session(handle h_inst,
 
     *h_session = session;
 
-    ICE_LOG(LOG_SEV_DEBUG, "ICE session created successfully");
+    ICE_LOG(LOG_SEV_DEBUG, "[ICE] ICE session created successfully");
 
     return STUN_OK;
 }
