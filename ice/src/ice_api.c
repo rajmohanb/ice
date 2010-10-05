@@ -314,7 +314,7 @@ int32_t ice_stop_timer(handle timer_id)
 }
 
 
-int32_t ice_format_and_send_message(handle h_msg, 
+int32_t ice_encode_and_send_message(handle h_msg, 
                 stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
                 uint32_t port, handle transport_param, handle app_param)
 {
@@ -444,7 +444,7 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     instance->stop_timer_cb = cbs->stop_timer_cb;
     
     /** set callbacks to turn module */
-    turn_cbs.nwk_cb = ice_format_and_send_message;
+    turn_cbs.nwk_cb = ice_encode_and_send_message;
     turn_cbs.start_timer_cb = ice_turn_start_timer;
     turn_cbs.stop_timer_cb = ice_stop_timer;
 
@@ -457,7 +457,7 @@ int32_t ice_instance_set_callbacks(handle h_inst,
         return status;
     }
     /** set callbacks to connectivity check module */
-    cc_cbs.nwk_cb = ice_format_and_send_message;
+    cc_cbs.nwk_cb = ice_encode_and_send_message;
     cc_cbs.start_timer_cb = ice_cc_start_timer;
     cc_cbs.stop_timer_cb = ice_stop_timer;
 
