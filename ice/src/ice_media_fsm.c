@@ -26,6 +26,7 @@ extern "C" {
 #include "ice_int.h"
 #include "conn_check_api.h"
 #include "ice_utils.h"
+#include "ice_cand_pair_fsm.h"
 #include "ice_media_fsm.h"
 
 
@@ -376,8 +377,8 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status != STUN_OK) return status;
 
-    status = ice_utils_init_connectivity_check(media, pair); 
-    if (status != STUN_OK) return status;
+    status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
+    /** TODO - check the return value of candidate pair fsm???? */
 
     /** as soon as we have sent out the first conn check, move the state */
     media->state = ICE_MEDIA_CC_RUNNING;
@@ -524,11 +525,13 @@ int32_t ice_media_stream_checklist_timer_expiry(
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status != STUN_OK) return status;
 
-    status = ice_utils_init_connectivity_check(media, pair); 
-    if (status != STUN_OK) return status;
+    status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
 
-    /** restart the timer */
-    status = ice_media_utils_start_check_list_timer(media);
+    if (status == STUN_OK)
+    {
+        /** restart the timer */
+        status = ice_media_utils_start_check_list_timer(media);
+    }
 
     return status;
 }

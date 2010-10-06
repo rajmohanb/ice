@@ -12,8 +12,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef ICE_MEDIA_FSM__H
-#define ICE_MEDIA_FSM__H
+#ifndef ICE_CAND_PAIR_FSM__H
+#define ICE_CAND_PAIR_FSM__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,19 +26,19 @@ extern "C" {
 int32_t ice_cp_unfreeze(ice_cand_pair_t *cp, handle h_msg);
 
 
-int32_t ice_cp_initiate_cc(ice_cand_pair_t *cp, handle h_msg);
+int32_t ice_cp_initiate_check(ice_cand_pair_t *cp, handle h_msg);
 
 
-int32_t ice_cp_cc_succeeded(ice_cand_pair_t *cp, handle h_msg);
+int32_t ice_cp_check_succeeded(ice_cand_pair_t *cp, handle h_msg);
 
 
-int32_t ice_cp_cc_failed(ice_cand_pair_t *cp, handle h_msg);
+int32_t ice_cp_check_failed(ice_cand_pair_t *cp, handle h_msg);
 
 
 int32_t ice_cp_ignore_msg(ice_cand_pair_t *cp, handle h_msg);
 
 
-int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *session, 
+int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *cp, 
                                     ice_cp_event_t event, handle h_msg);
 
 

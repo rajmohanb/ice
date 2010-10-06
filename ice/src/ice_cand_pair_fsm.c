@@ -40,7 +40,7 @@ static ice_cand_pair_fsm_handler
     /** ICE_CP_WAITING */
     {
         ice_cp_ignore_msg,
-        ice_cp_initiate_cc,
+        ice_cp_initiate_check,
         ice_cp_ignore_msg,
         ice_cp_ignore_msg,
     },
@@ -48,8 +48,8 @@ static ice_cand_pair_fsm_handler
     {
         ice_cp_ignore_msg,
         ice_cp_ignore_msg,
-        ice_cp_cc_succeeded,
-        ice_cp_cc_failed,
+        ice_cp_check_succeeded,
+        ice_cp_check_failed,
     },
     /** ICE_CP_SUCCEEDED */
     {
@@ -76,20 +76,39 @@ int32_t ice_cp_unfreeze(ice_cand_pair_t *cp, handle h_msg)
 }
 
 
-int32_t ice_cp_initiate_cc(ice_cand_pair_t *cp, handle h_msg)
+int32_t ice_cp_initiate_check(ice_cand_pair_t *cp, handle h_msg)
 {
+    int32_t status = ice_cand_pair_utils_init_connectivity_check(cp);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE CAND PAIR] Sending of connectivity check failed");
+        
+        cp->state = ICE_CP_FAILED;
+
+        return status;
+    }
+
+    cp->state = ICE_CP_INPROGRESS;
+
     return STUN_OK;
 }
 
 
-int32_t ice_cp_cc_succeeded(ice_cand_pair_t *cp, handle h_msg)
+int32_t ice_cp_check_succeeded(ice_cand_pair_t *cp, handle h_msg)
 {
+    /** extract check information */
+
+    cp->state = ICE_CP_SUCCEEDED;
+
     return STUN_OK;
 }
 
 
-int32_t ice_cp_cc_failed(ice_cand_pair_t *cp, handle h_msg)
+int32_t ice_cp_check_failed(ice_cand_pair_t *cp, handle h_msg)
 {
+    cp->state = ICE_CP_FAILED;
+
     return STUN_OK;
 }
 
@@ -100,17 +119,17 @@ int32_t ice_cp_ignore_msg(ice_cand_pair_t *cp, handle h_msg)
 }
 
 
-int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *session, 
+int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *cp, 
                                     ice_cp_event_t event, handle h_msg)
 {
     ice_cand_pair_fsm_handler handler;
 
-    handler = ice_cand_pair_fsm[session->state][event];
+    handler = ice_cand_pair_fsm[cp->state][event];
 
     if (!handler)
         return STUN_INVALID_PARAMS;
 
-    return handler(session, h_msg);
+    return handler(cp, h_msg);
 }
 
 

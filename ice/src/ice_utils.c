@@ -585,6 +585,7 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media)
                 pair->nominated = false;
 
                 pair->state = ICE_CP_FROZEN;
+                pair->media = media;
 
                 /** compute the pair priority as per sec 5.7.2 */
                 ice_media_utils_compute_candidate_pair_priority(media, pair);
@@ -965,14 +966,16 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
 }
 
 
-int32_t ice_utils_init_connectivity_check(
-                ice_media_stream_t *media, ice_cand_pair_t *pair)
+
+int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
 {
     int32_t status;
     handle h_cc_inst;
+    ice_media_stream_t *media;
     conn_check_credentials_t cred;
     conn_check_session_params_t cc_params= {0};
 
+    media = pair->media;
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
     status = conn_check_create_session(h_cc_inst, 
@@ -1070,13 +1073,13 @@ int32_t ice_utils_init_connectivity_check(
         goto ERROR_EXIT_PT2;
     }
 
-    pair->state = ICE_CP_INPROGRESS;
-
 ERROR_EXIT_PT2:
     conn_check_destroy_session(h_cc_inst, pair->h_cc_session);
 ERROR_EXIT_PT1:
     return status;
 }
+
+
 
 
 int32_t ice_utils_create_conn_check_session(

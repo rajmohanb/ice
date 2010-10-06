@@ -58,9 +58,9 @@ typedef enum
 typedef enum
 {
     ICE_CP_EVENT_UNFREEZE = 0,
-    ICE_CP_EVENT_CC_INIT,
-    ICE_EP_EVENT_CC_SUCCESS,
-    ICE_CP_EVENT_CC_FAILED,
+    ICE_CP_EVENT_INIT_CHECK,
+    ICE_EP_EVENT_CHECK_SUCCESS,
+    ICE_CP_EVENT_CHECK_FAILED,
     ICE_CP_EVENT_MAX,
 } ice_cp_event_t;
 
@@ -103,6 +103,9 @@ typedef struct tag_ice_candidate
 } ice_candidate_t;
 
 
+/** Forward declaration */
+typedef struct struct_ice_media_stream ice_media_stream_t;
+
 typedef struct
 {
     ice_candidate_t *local;
@@ -120,9 +123,11 @@ typedef struct
 
     handle h_transport_conn;
 
-    handle h_media_stream;
+    /** my boss */
+    ice_media_stream_t *media;
 
 } ice_cand_pair_t;
+
 
 
 typedef enum 
@@ -188,7 +193,7 @@ typedef enum
 /** forward declaration */
 typedef struct struct_ice_session ice_session_t;
 
-typedef struct
+struct struct_ice_media_stream
 {
     /** pointer back to the parent ICE session */
     ice_session_t *ice_session; 
@@ -228,7 +233,8 @@ typedef struct
 
     handle h_cc_svr_session;
 
-} ice_media_stream_t;
+};
+
 
 
 typedef struct 

@@ -43,9 +43,6 @@ int32_t ice_media_utils_compute_initial_states_for_pairs(
 int32_t ice_utils_get_next_connectivity_check_pair(
         ice_media_stream_t *media, ice_cand_pair_t **pair);
 
-int32_t ice_utils_init_connectivity_check(
-                ice_media_stream_t *media, ice_cand_pair_t *pair);
-
 int32_t ice_utils_nominate_candidate_pair(
         ice_session_t *session, ice_cand_pair_t *pair);
 
@@ -146,6 +143,8 @@ int32_t ice_utils_copy_turn_gathered_candidates(
         ice_media_stream_t *media, ice_int_params_t *param, uint32_t comp_id);
 
 int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media);
+
+int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair);
 
 
 /******************************************************************************/
