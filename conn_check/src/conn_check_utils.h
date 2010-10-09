@@ -56,6 +56,11 @@ int32_t conn_check_utils_extract_username_components(
                 u_char *username, uint32_t len, u_char **local_user, 
                 uint32_t *local_len, u_char **peer_user, uint32_t *peer_len);
 
+int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code);
+
+uint32_t cc_utils_extract_mapped_addr(handle h_msg, stun_inet_addr_t *prflx);
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

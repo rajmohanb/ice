@@ -112,14 +112,14 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
         if (status == STUN_TERMINATED)
         {
-            bool_t nominated;
+            conn_check_result_t check_result;
 
-            status = conn_check_session_get_nominated_state(
-                                h_cc_inst, media->h_cc_svr_session, &nominated);
+            status = conn_check_session_get_check_result(
+                            h_cc_inst, media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
             /** if nominated, then add it to the list of valid pairs */
-            if (nominated == true)
+            if (check_result.nominated == true)
             {
                 int32_t i;
                 ice_cand_pair_t *valid_pair;

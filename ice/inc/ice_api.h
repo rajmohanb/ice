@@ -60,6 +60,15 @@ typedef enum
 
 typedef enum
 {
+    ICE_NOMINATION_TYPE_INVALID = 0,
+    ICE_NOMINATION_TYPE_REGULAR,
+    ICE_NOMINATION_TYPE_AGGRESSIVE,
+    ICE_NOMINATION_TYPE_MAX,
+} ice_nomination_type_t;
+
+
+typedef enum
+{
     ICE_MODE_LITE = 0,
     ICE_MODE_FULL,
     ICE_INVALID_MODE,
@@ -265,6 +274,7 @@ typedef struct
 
 /******************************************************************************/
 
+
 int32_t ice_create_instance(handle *h_inst);
 
 int32_t ice_instance_set_callbacks(handle h_inst, 
@@ -276,12 +286,23 @@ int32_t ice_instance_register_event_handlers(handle h_inst,
 int32_t ice_instance_set_client_software_name(handle h_inst, 
                                                 u_char *client, uint32_t len);
 
+int32_t ice_instance_set_connectivity_check_nomination_mode(
+                                handle h_inst, ice_nomination_type_t nom_type);
+
 int32_t ice_destroy_instance(handle h_inst);
 
 int32_t ice_instance_verify_valid_stun_packet(void);
 
-int32_t ice_create_session(handle h_inst, 
-        ice_session_type_t session_type, ice_mode_type_t mode, handle *h_session);
+
+
+
+int32_t ice_create_session(handle h_inst,
+                           ice_session_type_t session_type, 
+                           ice_mode_type_t mode, 
+                           handle *h_session);
+
+int32_t ice_session_set_connectivity_check_nomination_mode(handle h_inst, 
+                            handle h_session, ice_nomination_type_t nom_type);
 
 int32_t ice_session_set_relay_server_cfg(handle h_inst, 
                             handle h_session, ice_relay_server_cfg_t *relay);
@@ -334,6 +355,8 @@ int32_t ice_session_get_media_valid_pairs(handle h_inst, handle h_session,
 
 int32_t ice_session_restart_media_stream (handle h_inst,
                                 handle h_session, handle h_media);
+
+
 
 /******************************************************************************/
 

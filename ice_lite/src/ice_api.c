@@ -84,7 +84,6 @@ static void ice_cc_callback_fxn (handle h_cc_inst,
     {
         case CC_OG_IDLE:
         case CC_OG_CHECKING:
-        case CC_OG_INPROGRESS:
             break;
 
         case CC_OG_TERMINATED:

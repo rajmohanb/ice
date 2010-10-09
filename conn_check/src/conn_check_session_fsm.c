@@ -46,13 +46,6 @@ static conn_check_session_fsm_handler
         cc_ignore_event,
         cc_ignore_event,
     },
-    /** CC_OG_INPROGRESS */
-    {
-        cc_ignore_event,
-        cc_ignore_event,
-        cc_ignore_event,
-        cc_ignore_event,
-    },
     /** CC_OG_TERMINATED */
     {
         cc_ignore_event,
@@ -182,18 +175,84 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
 {
     int32_t status;
     handle h_txn, h_txn_inst = session->instance->h_txn_inst;
+    bool_t txn_terminated = false;
+    stun_msg_type_t msg_class;
 
+    /** TODO = normal processing and validation of a packet as defined in STUN RFC */
+
+    /**
+     * RFC 5245 sec 7.1.2 - Processing the response
+     */
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
     if (status != STUN_OK)
         return status;
 
     status = stun_txn_inject_received_msg(h_txn_inst, h_txn, h_rcvdmsg);
-    if (status == STUN_OK) { }
+    if (status == STUN_OK)
+    {
+        return status;
+    }
     else if (status == STUN_TERMINATED)
     {
-        stun_destroy_txn(h_txn_inst, h_txn, false, false);
-        session->state = CC_OG_TERMINATED;
+        txn_terminated = true;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] stun txn injection rcvd msg returned error %d", 
+                status);
+        return status;
+    }
+
+    /** validate the source and destination for this packet = TODO */
+
+    /** check if success or failure response */
+    status = stun_msg_get_class(h_rcvdmsg, &msg_class);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Unable to extract the STUN msg class %d", status);
+        return status;
+    }
+
+    if (msg_class == STUN_ERROR_RESP)
+    {
+        /**
+         * if failure, RFC 5245 sec 7.1.2.1 - Failure Cases
+         */
+        session->cc_succeeded = false;
+
+        /** get STUN error code */
+        status = cc_utils_extract_error_code(h_rcvdmsg, &session->error_code);
+    }
+    else if(msg_class == STUN_SUCCESS_RESP)
+    {
+        /**
+         * if success, RFC 5245 sec 7.1.2 - Success Cases
+         */
         session->cc_succeeded = true;
+
+        /** extract the mapped address */
+        status = cc_utils_extract_mapped_addr(h_rcvdmsg, &session->prflx_addr);
+    }
+    else
+        goto ERROR_EXIT_PT;
+
+    if (txn_terminated == true)
+    {
+        stun_destroy_txn(h_txn_inst, h_txn, false, false);
+
+        session->h_txn = session->h_req = session->h_resp = NULL;
+    }
+
+    session->state = CC_OG_TERMINATED;
+    return STUN_TERMINATED;
+
+ERROR_EXIT_PT:
+    if (txn_terminated == true)
+    {
+        stun_destroy_txn(h_txn_inst, h_txn, false, false);
+        session->h_txn = session->h_req = session->h_resp = NULL;
     }
 
     return status;

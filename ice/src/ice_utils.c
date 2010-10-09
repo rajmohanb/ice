@@ -1073,6 +1073,8 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
         goto ERROR_EXIT_PT2;
     }
 
+    return status;
+
 ERROR_EXIT_PT2:
     conn_check_destroy_session(h_cc_inst, pair->h_cc_session);
 ERROR_EXIT_PT1:
@@ -2051,6 +2053,27 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
     return status;
 }
 
+
+int32_t ice_utils_find_cand_pair_for_conn_check_session(
+        ice_media_stream_t *media, handle h_conn_check, ice_cand_pair_t **cp)
+{
+    int32_t i;
+    ice_cand_pair_t *pair;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        pair = &media->ah_cand_pairs[i];
+        if (!pair->local) continue;
+
+        if (pair->h_cc_session == h_conn_check)
+        {
+            *cp = pair;
+            return STUN_OK;
+        }
+    }
+
+    return STUN_NOT_FOUND;
+}
 
 
 /******************************************************************************/

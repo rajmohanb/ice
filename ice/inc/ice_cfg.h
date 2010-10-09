@@ -87,6 +87,8 @@ extern "C" {
 
 #define TRANSPORT_MTU_SIZE      1500
 
+#define ICE_DEFAULT_NOMINATION_TYPE ICE_NOMINATION_TYPE_REGULAR
+
 /******************************************************************************/
 
 

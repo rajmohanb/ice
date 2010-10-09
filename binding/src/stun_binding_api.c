@@ -423,6 +423,7 @@ int32_t stun_binding_session_get_mapped_address(handle h_inst,
 {
     stun_binding_instance_t *instance;
     stun_binding_session_t *session;
+    stun_addr_family_type_t addr_family;
     handle h_attr;
     int32_t status, num;
 
@@ -442,9 +443,14 @@ int32_t stun_binding_session_get_mapped_address(handle h_inst,
                 &h_attr, (uint32_t *)&num);
     if (status != STUN_OK) return status;
 
-    status = stun_attr_xor_mapped_addr_get_address(
-                        h_attr, (u_char *)mapped_addr, len);
+    status = stun_attr_xor_mapped_addr_get_address(h_attr, 
+                                &addr_family, (u_char *)mapped_addr, len);
     if (status != STUN_OK) return status;
+
+    /** TODO **/
+#if 0
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+#endif
 
     status = stun_attr_xor_mapped_addr_get_port(h_attr, port);
 

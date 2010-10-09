@@ -257,6 +257,9 @@ typedef struct
     ice_session_start_timer_cb start_timer_cb;
     ice_session_stop_timer_cb stop_timer_cb;
 
+    /** ice nomination mode */
+    ice_nomination_type_t nomination_mode;
+
     /** 
      * agent application event handler callbacks 
      * for notification of change in states.
@@ -277,6 +280,7 @@ struct struct_ice_session
     ice_mode_type_t local_mode;
     ice_mode_type_t peer_mode;
 
+    /** controlling or controlled */
     ice_agent_role_type_t role;
 
     uint32_t num_media_streams;

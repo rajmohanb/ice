@@ -250,6 +250,7 @@ int32_t conn_check_create_session(handle h_inst,
     session->controlling_role = false;
     session->prflx_cand_priority = 0;
     session->cc_succeeded = false;
+    session->error_code = 0;
 
     *h_session = session;
 
@@ -567,20 +568,31 @@ int32_t conn_check_session_timer_get_session_handle (
 }
 
 
-int32_t conn_check_session_get_nominated_state(
-                handle h_inst, handle h_session, bool *nominated)
+int32_t conn_check_session_get_check_result(handle h_inst, 
+                            handle h_session, conn_check_result_t *result)
 {
     conn_check_session_t *session;
 
-    if ((h_inst == NULL) || (h_session == NULL))
+    if ((h_inst == NULL) || (h_session == NULL) || (result == NULL))
         return STUN_INVALID_PARAMS;
 
     session = (conn_check_session_t *) h_session;
 
-    *nominated = session->nominated;
+    if ((session->state != CC_OG_TERMINATED) && 
+            (session->state != CC_IC_TERMINATED))
+        return STUN_INVALID_PARAMS;
+
+    result->check_succeeded = session->cc_succeeded;
+    result->error_code = session->error_code;
+    result->nominated = session->nominated;
+
+    stun_memcpy(&result->prflx_addr,
+                    &session->prflx_addr, sizeof(stun_inet_addr_t));
 
     return STUN_OK;
 }
+
+
 
 
 /******************************************************************************/

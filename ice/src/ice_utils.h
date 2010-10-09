@@ -146,6 +146,9 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media);
 
 int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair);
 
+int32_t ice_utils_find_cand_pair_for_conn_check_session(
+        ice_media_stream_t *media, handle h_conn_check, ice_cand_pair_t **cp);
+
 
 /******************************************************************************/
 

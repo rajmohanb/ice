@@ -67,9 +67,13 @@
 #define LOCAL_ICE_RTP_HOST_PORT 44444
 #define LOCAL_ICE_RTCP_HOST_PORT 44445
 
+#define ICE_VENDOR_NAME "MindBricks ICE agent v0.5"
+#define ICE_VENDOR_NAME_LEN 25
+
 handle h_inst, h_session;
 static int sockfd_sip = 0;
 bool g_gather_done = false;
+bool g_session_destroyed = false;
 bool g_cc_done = false;
 int sockfd_ice[2];
 u_char *my_buf;
@@ -658,6 +662,14 @@ void app_initialize_ice(void)
         return;
     }
 
+    status = ice_instance_set_client_software_name(h_inst, 
+                            (u_char *)ICE_VENDOR_NAME, ICE_VENDOR_NAME_LEN);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, "Setting of ICE agent vendor name failed, returned error %d\n", status);
+        return;
+    }
+
     return;
 }
 
@@ -863,6 +875,7 @@ int main (int argc, char *argv[])
 
     ic_msg_count = 0;
 
+start_listen:
     while (g_gather_done == false) {
 
         int i, act_fd, fd_list[20];
@@ -919,6 +932,7 @@ int main (int argc, char *argv[])
     }
 
 
+#if 0
     app_log (LOG_SEV_ERROR, "OKKKK lets destroy the session now");
     status = ice_destroy_session(h_inst, h_session);
     if (status != STUN_OK)
@@ -927,6 +941,12 @@ int main (int argc, char *argv[])
                 "ice_destroy_session() returned error %d\n", status);
         return -1;
     }
+#endif
+
+#if 0
+    g_gather_done = false;
+    goto start_listen;
+#endif
 
     ice_input_remote_sdp(h_inst, h_session, h_audio);
 

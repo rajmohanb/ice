@@ -109,11 +109,11 @@ typedef struct
     handle h_req;
     handle h_resp;
 
-    u_char prflx_ip_addr[STUN_IP_ADDR_MAX_LEN];
-    uint32_t prflx_port;
+    stun_inet_addr_t prflx_addr;
 
     /** connectivity check result */
     bool_t cc_succeeded;
+    uint32_t error_code;
 
 } conn_check_session_t;
 

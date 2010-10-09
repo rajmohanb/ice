@@ -82,6 +82,8 @@ int32_t ice_create_instance(handle *h_inst)
         return status;
     }
 
+    instance->nomination_mode = ICE_DEFAULT_NOMINATION_TYPE;
+
     *h_inst = (handle) instance;
 
     return status;
@@ -165,7 +167,6 @@ void ice_cc_callback_fxn (handle h_cc_inst,
     {
         case CC_OG_IDLE:
         case CC_OG_CHECKING:
-        case CC_OG_INPROGRESS:
             break;
 
         case CC_OG_TERMINATED:
@@ -532,6 +533,27 @@ ERROR_EXIT_PT:
 }
 
 
+
+int32_t ice_instance_set_connectivity_check_nomination_mode(
+                                handle h_inst, ice_nomination_type_t nom_type)
+{
+    ice_instance_t *instance;
+
+    if (h_inst == NULL) return STUN_INVALID_PARAMS;
+
+    if ((nom_type != ICE_NOMINATION_TYPE_REGULAR) && 
+        (nom_type != ICE_NOMINATION_TYPE_AGGRESSIVE))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+
+    instance->nomination_mode = nom_type;
+
+    return STUN_OK;
+}
+
+
+
 int32_t ice_destroy_instance(handle h_inst)
 {
     ice_instance_t *instance;
@@ -623,6 +645,14 @@ int32_t ice_create_session(handle h_inst,
 
     ICE_LOG(LOG_SEV_DEBUG, "[ICE] ICE session created successfully");
 
+    return STUN_OK;
+}
+
+
+
+int32_t ice_session_set_connectivity_check_nomination_mode(handle h_inst, 
+                            handle h_session, ice_nomination_type_t nom_type)
+{
     return STUN_OK;
 }
 

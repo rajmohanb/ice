@@ -127,7 +127,7 @@ int32_t stun_attr_software_get_value(handle h_attr,
 
 
 int32_t stun_attr_mapped_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len)
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
     stun_mapped_addr_attr_t *attr;
     uint32_t size;
@@ -139,6 +139,8 @@ int32_t stun_attr_mapped_addr_get_address(handle h_attr,
 
     if (attr->hdr.type != STUN_ATTR_MAPPED_ADDR)
         return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
 
     if (attr->family == STUN_ADDR_FAMILY_IPV4)
     {
@@ -174,7 +176,7 @@ int32_t stun_attr_mapped_addr_get_port(handle h_attr, uint32_t *port)
 
 
 int32_t stun_attr_xor_mapped_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len)
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
     stun_xor_mapped_addr_attr_t *attr;
     uint32_t size;
@@ -186,6 +188,8 @@ int32_t stun_attr_xor_mapped_addr_get_address(handle h_attr,
 
     if (attr->hdr.type != STUN_ATTR_XOR_MAPPED_ADDR)
         return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
 
     if (attr->family == STUN_ADDR_FAMILY_IPV4)
     {
@@ -270,7 +274,7 @@ int32_t stun_attr_xor_mapped_addr_set_port(handle h_attr, uint32_t port)
 
 #ifdef ENABLE_TURN
 int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len)
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
     stun_mapped_addr_attr_t *attr;
     uint32_t size;
@@ -282,6 +286,8 @@ int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr,
 
     if (attr->hdr.type != STUN_ATTR_XOR_RELAYED_ADDR)
         return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
 
     if (attr->family == STUN_ADDR_FAMILY_IPV4)
     {

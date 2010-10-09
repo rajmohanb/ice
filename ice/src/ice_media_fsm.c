@@ -445,14 +445,14 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
         if (status == STUN_TERMINATED)
         {
-            bool_t nominated;
+            conn_check_result_t check_result;
 
-            status = conn_check_session_get_nominated_state(
-                                h_cc_inst, media->h_cc_svr_session, &nominated);
+            status = conn_check_session_get_check_result(
+                                h_cc_inst, media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
             /** if nominated, then add it to the list of valid pairs */
-            if (nominated == true)
+            if (check_result.nominated == true)
             {
                 int32_t i;
                 ice_cand_pair_t *valid_pair;
@@ -505,12 +505,51 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
     } else if (status == STUN_OK)
     {
+        ice_cand_pair_t *cp = NULL;
+
+        /** received connectivirt check binding response */
+        status = conn_check_session_inject_received_msg(
+                                    h_cc_inst, h_cc_dialog, stun_pkt->h_msg);
+        if (status == STUN_TERMINATED)
+        {
+            conn_check_result_t check_result;
+
+            /** 
+             * connectivity check terminated. Retrieve the overall
+             * result of the connectivity check and feed it to the 
+             * corresponding cand pair fsm. Then destroy the 
+             * connectivity check session if no longer required. TODO
+             */
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "CHECK! CHEKC! One connectivity check done");
+
+            status = ice_utils_find_cand_pair_for_conn_check_session(
+                                                    media, h_cc_dialog, &cp);
+            if (status == STUN_OK)
+            {
+                ice_cp_event_t event;
+
+                status = conn_check_session_get_check_result(
+                                    h_cc_inst, h_cc_dialog, &check_result);
+
+                status = ice_cand_pair_fsm_inject_msg(
+                                    cp, ICE_EP_EVENT_CHECK_SUCCESS, NULL);
+            }
+        }
+        else if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                "conn_check_session_inject_received_msg() returned error %d\n",
+                status);
+            return status;
+        }
     }
     else
     {
+        return status;
     }
 
-    return STUN_OK;
+    return status;
 }
 
 
@@ -525,6 +564,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status != STUN_OK) return status;
 
+#if 0
     status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
 
     if (status == STUN_OK)
@@ -532,6 +572,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
         /** restart the timer */
         status = ice_media_utils_start_check_list_timer(media);
     }
+#endif
 
     return status;
 }

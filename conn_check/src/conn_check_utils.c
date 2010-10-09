@@ -406,7 +406,6 @@ int32_t cc_utils_get_app_data_for_current_state(
     {
         case CC_OG_IDLE:
         case CC_OG_CHECKING:
-        case CC_OG_INPROGRESS:
             break;
 
         case CC_OG_TERMINATED:
@@ -415,7 +414,7 @@ int32_t cc_utils_get_app_data_for_current_state(
                         stun_calloc(1, sizeof(conn_check_result_t));
             if (result == NULL) return STUN_MEM_ERROR;
 
-            result->cc_succeeded = session->cc_succeeded;
+            result->check_succeeded = session->cc_succeeded;
 
             /** TODO - copy peer reflexive address if learned */
         }
@@ -427,7 +426,7 @@ int32_t cc_utils_get_app_data_for_current_state(
                         stun_calloc(1, sizeof(conn_check_result_t));
             if (result == NULL) return STUN_MEM_ERROR;
 
-            result->cc_succeeded = session->cc_succeeded;
+            result->check_succeeded = session->cc_succeeded;
             result->nominated = session->nominated;
         }
         break;
@@ -824,6 +823,67 @@ int32_t conn_check_utils_extract_username_components(
         *peer_user = NULL;
 
     return STUN_OK;
+}
+
+
+int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code)
+{
+    handle h_attr;
+    int32_t status;
+    uint32_t num = 1;
+
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_ERROR_CODE, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_error_code_get_error_code(h_attr, error_code);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting of the error code failed", status);
+    }
+
+    return status;
+}
+
+
+uint32_t cc_utils_extract_mapped_addr(handle h_msg, stun_inet_addr_t *prflx)
+{
+    handle h_attr;
+    int32_t status;
+    uint32_t num = 1;
+    stun_addr_family_type_t addr_family;
+
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_XOR_MAPPED_ADDR, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    num = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_xor_mapped_addr_get_address(h_attr, 
+                                        &addr_family, prflx->ip_addr, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting xor mapped addr failed", status);
+        return status;
+    }
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        prflx->host_type = STUN_INET_ADDR_IPV4;
+    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+        prflx->host_type = STUN_INET_ADDR_IPV6;
+    else
+        prflx->host_type = STUN_INET_ADDR_MAX;
+
+    status = stun_attr_xor_mapped_addr_get_port(h_attr, &prflx->port);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting xor mapped port failed", status);
+        return status;
+    }
+
+    return status;
 }
 
 

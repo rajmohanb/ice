@@ -307,6 +307,7 @@ int32_t turn_utils_extract_data_from_alloc_resp(
     handle h_attr;
     int32_t status;
     uint32_t num, len;
+    stun_addr_family_type_t addr_family;
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
@@ -314,16 +315,21 @@ int32_t turn_utils_extract_data_from_alloc_resp(
     if (status != STUN_OK) return status;
 
     len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_mapped_addr_get_address(
-                        h_attr, session->mapped_addr.ip_addr, &len);
+    status = stun_attr_xor_mapped_addr_get_address(h_attr, 
+                            &addr_family, session->mapped_addr.ip_addr, &len);
     if (status != STUN_OK) return status;
 
     status = stun_attr_xor_mapped_addr_get_port(
                                     h_attr, &(session->mapped_addr.port));
     if (status != STUN_OK) return status;
 
-    /** turn rfc supports IPv4 only */
-    session->mapped_addr.host_type = STUN_INET_ADDR_IPV4;
+    /** turn rfc supports IPv4 only? */
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        session->mapped_addr.host_type = STUN_INET_ADDR_IPV4;
+    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+        session->mapped_addr.host_type = STUN_INET_ADDR_IPV6;
+    else
+        session->mapped_addr.host_type = STUN_INET_ADDR_MAX;
 
 
     num = 1;
@@ -332,8 +338,8 @@ int32_t turn_utils_extract_data_from_alloc_resp(
     if (status != STUN_OK) return status;
 
     len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_relayed_addr_get_address(
-                                h_attr, session->relay_addr.ip_addr, &len);
+    status = stun_attr_xor_relayed_addr_get_address(h_attr, 
+                            &addr_family, session->relay_addr.ip_addr, &len);
     if (status != STUN_OK) return status;
 
     status = stun_attr_xor_relayed_addr_get_port(
@@ -341,7 +347,12 @@ int32_t turn_utils_extract_data_from_alloc_resp(
     if (status != STUN_OK) return status;
 
     /** turn rfc supports IPv4 only */
-    session->relay_addr.host_type = STUN_INET_ADDR_IPV4;
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        session->relay_addr.host_type = STUN_INET_ADDR_IPV4;
+    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+        session->relay_addr.host_type = STUN_INET_ADDR_IPV6;
+    else
+        session->relay_addr.host_type = STUN_INET_ADDR_MAX;
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
