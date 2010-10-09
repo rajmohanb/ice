@@ -21,6 +21,7 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#include "conn_check_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_utils.h"
@@ -97,8 +98,6 @@ int32_t ice_cp_initiate_check(ice_cand_pair_t *cp, handle h_msg)
 
 int32_t ice_cp_check_succeeded(ice_cand_pair_t *cp, handle h_msg)
 {
-    /** extract check information */
-
     cp->state = ICE_CP_SUCCEEDED;
 
     return STUN_OK;

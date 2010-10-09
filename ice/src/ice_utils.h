@@ -149,6 +149,17 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair);
 int32_t ice_utils_find_cand_pair_for_conn_check_session(
         ice_media_stream_t *media, handle h_conn_check, ice_cand_pair_t **cp);
 
+void ice_utils_handle_agent_role_conflict(
+                ice_media_stream_t *media, ice_agent_role_type_t new_role);
+
+int32_t ice_utils_search_local_candidates(ice_media_stream_t *media, 
+                    conn_check_result_t *check, ice_candidate_t **found_cand);
+
+int32_t ice_utils_add_peer_reflexive_candidate(ice_cand_pair_t *cp, 
+                    conn_check_result_t *check, ice_candidate_t **new_prflx);
+
+int32_t ice_utils_add_valid_pair(ice_media_stream_t *media, 
+                        ice_candidate_t *prflx_cand, ice_rx_stun_pkt_t *pkt);
 
 /******************************************************************************/
 

@@ -583,6 +583,7 @@ int32_t conn_check_session_get_check_result(handle h_inst,
         return STUN_INVALID_PARAMS;
 
     result->check_succeeded = session->cc_succeeded;
+    result->controlling_role = session->controlling_role;
     result->error_code = session->error_code;
     result->nominated = session->nominated;
 

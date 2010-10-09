@@ -119,6 +119,16 @@ typedef enum {
 
 
 /** list of stun error codes reason phrase */
+#define STUN_ERROR_TRY_ALTERNATE 300
+#define STUN_ERROR_BAD_REQUEST   400
+#define STUN_ERROR_UNAUTHORIZED  401
+#define STUN_ERROR_UNKNOWN_ATTR  420
+#define STUN_ERROR_STALE_NONCE   438
+#define STUN_ERROR_ROLE_CONFLICT 487
+#define STUN_ERROR_SERVER_ERROR  500
+
+
+/** list of stun error codes reason phrase */
 #define STUN_REJECT_RESPONSE_300 "Try Alternate"
 #define STUN_REJECT_RESPONSE_400 "Bad Request"
 #define STUN_REJECT_RESPONSE_401 "Unauthorized"

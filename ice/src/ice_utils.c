@@ -2076,6 +2076,163 @@ int32_t ice_utils_find_cand_pair_for_conn_check_session(
 }
 
 
+
+void ice_utils_handle_agent_role_conflict(
+                ice_media_stream_t *media, ice_agent_role_type_t new_role)
+{
+    ice_session_t *ice_session = media->ice_session;
+
+    ICE_LOG(LOG_SEV_INFO, "Changing the AGENT ROLE for the session");
+
+    ice_session->role = new_role;
+
+    return;
+}
+
+
+
+int32_t ice_utils_search_local_candidates(ice_media_stream_t *media, 
+                    conn_check_result_t *check, ice_candidate_t **found_cand)
+{
+    int32_t i;
+    ice_candidate_t *local_cand;
+
+    /** 
+     * check if the mapped address from the connectivity 
+     * check matches any of the local candidate 
+     */
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        local_cand = &media->as_local_cands[i];
+        if(local_cand->type == ICE_CAND_TYPE_INVALID) continue;
+
+        /** 
+         * Note 1: not checking the transport protocol, UDP is assumed.
+         * Note 2: strncmp is not proper way to compare ip addresses, 
+         *         especially ipv6 
+         */
+        if((local_cand->transport.type == check->prflx_addr.host_type) &&
+           (local_cand->transport.port == check->prflx_addr.port) &&
+           (stun_strncmp((char *)local_cand->transport.ip_addr, 
+                 (char *)check->prflx_addr.ip_addr, ICE_IP_ADDR_MAX_LEN) == 0))
+        {
+            /** OK, this candidate is already part of the local candidates */
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[ICE] The mapped address learned from the conn check is "\
+                    "already part of the local candidate list for media %p", 
+                    media);
+            *found_cand = local_cand;
+            return STUN_OK;
+        }
+    }
+
+    return STUN_NOT_FOUND;
+}
+
+
+
+int32_t ice_utils_add_peer_reflexive_candidate(ice_cand_pair_t *cp, 
+                    conn_check_result_t *check, ice_candidate_t **new_prflx)
+{
+    int32_t i;
+    ice_media_stream_t *media = cp->media;
+    ice_candidate_t *prflx_cand;
+
+    /** RFC 5245 sec 7.1.2.2.1 - check if peer reflexive candidate */
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+        if(media->as_local_cands[i].type == ICE_CAND_TYPE_INVALID) break;
+
+    if (i == ICE_CANDIDATES_MAX_SIZE)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "No more free local candidates available to add the peer "\
+                "reflexive candidate. Reached the maximum configured limit.");
+
+        return STUN_NO_RESOURCE;
+    }
+
+    /** 
+     * the mapped address is not part of the local candidate list.
+     * This is a candidate - a peer reflexive candidate.
+     */
+    prflx_cand = &media->as_local_cands[i];
+
+    /** transport params */
+    prflx_cand->transport.type = check->prflx_addr.host_type;
+    memcpy(prflx_cand->transport.ip_addr, 
+                        check->prflx_addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
+    prflx_cand->transport.port = check->prflx_addr.port;
+
+    /** Note: protocol is assumed to be always UDP */
+    prflx_cand->transport.protocol = ICE_TRANSPORT_UDP;
+
+    /** component id */
+    prflx_cand->comp_id = cp->local->comp_id;
+
+    /** 
+     * copy the application transport handle. This handle is 
+     * valid only to host candidate types.
+     * revisit -- should this be moved to media component level?
+     */
+    prflx_cand->transport_param = cp->local->transport_param;
+
+    prflx_cand->type = ICE_CAND_TYPE_PRFLX;
+
+    /** calculation of priority is bit different from spec - revisit? */
+    prflx_cand->priority = 
+        ice_utils_compute_peer_reflexive_candidate_priority(prflx_cand);
+
+    prflx_cand->default_cand = false;
+    prflx_cand->base = cp->local;
+
+    /** TODO = foundation */
+    stun_strncpy((char *)prflx_cand->foundation, "4", 1);
+
+    *new_prflx = prflx_cand;
+
+    return STUN_OK;
+}
+
+
+int32_t ice_utils_add_valid_pair(ice_media_stream_t *media, 
+                            ice_candidate_t *prflx_cand, ice_rx_stun_pkt_t *pkt)
+{
+    int32_t i;
+    ice_cand_pair_t *valid_pair;
+
+    /** find a free slot for the new valid pair */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {                    
+        valid_pair = &media->ah_valid_pairs[i];
+        if (valid_pair->local == NULL) break;
+    }
+
+    if (i == ICE_MAX_CANDIDATE_PAIRS)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "No more slots left for adding the new valid pair for media");
+        return STUN_NO_RESOURCE;
+    }
+
+    valid_pair->local = prflx_cand;
+    valid_pair->remote = 
+        ice_utils_get_peer_cand_for_pkt_src(media, &(pkt->src));
+
+    if (valid_pair->remote == NULL)
+    {
+        ICE_LOG (LOG_SEV_WARNING, 
+            "Ignored binding request from unknown source");
+        valid_pair->local = NULL;
+        return STUN_OK;
+    }
+
+    ICE_LOG (LOG_SEV_WARNING, "Added new valid pair for the media");
+
+    return STUN_OK;
+}
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

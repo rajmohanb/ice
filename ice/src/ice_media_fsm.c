@@ -518,22 +518,80 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              * connectivity check terminated. Retrieve the overall
              * result of the connectivity check and feed it to the 
              * corresponding cand pair fsm. Then destroy the 
-             * connectivity check session if no longer required. TODO
+             * connectivity check session if no longer required.
              */
             ICE_LOG (LOG_SEV_ERROR, 
-                    "CHECK! CHEKC! One connectivity check done");
+                    "[ICE MEDIA] CHECK! CHEKC! One connectivity check done");
 
             status = ice_utils_find_cand_pair_for_conn_check_session(
                                                     media, h_cc_dialog, &cp);
             if (status == STUN_OK)
             {
-                ice_cp_event_t event;
-
                 status = conn_check_session_get_check_result(
                                     h_cc_inst, h_cc_dialog, &check_result);
 
-                status = ice_cand_pair_fsm_inject_msg(
-                                    cp, ICE_EP_EVENT_CHECK_SUCCESS, NULL);
+                if (check_result.check_succeeded == true)
+                {
+                    ice_candidate_t *local_cand;
+
+                    status = ice_cand_pair_fsm_inject_msg(
+                            cp, ICE_EP_EVENT_CHECK_SUCCESS, &check_result);
+
+                    /**
+                     * RFC 5245 7.1.2.2.1 Discovering Peer Reflexive Candidates
+                     */
+                    status = ice_utils_search_local_candidates(
+                                            media, &check_result, &local_cand);
+                    if (status == STUN_OK)
+                    {
+                        ICE_LOG (LOG_SEV_INFO, 
+                                "[ICE MEDIA] The mapped address discovered "\
+                                "from connectivity check is already present "\
+                                "in the media local candidate list");
+                    }
+                    else if (status == STUN_NOT_FOUND)
+                    {
+                        ICE_LOG (LOG_SEV_INFO, 
+                                "[ICE MEDIA] The mapped address discovered "\
+                                "from connectivity check is NOT present "\
+                                "in the media local candidate list");
+                         
+                        status = ice_utils_add_peer_reflexive_candidate(
+                                                cp, &check_result, &local_cand);
+                    }
+
+                    /** 
+                     * RFC 5245 Sec 7.1.2.2.2 Constructing a Valid Pair
+                     * construct a valid pair and add to the media list
+                     */
+                    status = ice_utils_add_valid_pair(
+                                                media, local_cand, pkt);
+                    if (status == STUN_OK)
+                    {
+                        ICE_LOG(LOG_SEV_INFO, 
+                                "Added a new VALID PAIR for the media");
+                    }
+                }
+                else
+                {
+                    status = ice_cand_pair_fsm_inject_msg(
+                            cp, ICE_CP_EVENT_CHECK_FAILED, &check_result);
+
+                    /** RFC 5245 7.1.2.1 Failure Cases */
+                    if (check_result.error_code == STUN_ERROR_ROLE_CONFLICT)
+                    {
+                        ice_agent_role_type_t new_role;
+                        
+                        if (check_result.controlling_role == true)
+                            new_role = ICE_AGENT_ROLE_CONTROLLED;
+                        else
+                            new_role = ICE_AGENT_ROLE_CONTROLLING;
+
+                        ice_utils_handle_agent_role_conflict(media, new_role);
+                    }
+                }
+
+                status = conn_check_destroy_session(h_cc_inst, h_cc_dialog);
             }
         }
         else if (status != STUN_OK)
@@ -564,7 +622,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status != STUN_OK) return status;
 
-#if 0
+#if 1
     status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
 
     if (status == STUN_OK)

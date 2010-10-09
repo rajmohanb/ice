@@ -79,6 +79,10 @@ int32_t cc_initiate (conn_check_session_t *session, handle h_msg)
     if (status != STUN_OK)
         return status;
 
+    ICE_LOG(LOG_SEV_INFO,
+            "<<OG CONN CHECK>> => %s %d", session->stun_server, 
+            session->stun_port);
+
     h_txn_inst = session->instance->h_txn_inst;
 
     status = stun_create_txn(h_txn_inst,

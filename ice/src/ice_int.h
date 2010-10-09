@@ -123,7 +123,7 @@ typedef struct
 
     handle h_transport_conn;
 
-    /** my boss */
+    /** parent */
     ice_media_stream_t *media;
 
 } ice_cand_pair_t;
