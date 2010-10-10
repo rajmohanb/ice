@@ -229,9 +229,14 @@ int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port);
 /* ========================================================================== */
 
 int32_t stun_attr_xor_peer_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len);
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len);
+
+int32_t stun_attr_xor_peer_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family);
 
 int32_t stun_attr_xor_peer_addr_get_port(handle h_attr, uint32_t *port);
+
+int32_t stun_attr_xor_peer_addr_set_port(handle h_attr, uint32_t port);
 
 /* ========================================================================== */
 

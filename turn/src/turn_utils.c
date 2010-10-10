@@ -551,6 +551,111 @@ int32_t turn_utils_start_alloc_refresh_timer(
 }
 
 
+int32_t turn_utils_create_permission_req_msg(
+                            turn_session_t *session, handle *h_newmsg)
+{
+    int32_t status, i, attr_count = 0;
+    stun_addr_family_type_t addr_family;
+    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
+
+
+    status = turn_utils_create_request_msg(session, 
+                                STUN_METHOD_CREATE_PERMISSION, &h_msg);
+    if (status != STUN_OK) return status;
+
+    /** Multiple xor XOR-PEER-ADDRESS attributes ca be added */
+    for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
+    {
+        if (session->peer_addr[i].port == 0) break;
+
+        status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, 
+                                                &(ah_attr[attr_count]));
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+        attr_count++;
+
+        if (session->peer_addr[i].host_type == STUN_INET_ADDR_IPV4)
+            addr_family = STUN_ADDR_FAMILY_IPV4;
+        else if (session->peer_addr[i].host_type == STUN_INET_ADDR_IPV6)
+            addr_family = STUN_ADDR_FAMILY_IPV6;
+        else
+            goto ERROR_EXIT_PT;
+
+
+        status = stun_attr_xor_peer_addr_set_address(
+                ah_attr[attr_count - 1], session->peer_addr[i].ip_addr,
+                strlen((char *)session->peer_addr[i].ip_addr), addr_family);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+        status = stun_attr_xor_peer_addr_set_port(
+                        ah_attr[attr_count - 1], session->peer_addr[i].port);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+    }
+
+    if (attr_count == 0)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "No Peer addresses set for installing permission");
+        return STUN_INVALID_PARAMS;
+    }
+    
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
+                            session->cfg.username, 
+                            strlen((char *)session->cfg.username));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+
+    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
+                            session->nonce, session->nonce_len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+
+    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
+                            session->realm, session->realm_len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
+                                                &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+
+    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+
+    *h_newmsg = h_msg;
+
+    return status;
+
+ERROR_EXIT_PT:
+
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
+    stun_msg_destroy(h_msg);
+
+    return status;
+}
+
+
 
 /******************************************************************************/
 

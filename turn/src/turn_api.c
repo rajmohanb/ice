@@ -414,12 +414,23 @@ int32_t turn_session_send_message(handle h_inst,
                 status = STUN_INVALID_PARAMS;
             break;
         }
+        
+        case STUN_METHOD_CREATE_PERMISSION:
+        {
+            if (msg_type == STUN_REQUEST)
+                event = TURN_CREATE_PERM_REQ;
+            else if ((msg_type == STUN_SUCCESS_RESP) ||
+                     (msg_type == STUN_ERROR_RESP))
+                event = TURN_CREATE_PERM_RESP;
+            else
+                status = STUN_INVALID_PARAMS;
+            break;
+        }
 
         /** TODO */
         case STUN_METHOD_REFRESH:
         case STUN_METHOD_SEND:
         case STUN_METHOD_DATA:
-        case STUN_METHOD_CREATE_PERMISSION:
         case STUN_METHOD_CHANNEL_BIND:
         default:
             status = STUN_INVALID_PARAMS;
@@ -669,6 +680,32 @@ int32_t turn_session_get_allocation_info(handle h_inst,
     return STUN_OK;
 }
 
+
+
+int32_t turn_session_add_peer_address(handle h_inst, 
+                                    handle h_session, stun_inet_addr_t *addr)
+{
+    int32_t i;
+    turn_instance_t *instance;
+    turn_session_t *session;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (addr == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (turn_instance_t *) h_inst;
+    session = (turn_session_t *) h_session;
+
+    for (i = 0; i< TURN_MAX_PERMISSIONS; i++)
+    {
+        if(session->peer_addr[i].port == 0)
+        {
+            stun_memcpy(&session->peer_addr[i], addr, sizeof(stun_inet_addr_t));
+            return STUN_OK;
+        }
+    }
+
+    return STUN_NO_RESOURCE;
+}
 
 
 /******************************************************************************/

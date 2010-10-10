@@ -161,6 +161,9 @@ int32_t ice_utils_add_peer_reflexive_candidate(ice_cand_pair_t *cp,
 int32_t ice_utils_add_valid_pair(ice_media_stream_t *media, 
                         ice_candidate_t *prflx_cand, ice_rx_stun_pkt_t *pkt);
 
+int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media);
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

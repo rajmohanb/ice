@@ -335,6 +335,36 @@ int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg)
 
 int32_t send_perm_req (turn_session_t *session, handle h_msg)
 {
+    int32_t status;
+    handle h_txn, h_txn_inst;
+    
+    h_txn_inst = session->instance->h_txn_inst;
+
+    /** delete an existing transaction, if any */
+    stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
+
+    status = turn_utils_create_permission_req_msg(session, &session->h_req);
+    if (status != STUN_OK)
+        return status;
+
+    status = stun_create_txn(h_txn_inst,
+                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_req);
+    if (status != STUN_OK) return status;
+
+    session->h_txn = h_txn;
+
+    session->state = TURN_OG_CREATING_PERM;
+
     return STUN_OK;
 }
 

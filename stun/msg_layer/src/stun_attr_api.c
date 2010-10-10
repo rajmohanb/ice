@@ -322,6 +322,103 @@ int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port)
 }
 
 
+int32_t stun_attr_xor_peer_addr_get_address(handle h_attr, 
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
+{
+    stun_xor_peer_addr_attr_t *attr;
+    uint32_t size;
+
+    if ((address == NULL) || (h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
+
+    if (attr->family == STUN_ADDR_FAMILY_IPV4)
+    {
+        size = *len - 1;
+        stun_strncpy((char *)address, (char *)attr->address, size);
+        *len = size;
+    }
+    else
+    {
+        stun_strncpy((char *)address, 
+                (char *)attr->address, MAX_MAPPED_ADDRESS_LEN - 1);
+        *len = MAX_MAPPED_ADDRESS_LEN;
+    }
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_xor_peer_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family)
+{
+    stun_xor_peer_addr_attr_t *attr;
+
+    if ((address == NULL) || (h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->family = family;
+
+    if (family == STUN_ADDR_FAMILY_IPV4)
+    {
+        stun_strncpy((char *)attr->address, (char *)address, len);
+    }
+    else
+    {
+        stun_strncpy((char *)attr->address, (char *)address, len);
+    }
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_xor_peer_addr_get_port(handle h_attr, uint32_t *port)
+{
+    stun_xor_peer_addr_attr_t *attr;
+
+    if ((h_attr == NULL) || (port == NULL))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    *port = attr->port;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_xor_peer_addr_set_port(handle h_attr, uint32_t port)
+{
+    stun_xor_peer_addr_attr_t *attr;
+
+    if ((h_attr == NULL) || (port == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->port = port;
+
+    return STUN_OK;
+}
+
+
 int32_t stun_attr_lifetime_get_duration(handle h_attr, uint32_t *duration)
 {
     stun_lifetime_attr_t *attr;

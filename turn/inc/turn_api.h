@@ -27,6 +27,7 @@ extern "C" {
 #define TURN_MAX_PASSWORD_LEN           128
 #define TURN_MAX_REALM_LEN              64
 #define TURN_MAX_CONCURRENT_SESSIONS    10
+#define TURN_MAX_PERMISSIONS            3
 
 /******************************************************************************/
 
@@ -151,6 +152,9 @@ int32_t turn_session_timer_get_session_handle (
 
 int32_t turn_session_get_allocation_info(handle h_inst, 
                         handle h_session, turn_session_alloc_info_t *info);
+
+int32_t turn_session_add_peer_address(handle h_inst, 
+                                    handle h_session, stun_inet_addr_t *addr);
 
 
 /******************************************************************************/

@@ -117,6 +117,9 @@ typedef struct
     handle   h_alloc_refresh;
     turn_timer_params_t *alloc_refresh_timer_params;
 
+    /** peer addresses for permission */
+    stun_inet_addr_t peer_addr[TURN_MAX_PERMISSIONS];
+
 } turn_session_t;
 
 

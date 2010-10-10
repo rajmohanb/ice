@@ -2233,6 +2233,62 @@ int32_t ice_utils_add_valid_pair(ice_media_stream_t *media,
 }
 
 
+
+int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
+{
+    int32_t i, status;
+    ice_cand_pair_t *cp;
+    stun_inet_addr_t addr;
+    handle h_turn_session;
+    handle h_turn_inst = media->ice_session->instance->h_turn_inst;
+
+    /**
+     * ICE RFC 5245 - 7.1.1.  Creating Permissions for Relayed Candidates
+     *
+     * If the connectivity check is being sent using a relayed local
+     * candidate, the client MUST create a permission first if it has not
+     * already created one previously.
+     */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+
+        if (!cp->local) continue;
+        if(cp->local->type != ICE_CAND_TYPE_RELAYED) continue;
+
+        addr.host_type = cp->remote->transport.type;
+        addr.port = cp->remote->transport.port;
+        stun_memcpy(addr.ip_addr, 
+                cp->remote->transport.ip_addr, ICE_IP_ADDR_MAX_LEN);
+
+        /** note: better way to arrive at this? */
+        h_turn_session = media->h_turn_sessions[cp->local->comp_id - 1];
+
+        status = turn_session_add_peer_address(h_turn_inst, 
+                                                    h_turn_session, &addr);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Installation of permission for peer address failed");
+            return status;
+        }
+    }
+
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->h_turn_sessions[i] == NULL) continue;
+
+        status = turn_session_send_message(h_turn_inst, 
+                                           media->h_turn_sessions[i], 
+                                           STUN_METHOD_CREATE_PERMISSION, 
+                                           STUN_REQUEST);
+        if (status != STUN_OK) break;
+    }
+
+    return status;
+}
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus
