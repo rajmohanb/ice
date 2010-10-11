@@ -949,7 +949,8 @@ start_listen:
 #endif
 
     ice_input_remote_sdp(h_inst, h_session, h_audio);
-
+ 
+    app_log (LOG_SEV_ERROR, "Forming connectivity check lists ...\n");
     status = ice_session_form_check_lists(h_inst, h_session);
     if (status != STUN_OK)
     {
@@ -958,6 +959,7 @@ start_listen:
         return -1;
     }
 
+    app_log (LOG_SEV_ERROR, "Starting ICE connectivity checks ...\n");
     status = ice_session_start_connectivity_checks(h_inst, h_session);
     if (status != STUN_OK)
     {

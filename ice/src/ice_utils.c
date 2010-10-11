@@ -985,6 +985,12 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     media = pair->media;
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
+    ICE_LOG (LOG_SEV_ERROR, 
+            " Check: [%d] %s:%d --> %s:%d %s ", pair->local->comp_id, 
+            pair->local->transport.ip_addr, pair->local->transport.port,
+            pair->remote->transport.ip_addr, pair->remote->transport.port, 
+            cand_pair_states[pair->state]);
+
     status = conn_check_create_session(h_cc_inst, 
                             CC_CLIENT_SESSION, &(pair->h_cc_session));
     if (status != STUN_OK)
