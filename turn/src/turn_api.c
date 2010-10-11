@@ -390,7 +390,6 @@ int32_t turn_session_send_message(handle h_inst,
     turn_session_t *session;
     turn_event_t event;
     int32_t status = STUN_OK;
-    turn_session_state_t cur_state;
 
     if ((h_inst == NULL) || (h_session == NULL))
         return STUN_INVALID_PARAMS;
@@ -439,7 +438,6 @@ int32_t turn_session_send_message(handle h_inst,
 
     if (status != STUN_OK) return status;
     
-    cur_state = session->state;
     return turn_session_fsm_inject_msg(session, event, NULL);
 }
 
@@ -454,7 +452,6 @@ int32_t turn_session_inject_received_msg(
     int32_t status = STUN_OK;
     stun_method_type_t method;
     stun_msg_type_t class;
-    turn_session_state_t cur_state;
 
     if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
     {
@@ -552,7 +549,6 @@ int32_t turn_session_inject_received_msg(
     
     session->h_resp = h_msg;
 
-    cur_state = session->state;
     return turn_session_fsm_inject_msg(session, event, h_msg);
 }
 
@@ -706,6 +702,32 @@ int32_t turn_session_add_peer_address(handle h_inst,
 
     return STUN_NO_RESOURCE;
 }
+
+
+
+int32_t turn_session_send_application_data(handle h_inst, 
+                            handle h_session, stun_inet_addr_t *peer_dest,
+                            u_char *data, uint32_t len)
+{
+    turn_instance_t *instance;
+    turn_session_t *session;
+    turn_app_data_t app_data;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    /** the data can be empty, and is legal! */
+
+    instance = (turn_instance_t *) h_inst;
+    session = (turn_session_t *) h_session;
+
+    app_data.data = data;
+    app_data.len = len;
+    app_data.dest = peer_dest;
+
+    return turn_session_fsm_inject_msg(session, TURN_DATA_IND, &app_data);
+}
+
 
 
 /******************************************************************************/

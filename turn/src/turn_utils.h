@@ -51,6 +51,9 @@ int32_t turn_utils_create_refresh_req_msg(
 int32_t turn_utils_create_permission_req_msg(
                             turn_session_t *session, handle *h_newmsg);
 
+int32_t turn_utils_create_data_ind_msg(
+        turn_session_t *session, turn_app_data_t *data, handle *h_newmsg);
+
 int32_t turn_session_utils_notify_state_change_event(turn_session_t *session);
 
 int32_t turn_utils_start_alloc_refresh_timer(

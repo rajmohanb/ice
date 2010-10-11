@@ -40,6 +40,8 @@ int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg);
 
 int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg);
 
+int32_t turn_send_data_ind(turn_session_t *session, handle h_msg);
+
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
 
 int32_t turn_session_fsm_inject_msg(turn_session_t *session, 

@@ -1412,13 +1412,78 @@ int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf,
 
 int32_t stun_attr_encode_data(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+
+    stun_data_attr_t *data;
+    uint16_t val16, pad_bytes = 0;
+
+    data = (stun_data_attr_t *) attr;
+
+    /** attribute type */
+    val16 = htons(STUN_ATTR_DATA);
+    memcpy(buf, &val16, sizeof(uint16_t));
+
+    buf += sizeof(uint16_t);
+
+    /** copy application data */
+    stun_memcpy(buf + 2, data->data, data->length);
+
+    val16 = htons(data->length);
+    memcpy(buf, &val16, sizeof(uint16_t));
+
+    /** padding */
+    if (data->length % 4)
+    {
+        pad_bytes = 4 - (data->length % 4);
+    }
+    buf += pad_bytes;
+
+    *len = data->length + pad_bytes + 4;
+
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_data(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr) {
+
+    stun_data_attr_t *data;
+    uint16_t val16;
+    int32_t status;
+    u_char *pkt = *buf;
+
+    data = (stun_data_attr_t *) stun_calloc (1, sizeof(stun_data_attr_t));
+    if (data == NULL) return STUN_MEM_ERROR;
+
+    data->hdr.type = STUN_ATTR_DATA;
+
+    memcpy(&val16, pkt, sizeof(uint16_t));
+    data->length = ntohs(val16);
+    pkt += 2;
+
+    data->data = (u_char *) stun_calloc(1, data->length);
+    if(data->data == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto ERROR_EXIT;
+    }
+
+    memcpy(data->data, pkt, data->length);
+    pkt +=  data->length;
+
+    if (data->length % 4)
+    {
+        pkt += (4 -  (data->length % 4));
+    }
+
+    *attr = (stun_attr_hdr_t *) data;
+    *buf = pkt;
+
     return STUN_OK;
+
+ERROR_EXIT:
+
+    stun_free(data);
+    return status;
 }
 
 /*============================================================================*/

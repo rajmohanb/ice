@@ -79,7 +79,7 @@ static turn_session_fsm_handler
         process_perm_resp,
         turn_ignore_msg,
         turn_ignore_msg,
-        turn_ignore_msg,
+        turn_send_data_ind,
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
@@ -92,7 +92,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
-        turn_ignore_msg,
+        turn_send_data_ind,
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
@@ -370,8 +370,41 @@ int32_t send_perm_req (turn_session_t *session, handle h_msg)
 
 
 
-int32_t process_perm_resp (turn_session_t *session, handle h_msg)
+int32_t process_perm_resp (turn_session_t *session, handle h_rcvdmsg)
 {
+    int32_t status;
+    handle h_txn, h_txn_inst = session->instance->h_txn_inst;
+    bool_t txn_terminated = false;
+
+    /** TODO = processing */
+
+    status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "STUN Transaction not found, ignoring the message");
+        return status;
+    }
+
+    status = stun_txn_inject_received_msg(h_txn_inst, h_txn, h_rcvdmsg);
+    if (status == STUN_TERMINATED)
+    { 
+        txn_terminated = true;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "STUN Transaction returned error %d", status);
+        return status;
+    }
+
+    if (txn_terminated == true)
+        stun_destroy_txn(h_txn_inst, h_txn, false, false);
+
+    session->h_txn = session->h_req = session->h_resp = 0;
+
+    session->state = TURN_OG_ACTIVE;
+
     return STUN_TERMINATED;
 }
 
@@ -532,6 +565,8 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
                     session->state = TURN_OG_FAILED;
                 }
             }
+
+            ICE_LOG (LOG_SEV_INFO, "TURN session refreshed");
         }
 
         session->h_txn = session->h_req = session->h_resp = NULL;
@@ -689,7 +724,10 @@ int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg)
     
     h_txn_inst = session->instance->h_txn_inst;
 
-    /** TODO = session should be capable of supporting multiple concurrent transactions and so has to store multiple txn handles */
+    /** TODO = 
+     * session should be capable of supporting multiple concurrent 
+     * transactions and so has to store multiple txn handles 
+     */
     /** delete an existing transaction, if any */
     stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
 
@@ -716,6 +754,48 @@ int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg)
     /** no change in state */
 
     return status;
+}
+
+
+
+int32_t turn_send_data_ind(turn_session_t *session, handle h_msg)
+{
+    int32_t status;
+    handle h_txn, h_ind, h_txn_inst;
+    turn_app_data_t *data = (turn_app_data_t *) h_msg;
+    
+    h_txn_inst = session->instance->h_txn_inst;
+
+    /** TODO = 
+     * verify that the destination is one of the addresses
+     * for which permissions have been installed 
+     */
+
+    /** The transaction and the turn ind msg handle need not be stored */
+
+    status = turn_utils_create_data_ind_msg(session, data, &h_ind);
+    if (status != STUN_OK) return status;
+
+    status = stun_create_txn(h_txn_inst,
+                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, h_ind);
+    if (status != STUN_OK) return status;
+
+    session->h_txn = h_txn;
+
+    /** no change in state */
+
+    return status;
+
 }
 
 

@@ -119,23 +119,35 @@ typedef enum {
 
 
 /** list of stun error codes reason phrase */
-#define STUN_ERROR_TRY_ALTERNATE 300
-#define STUN_ERROR_BAD_REQUEST   400
-#define STUN_ERROR_UNAUTHORIZED  401
-#define STUN_ERROR_UNKNOWN_ATTR  420
-#define STUN_ERROR_STALE_NONCE   438
-#define STUN_ERROR_ROLE_CONFLICT 487
-#define STUN_ERROR_SERVER_ERROR  500
+#define STUN_ERROR_TRY_ALTERNATE     300
+#define STUN_ERROR_BAD_REQUEST       400
+#define STUN_ERROR_UNAUTHORIZED      401
+#define STUN_ERROR_FORBIDDEN         403
+#define STUN_ERROR_UNKNOWN_ATTR      420
+#define STUN_ERROR_ALLOC_MISMATCH    437
+#define STUN_ERROR_STALE_NONCE       438
+#define STUN_ERROR_WRONG_CREDS       441
+#define STUN_ERROR_UNSUPPORTED_PROTO 442
+#define STUN_ERROR_QUOTA_REACHED     486
+#define STUN_ERROR_ROLE_CONFLICT     487
+#define STUN_ERROR_SERVER_ERROR      500
+#define STUN_ERROR_INSUF_CAPACITY    508
 
 
 /** list of stun error codes reason phrase */
 #define STUN_REJECT_RESPONSE_300 "Try Alternate"
 #define STUN_REJECT_RESPONSE_400 "Bad Request"
 #define STUN_REJECT_RESPONSE_401 "Unauthorized"
+#define STUN_REJECT_RESPONSE_403 "Forbidden"
 #define STUN_REJECT_RESPONSE_420 "Unknown Attribute"
+#define STUN_REJECT_RESPONSE_437 "Allocation Mismatch"
 #define STUN_REJECT_RESPONSE_438 "Stale Nonce"
+#define STUN_REJECT_RESPONSE_441 "Wrong Credentials"
+#define STUN_REJECT_RESPONSE_442 "Unsupported Transport Protocol"
+#define STUN_REJECT_RESPONSE_486 "Allocation Quota Reached"
 #define STUN_REJECT_RESPONSE_487 "Role Conflict"
 #define STUN_REJECT_RESPONSE_500 "Server Error"
+#define STUN_REJECT_RESPONSE_508 "Insufficient Capacity"
 
 
 /** instance specific apis */
@@ -243,6 +255,14 @@ int32_t stun_attr_xor_peer_addr_set_port(handle h_attr, uint32_t port);
 int32_t stun_attr_lifetime_get_duration(handle h_attr, uint32_t *duration);
 
 int32_t stun_attr_lifetime_set_duration(handle h_attr, uint32_t duration);
+
+/* ========================================================================== */
+
+int32_t stun_attr_data_get_data_length(handle h_attr, uint32_t *len);
+
+int32_t stun_attr_data_get_data(handle h_attr, u_char *data, uint32_t len);
+
+int32_t stun_attr_data_set_data(handle h_attr, u_char *data, uint32_t len);
 
 /* ========================================================================== */
 

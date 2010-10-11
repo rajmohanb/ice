@@ -725,6 +725,7 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 
 int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param)
 {
+    ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Event ignored");
     return STUN_OK;
 }
 

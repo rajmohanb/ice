@@ -254,7 +254,7 @@ handle ice_cc_start_timer(uint32_t duration, handle arg)
     int32_t status;
     ice_timer_params_t *timer;
     handle h_cc_session, h_cc_inst;
-    ice_media_stream_t *media;
+    ice_cand_pair_t *cp;
 
     timer = (ice_timer_params_t *) 
         stun_calloc (1, sizeof(ice_timer_params_t));
@@ -268,19 +268,19 @@ handle ice_cc_start_timer(uint32_t duration, handle arg)
     }
 
     status = conn_check_session_get_app_param( 
-                            h_cc_inst, h_cc_session, (handle *)&media);
+                            h_cc_inst, h_cc_session, (handle *)&cp);
     if (status != STUN_OK)
     {
         goto ERROR_EXIT;
     }
 
-    timer->h_instance = media->ice_session->instance;
-    timer->h_session = media->ice_session;
-    timer->h_media = media;
+    timer->h_instance = cp->media->ice_session->instance;
+    timer->h_session = cp->media->ice_session;
+    timer->h_media = cp->media;
     timer->arg = arg;
     timer->type = ICE_CC_TIMER;
 
-    timer->timer_id = media->ice_session->instance->start_timer_cb(duration, timer);
+    timer->timer_id = cp->media->ice_session->instance->start_timer_cb(duration, timer);
     if (timer->timer_id)
     {
         return timer;
@@ -315,7 +315,7 @@ int32_t ice_stop_timer(handle timer_id)
 }
 
 
-int32_t ice_encode_and_send_message(handle h_msg, 
+static int32_t ice_encode_and_send_message(handle h_msg, 
                 stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
                 uint32_t port, handle transport_param, handle app_param)
 {
@@ -421,6 +421,116 @@ int32_t ice_encode_and_send_message(handle h_msg,
 }
 
 
+
+static int32_t ice_encode_and_send_conn_check_message(handle h_msg, 
+                    stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+                    uint32_t port, handle transport_param, handle app_param)
+{
+    u_char *buf;
+    uint32_t sent_bytes, buf_len;
+    int32_t status, sock_fd = (int32_t) transport_param;
+    ice_cand_pair_t *cp = (ice_cand_pair_t *) app_param;
+    ice_media_stream_t *media;
+    ice_session_t *ice_session;
+    stun_auth_params_t auth = {0};
+    stun_msg_type_t msg_class;
+
+    if ((h_msg == NULL) || (ip_addr == NULL) || 
+                            (port == 0) || (transport_param == NULL))
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Invalid parameter, hence not sending message");
+        return STUN_INVALID_PARAMS;
+    }
+
+    if (!app_param) return STUN_INT_ERROR;
+    media = cp->media;
+    ice_session = media->ice_session;
+
+    /** connectivity check mesages - short term credential */
+    status = stun_msg_get_class(h_msg, &msg_class);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Invalid message!! unable to retrieve STUN msg class");
+        return STUN_INVALID_PARAMS;
+    }
+
+    if (msg_class == STUN_REQUEST)
+    {
+        auth.len = stun_strlen(media->peer_pwd);
+        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+        stun_strncpy((char *)auth.password, media->peer_pwd, auth.len);
+    }
+    else if ((msg_class == STUN_SUCCESS_RESP) || 
+             (msg_class == STUN_ERROR_RESP))
+    {
+        auth.len = stun_strlen(media->local_pwd);
+        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+        stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+    }
+        
+    /** Indications are not authenticated */
+
+    buf = (u_char *) stun_calloc(1, TRANSPORT_MTU_SIZE);
+    buf_len = TRANSPORT_MTU_SIZE;
+
+    status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "stun_msg_format() returned error %d\n", status);
+        stun_free(buf);
+        return STUN_INT_ERROR;
+    }
+
+    if (!sock_fd)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "some error! transport socket handle is NULL\n");
+        stun_free(buf);
+        return STUN_INVALID_PARAMS;
+    }
+
+    /** 
+     * connectivity check messages that are sent using the relayed 
+     * candidate must be encoded in a TURN DATA indication message
+     */
+    if(cp->local->type == ICE_CAND_TYPE_RELAYED)
+    {
+        handle h_turn_session;
+        stun_inet_addr_t dest = {0};
+        handle h_turn_inst = cp->media->ice_session->instance->h_turn_inst;
+
+        /** better way to identify turn session? */
+        h_turn_session = cp->media->h_turn_sessions[cp->local->comp_id - 1];
+
+        dest.host_type = ip_addr_type;
+        dest.port = port;
+        stun_memcpy(dest.ip_addr, ip_addr, ICE_IP_ADDR_MAX_LEN);
+
+        status = turn_session_send_application_data(h_turn_inst, 
+                                        h_turn_session, &dest, buf, buf_len);
+    }
+    else
+    {
+        sent_bytes = ice_session->instance->nwk_send_cb(buf, 
+                buf_len, ip_addr_type, ip_addr, port, transport_param);
+
+        if (sent_bytes == -1)
+            status = STUN_INT_ERROR;
+        else
+            status = STUN_OK;
+    }
+
+    stun_free(buf);
+
+    return status;
+}
+
+
 int32_t ice_instance_set_callbacks(handle h_inst, 
                                         ice_instance_callbacks_t *cbs)
 {
@@ -458,7 +568,7 @@ int32_t ice_instance_set_callbacks(handle h_inst,
         return status;
     }
     /** set callbacks to connectivity check module */
-    cc_cbs.nwk_cb = ice_encode_and_send_message;
+    cc_cbs.nwk_cb = ice_encode_and_send_conn_check_message;
     cc_cbs.start_timer_cb = ice_cc_start_timer;
     cc_cbs.stop_timer_cb = ice_stop_timer;
 

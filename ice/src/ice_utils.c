@@ -951,6 +951,7 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
          */
 
         /** TODO */
+        return STUN_INT_ERROR;
     }
 
     /**
@@ -1014,7 +1015,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
 
     /** set the ice media handle as application handle */
     status = conn_check_session_set_app_param(h_cc_inst, 
-                                            pair->h_cc_session, media);
+                                            pair->h_cc_session, pair);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_DEBUG, 

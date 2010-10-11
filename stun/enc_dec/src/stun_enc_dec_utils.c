@@ -51,18 +51,11 @@ int32_t stun_enc_dec_utils_get_long_term_cred_hmac_key(handle h_msg,
 {
     handle h_username, h_realm;
     u_char *username, *realm;
-#if 0
-    u_char *ptr, concat_str[MAX_USERNAME_LEN+MAX_REALM_VAL_BYTES+100];
-#endif
     int32_t status;
     uint32_t num, realm_len, username_len;
     stun_MD5_CTX ctx;
 
     stun_MD5_Init(&ctx);
-
-#if 0
-    ptr = concat_str;
-#endif
 
     /** username */
     num = 1;
@@ -99,14 +92,6 @@ int32_t stun_enc_dec_utils_get_long_term_cred_hmac_key(handle h_msg,
     stun_MD5_Update(&ctx, username, username_len);
     stun_MD5_Update(&ctx, ":", 1);
 
-#if 0
-    stun_memcpy(ptr, username, username_len);
-    ptr += username_len;
-
-    *ptr = ':';
-    ptr++;
-#endif
-
 
     /** realm */
     num = 1;
@@ -141,25 +126,8 @@ int32_t stun_enc_dec_utils_get_long_term_cred_hmac_key(handle h_msg,
     stun_MD5_Update(&ctx, realm, realm_len);
     stun_MD5_Update(&ctx, ":", 1);
 
-#if 0
-    stun_memcpy(ptr, realm, realm_len);
-    ptr += realm_len;
-
-    *ptr = ':';
-    ptr++;
-#endif
-
-    //stun_MD5_Update(&ctx, "password", strlen("password"));
     stun_MD5_Update(&ctx, auth_params->password, auth_params->len);
 
-#if 0
-    stun_memcpy(ptr, "password", strlen("password"));
-    ptr += strlen("password");
-#endif
-
-#if 0
-    platform_md5((unsigned char*) concat_str, (ptr - concat_str), key);
-#endif
     stun_MD5_Final(key, &ctx);
 
     stun_free(username);

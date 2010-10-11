@@ -657,6 +657,69 @@ ERROR_EXIT_PT:
 
 
 
+int32_t turn_utils_create_data_ind_msg(
+        turn_session_t *session, turn_app_data_t *data, handle *h_newmsg)
+{
+    int32_t status, i, attr_count = 0;
+    stun_addr_family_type_t addr_family;
+    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_ind;
+
+    status = stun_msg_create(STUN_INDICATION, STUN_METHOD_DATA, &h_ind);
+    if (status != STUN_OK) return status;
+
+
+    if (data->dest->host_type == STUN_INET_ADDR_IPV4)
+        addr_family = STUN_ADDR_FAMILY_IPV4;
+    else if (data->dest->host_type == STUN_INET_ADDR_IPV6)
+        addr_family = STUN_ADDR_FAMILY_IPV6;
+    else
+        goto ERROR_EXIT_PT;
+
+    status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, 
+                                            &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+    status = stun_attr_xor_peer_addr_set_address(
+            ah_attr[attr_count - 1], data->dest->ip_addr,
+            strlen((char *)data->dest->ip_addr), addr_family);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = stun_attr_xor_peer_addr_set_port(
+                    ah_attr[attr_count - 1], data->dest->port);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    
+    status = stun_attr_create(STUN_ATTR_DATA, &(ah_attr[attr_count]));
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+    attr_count++;
+
+    status = stun_attr_data_set_data(
+                            ah_attr[attr_count - 1], data->data, data->len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    /** TODO =
+     * Add DONT-FRAGMENT attribute if configured
+     */
+
+    status = stun_msg_add_attributes(h_ind, ah_attr, attr_count);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    *h_newmsg = h_ind;
+
+    return status;
+
+ERROR_EXIT_PT:
+
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
+    stun_msg_destroy(h_ind);
+
+    return status;
+}
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

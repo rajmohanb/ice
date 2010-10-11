@@ -453,6 +453,68 @@ int32_t stun_attr_lifetime_set_duration(handle h_attr, uint32_t duration)
     return STUN_OK;
 }
 
+
+int32_t stun_attr_data_get_data_length(handle h_attr, uint32_t *len)
+{
+    stun_data_attr_t *attr;
+
+    if ((h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_data_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_DATA)
+        return STUN_INVALID_PARAMS;
+
+    *len = attr->length;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_data_get_data(handle h_attr, u_char *data, uint32_t len)
+{
+    stun_data_attr_t *attr;
+
+    if ((h_attr == NULL) || (data == NULL))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_data_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_DATA)
+        return STUN_INVALID_PARAMS;
+
+    if(attr->length > len) return STUN_MEM_INSUF;
+
+    stun_memcpy(data, attr->data, attr->length);
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_data_set_data(handle h_attr, u_char *data, uint32_t len)
+{
+    stun_data_attr_t *attr;
+
+    if (h_attr == NULL) return STUN_INVALID_PARAMS;
+    /** data of length zero is perfectly legal! */
+
+    attr = (stun_data_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_DATA)
+        return STUN_INVALID_PARAMS;
+
+    attr->data = (u_char *) stun_calloc (1, len);
+    if (attr->data == NULL) return STUN_MEM_ERROR;
+
+    stun_memcpy(attr->data, data, len);
+    attr->length = len;
+
+    return STUN_OK;
+}
+
+
+
 #endif
 
 

@@ -93,7 +93,7 @@ static ice_media_stream_fsm_handler
     /** ICE_MEDIA_CC_RUNNING */
     {
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_process_relay_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -752,7 +752,7 @@ int32_t ice_media_stream_dual_ice_lite(ice_media_stream_t *media, handle h_msg)
 
 int32_t ice_media_stream_ignore_msg(ice_media_stream_t *media, handle h_msg)
 {
-    ICE_LOG(LOG_SEV_ERROR, "Event ignored");
+    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Event ignored");
     return STUN_OK;
 }
 
@@ -763,6 +763,9 @@ int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media,
     int32_t status;
     ice_media_stream_state_t cur_state;
     ice_media_stream_fsm_handler handler;
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] Processing event %d in %d state", event, media->state);
 
     cur_state = media->state;
     handler = ice_media_stream_fsm[cur_state][event];

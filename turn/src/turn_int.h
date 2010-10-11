@@ -22,6 +22,16 @@ extern "C" {
 /******************************************************************************/
 
 
+
+typedef struct
+{
+    uint32_t len;
+    u_char *data;
+
+    stun_inet_addr_t *dest;
+} turn_app_data_t;
+
+
 typedef enum
 {
     /** timer started by turn transactions */
@@ -33,6 +43,7 @@ typedef enum
 
     /** that's all we have as of now */
 } turn_timer_type_t;
+
 
 typedef struct {
     handle h_instance;
