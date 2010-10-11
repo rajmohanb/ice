@@ -825,6 +825,10 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
     ICE_LOG (LOG_SEV_DEBUG, 
             "===============================================================");
 
+    ICE_LOG (LOG_SEV_DEBUG, 
+            "\ncount: [comp_id] source --> dest state [ priority foundation ]\n");
+
+
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
         pair = &media->ah_cand_pairs[i];
@@ -832,11 +836,13 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
         if (!pair->local) continue;
 
         count++;
-        ICE_LOG (LOG_SEV_DEBUG, "count: %d state: %s priority: %lld component id: %d local "\
-                "cand %p remote cand %p local foundation: %s remote "\
-                "foundation: %s\n", count, cand_pair_states[pair->state], pair->priority,
-                pair->local->comp_id, pair->local, pair->remote,
-                pair->local->foundation, pair->remote->foundation);
+        ICE_LOG (LOG_SEV_DEBUG, 
+                "%d: [%d] %s:%d --> %s:%d %s [ %lld %s:%s ]\n", count, 
+                pair->local->comp_id, pair->local->transport.ip_addr, 
+                pair->local->transport.port, pair->remote->transport.ip_addr, 
+                pair->remote->transport.port, cand_pair_states[pair->state], 
+                pair->priority, pair->local->foundation, 
+                pair->remote->foundation);
     }
 
     ICE_LOG (LOG_SEV_DEBUG, "Total %d valid pairs for this media\n", count);
