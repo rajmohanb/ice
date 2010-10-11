@@ -664,7 +664,7 @@ int32_t turn_utils_create_data_ind_msg(
     stun_addr_family_type_t addr_family;
     handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_ind;
 
-    status = stun_msg_create(STUN_INDICATION, STUN_METHOD_DATA, &h_ind);
+    status = stun_msg_create(STUN_INDICATION, STUN_METHOD_SEND, &h_ind);
     if (status != STUN_OK) return status;
 
 
