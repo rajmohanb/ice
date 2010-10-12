@@ -160,6 +160,10 @@ int32_t turn_session_send_application_data(handle h_inst,
                             handle h_session, stun_inet_addr_t *peer_dest,
                             u_char *data, uint32_t len);
 
+int32_t turn_session_get_application_data(handle h_inst,
+                                handle h_session, stun_inet_addr_t *peer_src,
+                                u_char *data, uint32_t len);
+
 
 /******************************************************************************/
 

@@ -35,7 +35,7 @@ extern "C" {
         if (session->aps_media_streams[i] == h_media) { break; } \
 \
     if (i == ICE_MAX_MEDIA_STREAMS) { \
-        ICE_LOG(LOG_SEV_ERROR, "Invalid media handle"); \
+        ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Invalid media handle"); \
         return STUN_INVALID_PARAMS; \
     } \
 } \
@@ -183,7 +183,8 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
         if(status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Initiation of candidate gathering for media %d failed.", i);
+                    "[ICE SESSION] Initiation of candidate gathering for "\
+                    "media %d failed.", i);
             return STUN_INT_ERROR;
         }
     }
@@ -191,7 +192,8 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
     return status;
@@ -211,7 +213,8 @@ int32_t handle_gather_result(ice_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "unable to get application param from TURN handle");
+                "[ICE SESSION] unable to get application param "\
+                "from TURN handle");
         return status;
     }
 
@@ -220,14 +223,16 @@ int32_t handle_gather_result(ice_session_t *session,
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "processing of gathered candidates by media fsm failed");
+                "[ICE SESSION] processing of gathered candidates "\
+                "by media fsm failed");
         goto EXIT_PT;
     }
 
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
 EXIT_PT:
@@ -247,7 +252,8 @@ int32_t turn_alloc_failed(ice_session_t *session, handle h_msg, handle *h_param)
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "unable to get application param from TURN handle");
+                "[ICE SESSION] unable to get application param from "\
+                "TURN handle");
         return status;
     }
 
@@ -256,14 +262,16 @@ int32_t turn_alloc_failed(ice_session_t *session, handle h_msg, handle *h_param)
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "processing of gathered candidates by media fsm failed");
+                "[ICE SESSION] processing of gathered candidates by "\
+                "media fsm failed");
         goto EXIT_PT;
     }
 
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
 EXIT_PT:
@@ -297,27 +305,30 @@ int32_t process_relay_server_msg (ice_session_t *session,
     if(status == STUN_NOT_FOUND)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-            "Could not find media handle for the received message with "\
-            "transport param %p\n", stun_pkt->transport_param);
+            "[ICE SESSION] Could not find media handle for the received "\
+            "message with transport param %p\n", stun_pkt->transport_param);
 
         return STUN_INVALID_PARAMS;
     }
 
-    ICE_LOG (LOG_SEV_INFO, "Found media stream for received message");
+    ICE_LOG (LOG_SEV_INFO, 
+            "[ICE SESSION] Found media stream for received message");
 
     media = session->aps_media_streams[index];
 
     status = ice_media_stream_fsm_inject_msg(media, ICE_MEDIA_RELAY_MSG, h_msg);
     if(status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Injecting of received stun message failed.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Injecting of received stun message failed.");
         return STUN_INT_ERROR;
     }
 
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
     return status;
@@ -339,8 +350,8 @@ int32_t ice_form_checklist(ice_session_t *session,
                             media, ICE_MEDIA_FORM_CHECKLIST, NULL);
         if(status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, 
-                "Forming of check list for media stream %d failed.", i);
+            ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] "\
+                    "Forming of check list for media stream %d failed.", i);
             return STUN_INT_ERROR;
         }
     }
@@ -375,8 +386,8 @@ int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
                         media, ICE_MEDIA_UNFREEZE, NULL);
     if(status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Unfreezing of the checklist for first media failed.");
+        ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] "\
+                "Unfreezing of the checklist for first media failed.");
         return STUN_INT_ERROR;
     }
 
@@ -403,13 +414,14 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     if(status == STUN_NOT_FOUND)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-            "Could not find media handle for the received message with "\
-            "transport param %p\n", stun_pkt->transport_param);
+            "[ICE SESSION] Could not find media handle for the received "\
+            "message with transport param %p\n", stun_pkt->transport_param);
 
         return STUN_INVALID_PARAMS;
     }
 
-    ICE_LOG (LOG_SEV_INFO, "Found media stream for received message");
+    ICE_LOG (LOG_SEV_INFO, 
+            "[ICE SESSION] Found media stream for received message");
 
     media = session->aps_media_streams[index];
 
@@ -421,7 +433,8 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     status = ice_media_stream_fsm_inject_msg(media, event, pkt);
     if(status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Injecting of received stun message failed.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Injecting of received stun message failed.");
         return STUN_INT_ERROR;
     }
 
@@ -443,8 +456,9 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     if (count == session->num_media_streams)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
-            "All media streams have moved to ICE_MEDIA_CC_COMPLETED state. "\
-            "Hence ICE session state entering ICE_SES_CC_COMPLETED state");
+            "[ICE SESSION] All media streams have moved to "\
+            "ICE_MEDIA_CC_COMPLETED state. Hence ICE session state entering "\
+            "ICE_SES_CC_COMPLETED state");
         session->state = ICE_SES_CC_COMPLETED;
     }
 
@@ -458,7 +472,8 @@ int32_t ice_nominate(ice_session_t *session, handle h_msg, handle *h_param)
 
     if (session->role == ICE_AGENT_ROLE_CONTROLLED)
     {
-        ICE_LOG (LOG_SEV_DEBUG, "Waiting for the peer to nominate a pair\n");
+        ICE_LOG (LOG_SEV_DEBUG, 
+                "[ICE SESSION] Waiting for the peer to nominate a pair\n");
         session->state = ICE_CC_COMPLETED;
     }
     else
@@ -496,7 +511,7 @@ int32_t ice_handle_checklist_timer_expiry(ice_session_t *session,
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Unfreezing of the checklist for first media failed.");
+            "[ICE SESSION] Unfreezing of the checklist for first media failed.");
         return STUN_INT_ERROR;
     }
 
@@ -531,7 +546,7 @@ int32_t ice_restart (ice_session_t *session, handle arg, handle *h_param)
         else
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "restarting of media stream %d failed.", i);
+                "[ICE SESSION] restarting of media stream %d failed.", i);
         }
     }
 
@@ -559,7 +574,8 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
 
         if (j == ICE_MAX_MEDIA_STREAMS)
         {
-            ICE_LOG(LOG_SEV_ERROR, "Media handle not found in the session");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[ICE SESSION] Media handle not found in the session");
             return STUN_INVALID_PARAMS;
         }
 
@@ -568,7 +584,7 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
         if(status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Processing of remote media params failed");
+                    "[ICE SESSION] Processing of remote media params failed");
             return STUN_INT_ERROR;
         }
     }
@@ -601,7 +617,8 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
     return status;
@@ -644,8 +661,8 @@ int32_t ice_add_media_stream (ice_session_t *session,
         if(status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Unfreezing of media stream failed for this ice-lite session."\
-               " Hence not moving into RUNNING state");
+                "[ICE SESSION] Unfreezing of media stream failed for this "\
+                "ice-lite session. Hence not moving into RUNNING state");
             status = STUN_INT_ERROR;
             goto EXIT_PT;
         }
@@ -660,7 +677,8 @@ int32_t ice_add_media_stream (ice_session_t *session,
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
         session->num_media_streams -= 1;
         session->aps_media_streams[i] = NULL;
         goto EXIT_PT;
@@ -699,7 +717,8 @@ int32_t ice_remove_media_stream (ice_session_t *session,
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Destroying of TURN session failed %d", status);
+                    "[ICE SESSION] Destroying of TURN session failed %d", 
+                    status);
         }
     }
 

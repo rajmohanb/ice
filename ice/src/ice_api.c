@@ -1195,11 +1195,16 @@ int32_t ice_session_inject_received_msg(handle h_inst,
         case STUN_METHOD_BINDING:
         case STUN_METHOD_ALLOCATE:
         case STUN_METHOD_REFRESH:
-        case STUN_METHOD_SEND:
         case STUN_METHOD_DATA:
         case STUN_METHOD_CREATE_PERMISSION:
         case STUN_METHOD_CHANNEL_BIND:
             event = ICE_MSG;
+            break;
+
+        case STUN_METHOD_SEND:
+            status = STUN_INVALID_PARAMS;
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE] Received SEND message are ignored");
             break;
 
         default:

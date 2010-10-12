@@ -729,6 +729,30 @@ int32_t turn_session_send_application_data(handle h_inst,
 }
 
 
+int32_t turn_session_get_application_data(handle h_inst,
+                                handle h_session, stun_inet_addr_t *peer_src,
+                                u_char *data, uint32_t len)
+{
+    turn_instance_t *instance;
+    turn_session_t *session;
+    turn_app_data_t app_data;
+
+    if ((h_inst == NULL) || (h_session == NULL) || 
+            (peer_src == NULL) || (data == NULL))
+        return STUN_INVALID_PARAMS;
+
+    /** the data can be empty, and is legal! */
+
+    instance = (turn_instance_t *) h_inst;
+    session = (turn_session_t *) h_session;
+
+    app_data.data = data;
+    app_data.len = len;
+    app_data.dest = peer_src;
+
+    return turn_session_fsm_inject_msg(session, TURN_DATA_IND, &app_data);
+}
+
 
 /******************************************************************************/
 

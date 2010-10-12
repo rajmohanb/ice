@@ -147,8 +147,8 @@ int32_t ice_media_stream_gather_cands(ice_media_stream_t *media, handle h_msg)
         status = turn_create_session(h_turn_inst, &(media->h_turn_sessions[i]));
         if (status != STUN_OK) goto ERROR_EXIT;
 
-        ICE_LOG(LOG_SEV_DEBUG, "TURN session created handle %p", 
-                                                media->h_turn_sessions[i]);
+        ICE_LOG(LOG_SEV_DEBUG, "[ICE MEDIA] TURN session created handle %p", 
+                                                    media->h_turn_sessions[i]);
 
         status = turn_session_set_app_param(h_turn_inst, 
                         media->h_turn_sessions[i], (handle) media);
@@ -191,11 +191,23 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     int32_t status;
     handle h_turn_inst, h_turn_dialog;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) h_msg;
+    stun_method_type_t method;
 
     h_turn_inst = media->ice_session->instance->h_turn_inst;
 
-    ICE_LOG(LOG_SEV_DEBUG, "Received message from %s and port %d", 
-                                stun_pkt->src.ip_addr, stun_pkt->src.port);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] Received message from %s and port %d", 
+            stun_pkt->src.ip_addr, stun_pkt->src.port);
+
+    status = stun_msg_get_method(stun_pkt->h_msg, &method);
+    if (status != STUN_OK) return status;
+
+    /** SEND messages are filtered out and ignored earlier */
+    if (method == STUN_METHOD_DATA)
+    {
+        ICE_LOG(LOG_SEV_DEBUG,
+                "[ICE MEDIA] **** Received indication message ****\n");
+    }
 
     /** 
      * find out if the received stun packet belongs to 
@@ -206,8 +218,8 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_WARNING, 
-                "Unable to find a turn session for the received message. "\
-                "Dropping the message");
+                "[ICE MEDIA] Unable to find a turn session for the "\
+                "received message. Dropping the message");
         goto ERROR_EXIT;
     }
 
@@ -215,7 +227,8 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
                                             h_turn_dialog, stun_pkt->h_msg);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_WARNING, "TURN session returned error %d ", status);
+        ICE_LOG(LOG_SEV_WARNING, 
+                "[ICE MEDIA] TURN session returned error %d ", status);
         goto ERROR_EXIT;
     }
 
@@ -240,8 +253,8 @@ int32_t ice_media_stream_check_gather_resp(
 
     media->num_comp_gathered++;
 
-    ICE_LOG(LOG_SEV_DEBUG, "Candidates gathered for %d number of components", 
-                                                    media->num_comp_gathered);
+    ICE_LOG(LOG_SEV_DEBUG, "[ICE MEDIA] Candidates gathered for %d "\
+            "number of components", media->num_comp_gathered);
 
     if (media->num_comp_gathered >= media->num_comp)
     {
@@ -274,8 +287,8 @@ int32_t ice_media_stream_gather_failed(
     if (status != STUN_OK) return status;
 
     ICE_LOG(LOG_SEV_ERROR,
-            "Gathering of candidates failed for component %d of media %p", 
-            comp_id, media);
+            "[ICE MEDIA] Gathering of candidates failed for component %d "\
+            "of media %p", comp_id, media);
 
     media->state = ICE_MEDIA_CC_FAILED;
 
@@ -365,7 +378,8 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     status = ice_utils_install_turn_permissions(media);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Installing of TURN permissions failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE MEDIA] Installing of TURN permissions failed");
         return status;
     }
 
@@ -421,8 +435,9 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
-    ICE_LOG(LOG_SEV_DEBUG, "Received message from %s and port %d", 
-                                stun_pkt->src.ip_addr, stun_pkt->src.port);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] Received message from %s and port %d", 
+            stun_pkt->src.ip_addr, stun_pkt->src.port);
 
     /** 
      * find out if the received stun packet belongs to 
@@ -439,7 +454,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         if (msg_class != STUN_REQUEST)
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "Discarding the stray stun response message");
+                    "[ICE MEDIA] Discarding the stray stun response message");
             return STUN_OK;
         }
 
@@ -448,8 +463,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         if (status != STUN_OK)
         {
             ICE_LOG (LOG_SEV_ERROR, 
-                "ice_utils_create_conn_check_session() returned error %d\n", 
-                status);
+                "[ICE MEDIA] ice_utils_create_conn_check_session() "\
+                "returned error %d\n", status);
             return STUN_INT_ERROR;
         }
 
@@ -477,24 +492,29 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 }
 
                 ICE_LOG (LOG_SEV_INFO, 
-                    "USE-CANDIDATE is set for this connectivity check request");
+                    "[ICE MEDIA] USE-CANDIDATE is set for this connectivity "\
+                    "check request");
 
                 if (i == ICE_MAX_CANDIDATE_PAIRS)
                 {
                     ICE_LOG (LOG_SEV_WARNING, 
-                        "Exceeded the cofigured list of valid pair entries");
+                        "[ICE MEDIA] Exceeded the cofigured list of valid "\
+                        "pair entries");
                 }
                 else
                 {
                     valid_pair->local = 
-                        ice_utils_get_local_cand_for_transport_param(media, stun_pkt->transport_param);
+                        ice_utils_get_local_cand_for_transport_param(
+                                            media, stun_pkt->transport_param);
                     valid_pair->remote = 
-                        ice_utils_get_peer_cand_for_pkt_src(media, &(stun_pkt->src));
+                        ice_utils_get_peer_cand_for_pkt_src(
+                                                    media, &(stun_pkt->src));
 
                     if (valid_pair->remote == NULL)
                     {
                         ICE_LOG (LOG_SEV_WARNING, 
-                            "Ignored binding request from unknown source");
+                            "[ICE MEDIA] Ignored binding request from "\
+                            "unknown source");
                     }
                 }
 
@@ -510,8 +530,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         else if (status != STUN_OK)
         {
             ICE_LOG (LOG_SEV_ERROR, 
-                "conn_check_session_inject_received_msg() returned error %d\n", 
-                status);
+                "[ICE MEDIA] conn_check_session_inject_received_msg() "\
+                "returned error %d\n", status);
             return STUN_INT_ERROR;
         }
 
@@ -581,7 +601,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                     if (status == STUN_OK)
                     {
                         ICE_LOG(LOG_SEV_INFO, 
-                                "Added a new VALID PAIR for the media");
+                                "[ICE MEDIA] Added a new VALID PAIR for "\
+                                "the media");
                     }
                 }
                 else
@@ -609,8 +630,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         else if (status != STUN_OK)
         {
             ICE_LOG (LOG_SEV_ERROR, 
-                "conn_check_session_inject_received_msg() returned error %d\n",
-                status);
+                "[ICE MEDIA] conn_check_session_inject_received_msg() "\
+                "returned error %d\n", status);
             return status;
         }
     }
@@ -696,7 +717,7 @@ int32_t ice_media_stream_remote_params(ice_media_stream_t *media, handle h_msg)
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of remote params failed for media %p", media);
+            "[ICE MEDIA] Setting of remote params failed for media %p", media);
         return status;
     }
 
@@ -740,7 +761,7 @@ int32_t ice_media_stream_dual_ice_lite(ice_media_stream_t *media, handle h_msg)
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Forming of candidates failed for media %p", media);
+            "[ICE MEDIA] Forming of candidates failed for media %p", media);
         return status;
     }
 
