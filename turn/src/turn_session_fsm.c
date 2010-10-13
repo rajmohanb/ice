@@ -44,11 +44,13 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATING */
     {
         turn_ignore_msg,
         process_alloc_resp,
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -68,6 +70,7 @@ static turn_session_fsm_handler
         turn_refresh_resp,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
     },
@@ -79,7 +82,8 @@ static turn_session_fsm_handler
         process_perm_resp,
         turn_ignore_msg,
         turn_ignore_msg,
-        turn_send_data_ind,
+        turn_send_ind,
+        turn_data_ind,
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
@@ -92,7 +96,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
-        turn_send_data_ind,
+        turn_send_ind,
+        turn_data_ind,
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
@@ -758,7 +763,7 @@ int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg)
 
 
 
-int32_t turn_send_data_ind(turn_session_t *session, handle h_msg)
+int32_t turn_send_ind(turn_session_t *session, handle h_msg)
 {
     int32_t status;
     handle h_txn, h_ind, h_txn_inst;
@@ -773,7 +778,7 @@ int32_t turn_send_data_ind(turn_session_t *session, handle h_msg)
 
     /** The transaction and the turn ind msg handle need not be stored */
 
-    status = turn_utils_create_data_ind_msg(session, data, &h_ind);
+    status = turn_utils_create_send_ind_msg(session, data, &h_ind);
     if (status != STUN_OK) return status;
 
     status = stun_create_txn(h_txn_inst,
@@ -798,6 +803,15 @@ int32_t turn_send_data_ind(turn_session_t *session, handle h_msg)
 
 }
 
+
+int32_t turn_data_ind(turn_session_t *session, handle h_msg)
+{
+    int32_t status = turn_utils_process_data_indication(session, h_msg);
+
+    /** no change in state */
+
+    return status;
+}
 
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg)

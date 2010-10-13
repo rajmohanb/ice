@@ -653,7 +653,7 @@ int32_t ice_media_utils_prune_checklist(ice_media_stream_t *media)
         }
     }
 
-#ifdef DEBUG
+#ifdef DEBUG1
     ice_media_utils_dump_cand_pair_stats(media);
 #endif
 
@@ -668,7 +668,7 @@ int32_t ice_media_utils_prune_checklist(ice_media_stream_t *media)
 
         if (!pair_hi->local) continue;
 
-#ifdef DEBUG        
+#ifdef DEBUG1
         ICE_LOG (LOG_SEV_DEBUG, "Hi Pair state: %s component id: %d local "\
                "candidate : %p remote candidate: %p\n", 
                cand_pair_states[pair_hi->state], pair_hi->local->comp_id, 
@@ -681,7 +681,7 @@ int32_t ice_media_utils_prune_checklist(ice_media_stream_t *media)
         
             if (!pair_lo->local) continue;
 
-#ifdef DEBUG
+#ifdef DEBUG1
             ICE_LOG (LOG_SEV_DEBUG, "Low Pair state: %s component id: %d "\
                     "local candidate : %p remote candidate: %p\n", 
                     cand_pair_states[pair_lo->state], pair_lo->local->comp_id,
@@ -697,7 +697,7 @@ int32_t ice_media_utils_prune_checklist(ice_media_stream_t *media)
 
         }
 
-#ifdef DEBUG
+#ifdef DEBUG1
         ICE_LOG (LOG_SEV_DEBUG, 
                 "========================================================\n");
 #endif
@@ -1551,6 +1551,21 @@ ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
 
     return NULL;
 }
+
+
+
+handle ice_utils_get_turn_session_for_transport_param(
+                    ice_media_stream_t *media, handle transport_param)
+{
+    ice_candidate_t *cand = 
+        ice_utils_get_local_cand_for_transport_param(media, transport_param);
+
+    if(cand == NULL) return cand;
+
+    /** fixme: is there a better way! */
+    return media->h_turn_sessions[cand->comp_id - 1];
+}
+
 
 
 bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)

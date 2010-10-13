@@ -82,6 +82,9 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params);
 ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
                 ice_media_stream_t *media, handle transport_param);
 
+handle ice_utils_get_turn_session_for_transport_param(
+                    ice_media_stream_t *media, handle transport_param);
+
 ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
                     ice_media_stream_t *media, stun_inet_addr_t *src);
 

@@ -657,7 +657,7 @@ ERROR_EXIT_PT:
 
 
 
-int32_t turn_utils_create_data_ind_msg(
+int32_t turn_utils_create_send_ind_msg(
         turn_session_t *session, turn_app_data_t *data, handle *h_newmsg)
 {
     int32_t status, i, attr_count = 0;
@@ -715,6 +715,99 @@ ERROR_EXIT_PT:
         stun_attr_destroy(ah_attr[i]);
 
     stun_msg_destroy(h_ind);
+
+    return status;
+}
+
+
+int32_t turn_utils_process_data_indication(
+                                turn_session_t *session, handle h_msg)
+{
+    int32_t status;
+    uint32_t len;
+    void *app_data;
+    handle h_data_attr, h_xor_peer_addr;
+    stun_inet_addr_t src;
+    stun_addr_family_type_t addr_family;
+
+    /**
+     * TURN RFC 5766 sec 10.4 Receiving a Data Indication
+     */
+
+    len = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_XOR_PEER_ADDR, &h_xor_peer_addr, &len);
+    if (status == STUN_NOT_FOUND)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] XOR-PEER-ADDR attribute missing. Discarding the"\
+                " received data indication message");
+        return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] Extracting XOR-PEER-ADDR attribute from msg failed");
+        return status;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, 
+            "[TURN] XOR-PEER-ADDR attribute is present in the received msg");
+
+    status = stun_attr_xor_peer_addr_get_address(
+                        h_xor_peer_addr, &addr_family, src.ip_addr, &len);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_xor_peer_addr_get_port(h_xor_peer_addr, &src.port);
+    if (status != STUN_OK) return status;
+
+    /** TODO = 
+     * This xor-peer-addr must be a valid one trusted by the 
+     * application. Valiadte the received source ip address.
+     */
+
+
+    /** data attribute */
+    len = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_DATA, &h_data_attr, &len);
+    if (status == STUN_NOT_FOUND)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] DATA attribute missing. Discarding the"\
+                " received data indication message");
+        return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] Extracting DATA attribute from msg failed");
+        return status;
+    }
+
+
+    ICE_LOG(LOG_SEV_INFO, 
+            "[TURN] DATA attribute is present in the received msg");
+
+    status = stun_attr_data_get_data_length(h_data_attr, &len);
+    if (status != STUN_OK) return STUN_INVALID_PARAMS;
+
+    /** TODO = avoid calloc and memcpy in data path */
+    app_data = (void *) stun_calloc (1, len);
+    if (app_data == NULL) return STUN_MEM_ERROR;
+
+    status = stun_attr_data_get_data(h_data_attr, app_data, len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    /** pass on the data to the application */
+    session->instance->rx_data_cb(session->instance, 
+                                            session, app_data, len, &src);
+    stun_free(app_data);
+
+    return STUN_OK;
+
+ERROR_EXIT_PT:
+    stun_free(app_data);
 
     return status;
 }

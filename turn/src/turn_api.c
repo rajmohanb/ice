@@ -172,6 +172,7 @@ int32_t turn_instance_set_callbacks(handle h_inst,
     instance = (turn_instance_t *) h_inst;
 
     instance->nwk_send_cb = cbs->nwk_cb;
+    instance->rx_data_cb = cbs->rx_data_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
     instance->state_change_cb = cbs->session_state_cb;
@@ -535,8 +536,11 @@ int32_t turn_session_inject_received_msg(
             break;
         }
 
-        case STUN_METHOD_SEND:
         case STUN_METHOD_DATA:
+            event = TURN_DATA_IND;
+            break;
+
+        case STUN_METHOD_SEND:
         case STUN_METHOD_CHANNEL_BIND:
         default:
             status = STUN_INVALID_PARAMS;
@@ -725,13 +729,12 @@ int32_t turn_session_send_application_data(handle h_inst,
     app_data.len = len;
     app_data.dest = peer_dest;
 
-    return turn_session_fsm_inject_msg(session, TURN_DATA_IND, &app_data);
+    return turn_session_fsm_inject_msg(session, TURN_SEND_IND, &app_data);
 }
 
 
-int32_t turn_session_get_application_data(handle h_inst,
-                                handle h_session, stun_inet_addr_t *peer_src,
-                                u_char *data, uint32_t len)
+int32_t turn_session_get_application_data(handle h_inst, 
+        handle h_session, stun_inet_addr_t *peer_src, u_char *data, uint32_t len)
 {
     turn_instance_t *instance;
     turn_session_t *session;

@@ -531,6 +531,13 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
 }
 
 
+void ice_handle_app_data(handle h_turn_inst, handle h_turn_session, 
+                        void *data, uint32_t data_len, stun_inet_addr_t *src)
+{
+    return;
+}
+
+
 int32_t ice_instance_set_callbacks(handle h_inst, 
                                         ice_instance_callbacks_t *cbs)
 {
@@ -556,6 +563,8 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     
     /** set callbacks to turn module */
     turn_cbs.nwk_cb = ice_encode_and_send_message;
+    turn_cbs.rx_data_cb = ice_handle_app_data;
+
     turn_cbs.start_timer_cb = ice_turn_start_timer;
     turn_cbs.stop_timer_cb = ice_stop_timer;
 

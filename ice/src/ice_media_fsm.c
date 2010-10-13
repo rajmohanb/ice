@@ -207,20 +207,27 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     {
         ICE_LOG(LOG_SEV_DEBUG,
                 "[ICE MEDIA] **** Received indication message ****\n");
+
+        h_turn_dialog = ice_utils_get_turn_session_for_transport_param(
+                                            media, stun_pkt->transport_param);
+        if (h_turn_dialog == NULL) status = STUN_INVALID_PARAMS;
+    }
+    else
+    {
+        /** 
+         * find out if the received stun packet belongs to 
+         * one of existing turn session
+         */
+        status = turn_instance_find_session_for_received_msg(
+                                h_turn_inst, stun_pkt->h_msg, &h_turn_dialog);
     }
 
-    /** 
-     * find out if the received stun packet belongs to 
-     * one of existing turn session
-     */
-    status = turn_instance_find_session_for_received_msg(
-                            h_turn_inst, stun_pkt->h_msg, &h_turn_dialog);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_WARNING, 
                 "[ICE MEDIA] Unable to find a turn session for the "\
                 "received message. Dropping the message");
-        goto ERROR_EXIT;
+        return status;
     }
 
     status = turn_session_inject_received_msg(h_turn_inst, 
@@ -229,10 +236,9 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     {
         ICE_LOG(LOG_SEV_WARNING, 
                 "[ICE MEDIA] TURN session returned error %d ", status);
-        goto ERROR_EXIT;
+        return status;
     }
 
-ERROR_EXIT:
     return status;
 }
 
@@ -300,12 +306,12 @@ int32_t ice_media_stream_gather_failed(
 int32_t ice_media_stream_form_checklist(
                     ice_media_stream_t *media, handle h_msg)
 {
-#ifdef DEBUG
+#ifdef DEBUG1
     uint32_t i;
 #endif
     int32_t status;
 
-#ifdef DEBUG
+#ifdef DEBUG1
     ICE_LOG (LOG_SEV_DEBUG, 
             "************************************************************\n");
     ICE_LOG (LOG_SEV_DEBUG, "Local candidates\n");
@@ -331,7 +337,7 @@ int32_t ice_media_stream_form_checklist(
     status = ice_media_utils_form_candidate_pairs(media);
     if (status != STUN_OK) return status;
 
-#ifdef DEBUG
+#ifdef DEBUG1
     ice_media_utils_dump_cand_pair_stats(media);
 #endif
 
@@ -339,7 +345,7 @@ int32_t ice_media_stream_form_checklist(
     status = ice_media_utils_sort_candidate_pairs(media);
     if (status != STUN_OK) return status;
 
-#ifdef DEBUG
+#ifdef DEBUG1
     ice_media_utils_dump_cand_pair_stats(media);
 #endif
 
@@ -653,17 +659,20 @@ int32_t ice_media_stream_checklist_timer_expiry(
     ice_media_utils_dump_cand_pair_stats(media);
 
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
-    if (status != STUN_OK) return status;
-
-#if 1
-    status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
-
     if (status == STUN_OK)
     {
+#if 1
+        status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
+
         /** restart the timer */
+        if (status == STUN_OK)
+            status = ice_media_utils_start_check_list_timer(media);
+#endif
+    }
+    else
+    {
         status = ice_media_utils_start_check_list_timer(media);
     }
-#endif
 
     return status;
 }

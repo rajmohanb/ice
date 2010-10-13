@@ -62,6 +62,7 @@ typedef enum
     TURN_CREATE_PERM_RESP,
     TURN_REFRESH_REQ,
     TURN_REFRESH_RESP,
+    TURN_SEND_IND,
     TURN_DATA_IND,
     TURN_TXN_TIMEOUT,
     TURN_DEALLOC_REQ,
@@ -83,6 +84,7 @@ typedef struct
     u_char *client_name;
 
     turn_session_nwk_send_cb nwk_send_cb;
+    turn_session_rx_app_data rx_data_cb;
     turn_session_start_timer_cb start_timer_cb;
     turn_session_stop_timer_cb stop_timer_cb;
     turn_session_state_change_cb state_change_cb;

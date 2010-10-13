@@ -45,17 +45,53 @@ typedef enum
 } turn_session_state_t;
 
 
+/** 
+ * This callback will be called when the TURN stack wants to 
+ * send data over the network to the specified destination.
+ */
 typedef int32_t (*turn_session_nwk_send_cb) (handle h_msg, 
                     stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
                     uint32_t port, handle transport_param, handle app_param);
+
+/** 
+ * This callback will be called when the TURN stack wants to 
+ * pass on the application data (say RTP, RTCP or encoded stun msg)
+ * to the TURN application.
+ */
+typedef void (*turn_session_rx_app_data) (handle h_inst, 
+                                    handle h_turn_session, void *data, 
+                                    uint32_t data_len, stun_inet_addr_t *src);
+
+/** 
+ * This callback will be called when the TURN stack wants to 
+ * start a timer. The duration is specified in milliseconds and
+ * the argument that needs to be passed by the application in
+ * case the timer expires. The application is expected to 
+ * return a valid timer handle that can be subsequently used to
+ * identify the specific instance of the timer.
+ */
 typedef handle (*turn_session_start_timer_cb) (uint32_t duration, handle arg);
+
+
+/** 
+ * This callback will be called when the TURN stack wants to 
+ * stop a timer. The timer to be stopped is indicated by the
+ * timer_id.
+ */
 typedef int32_t (*turn_session_stop_timer_cb) (handle timer_id);
+
+
+/** 
+ * This callback will be called when the TURN stack wants to notify
+ * the application about the change in the state of the session.
+ */
 typedef void (*turn_session_state_change_cb) (handle h_nist, 
                         handle h_session, turn_session_state_t state);
 
 
 typedef struct {
     turn_session_nwk_send_cb nwk_cb;
+    turn_session_rx_app_data rx_data_cb;
     turn_session_start_timer_cb start_timer_cb;
     turn_session_stop_timer_cb  stop_timer_cb;
     turn_session_state_change_cb session_state_cb;
