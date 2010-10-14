@@ -30,13 +30,8 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media);
 int32_t ice_utils_compute_candidate_pair_priority(
             ice_session_t *session, ice_cand_pair_t *cand_pair);
 
-int32_t ice_media_utils_sort_candidate_pairs(ice_media_stream_t *media);
-
 int32_t ice_utils_get_next_connectivity_check_pair(
         ice_media_stream_t *media, ice_cand_pair_t **pair);
-
-int32_t ice_utils_init_connectivity_check(
-                ice_media_stream_t *media, ice_cand_pair_t *pair);
 
 int32_t ice_utils_copy_media_host_candidates(
                 ice_api_media_stream_t *src, ice_media_stream_t *dest);
@@ -51,8 +46,6 @@ ice_media_stream_t *
 
 void ice_utils_compute_foundation_ids(ice_media_stream_t *media);
 
-int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media);
-
 handle ice_media_utils_get_base_cand_for_comp_id(
                             ice_media_stream_t *media, uint32_t comp_id);
 
@@ -63,9 +56,6 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media);
 
 int32_t ice_utils_create_conn_check_session(
                     ice_media_stream_t *media, ice_rx_stun_pkt_t *pkt);
-
-int32_t ice_media_utils_get_next_connectivity_check_pair(
-        ice_media_stream_t *media, ice_cand_pair_t **pair);
 
 void ice_utils_dump_media_params(ice_media_params_t *media_params);
 
