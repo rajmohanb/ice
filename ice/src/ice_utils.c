@@ -800,7 +800,7 @@ int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
                     waiting_pair = inner;
                     waiting_pair->state = ICE_CP_WAITING;
 
-#ifdef DEBUG
+#ifdef DEBUG1
                     ICE_LOG(LOG_SEV_CRITICAL, "value i:%d and j:%d", i, j);
                     ICE_LOG(LOG_SEV_DEBUG, 
                             "Waiting pair found for comp id %d foundation %s:%s", 

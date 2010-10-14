@@ -671,7 +671,9 @@ int32_t ice_media_stream_checklist_timer_expiry(
     }
     else
     {
+#if 0
         status = ice_media_utils_start_check_list_timer(media);
+#endif
     }
 
     return status;

@@ -754,12 +754,16 @@ int32_t turn_utils_process_data_indication(
     ICE_LOG(LOG_SEV_INFO, 
             "[TURN] XOR-PEER-ADDR attribute is present in the received msg");
 
+    len = ICE_IP_ADDR_MAX_LEN;
     status = stun_attr_xor_peer_addr_get_address(
                         h_xor_peer_addr, &addr_family, src.ip_addr, &len);
     if (status != STUN_OK) return status;
 
     status = stun_attr_xor_peer_addr_get_port(h_xor_peer_addr, &src.port);
     if (status != STUN_OK) return status;
+
+    ICE_LOG(LOG_SEV_CRITICAL,
+            "TURN DATA IP Address %s:%d", src.ip_addr, src.port);
 
     /** TODO = 
      * This xor-peer-addr must be a valid one trusted by the 
@@ -801,7 +805,7 @@ int32_t turn_utils_process_data_indication(
 
     /** pass on the data to the application */
     session->instance->rx_data_cb(session->instance, 
-                                            session, app_data, len, &src);
+                    session, app_data, len, &src, session->transport_param);
     stun_free(app_data);
 
     return STUN_OK;

@@ -531,9 +531,59 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
 }
 
 
-void ice_handle_app_data(handle h_turn_inst, handle h_turn_session, 
-                        void *data, uint32_t data_len, stun_inet_addr_t *src)
+void ice_handle_app_data(handle h_turn_inst, 
+                    handle h_turn_session, void *data, uint32_t data_len, 
+                    stun_inet_addr_t *src, handle transport_param)
 {
+    int32_t status;
+    ice_media_stream_t *media;
+    stun_method_type_t method;
+    handle h_msg;
+    ice_rx_stun_pkt_t pkt;
+
+    /** TODO =
+     * 1. Check if this is a STUN message
+     * 2. If no, call the ice application callback and pass on the data
+     */
+
+    status = turn_session_get_app_param(h_turn_inst, 
+                                    h_turn_session, (handle) &media);
+    if (status != STUN_OK) return;
+
+    /*
+     * 3. If yes, then determine the media and ice session for turn session.
+     * 4. decode the message 
+     * 5. if the method type is BINDING, then determine the
+     *    conn check session and inject the message into the conn check session.
+     */
+
+    status = stun_msg_decode(data, data_len, &h_msg);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "[ICE] Decoding of STUN message received via TURN failed", 
+                status);
+        return;
+    }
+
+    status = stun_msg_get_method(h_msg, &method);
+    if (status != STUN_OK) return;
+
+    if (method != STUN_METHOD_BINDING)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "[ICE] The method of the decoded message received via "\
+                "TURN module DATA indication is %d. Hence discarding "\
+                "the message.", method);
+        return;
+    }
+
+    pkt.h_msg = h_msg;
+    pkt.transport_param = transport_param;
+    stun_memcpy(&pkt.src, src, sizeof(stun_inet_addr_t));
+
+    ice_session_fsm_inject_msg(media->ice_session, ICE_MSG, (handle)&pkt, NULL);
+
     return;
 }
 
