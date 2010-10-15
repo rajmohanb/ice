@@ -21,7 +21,7 @@ extern "C" {
 
 /******************************************************************************/
 
-#define ICE_FOUNDATION_MAX_LEN  128
+#define ICE_FOUNDATION_MAX_LEN  32
 
 
 #define ICE_CHECK_LIST_MAX_SIZE     100

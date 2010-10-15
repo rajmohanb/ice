@@ -26,6 +26,7 @@ extern "C" {
 #include "turn_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
+#include "ice_cand_pair_fsm.h"
 #include "ice_utils.h"
 
 
@@ -2311,6 +2312,42 @@ int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
                                            STUN_METHOD_CREATE_PERMISSION, 
                                            STUN_REQUEST);
         if (status != STUN_OK) break;
+    }
+
+    return status;
+}
+
+
+int32_t ice_media_utils_update_cand_pair_states(
+                            ice_media_stream_t *media, ice_cand_pair_t *cur_cp)
+{
+    int32_t i, status;
+    ice_cand_pair_t *cp;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+
+        if (cp == cur_cp) continue;
+
+        if ((stun_strncmp((char *)cp->local->foundation, 
+                          (char *)cur_cp->local->foundation, 
+                          ICE_FOUNDATION_MAX_LEN) == 0) &&
+            (stun_strncmp((char *)cp->remote->foundation, 
+                          (char *)cur_cp->remote->foundation,
+                          ICE_FOUNDATION_MAX_LEN) == 0))
+        {
+            /** foundation of these both candidate pairs match */
+            status = ice_cand_pair_fsm_inject_msg(
+                                    cp, ICE_CP_EVENT_UNFREEZE, NULL);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR,
+                        "Unfreezing of the candidate pair failed");
+                return status;
+            }
+        }
     }
 
     return status;

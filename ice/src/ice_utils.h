@@ -166,6 +166,9 @@ int32_t ice_utils_add_valid_pair(ice_media_stream_t *media,
 
 int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media);
 
+int32_t ice_media_utils_update_cand_pair_states(
+                        ice_media_stream_t *media, ice_cand_pair_t *cur_cp);
+
 
 /******************************************************************************/
 

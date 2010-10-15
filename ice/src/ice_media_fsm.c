@@ -610,6 +610,22 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                 "[ICE MEDIA] Added a new VALID PAIR for "\
                                 "the media");
                     }
+
+                    /**
+                     * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+                     * - The agent changes the states for all other Frozen
+                     *   pairs for the same media stream and same foundation
+                     *   to Waiting.
+                     */
+                    status = ice_media_utils_update_cand_pair_states(media, cp);
+                    if (status != STUN_OK)
+                    {
+                        ICE_LOG(LOG_SEV_ERROR,
+                                "Updating the candidate pair states of "\
+                                "the media failed - %d", status);
+
+                        /** just fallthrough ... */
+                    }
                 }
                 else
                 {

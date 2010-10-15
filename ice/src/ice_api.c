@@ -1357,6 +1357,7 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
 
     if(timer->type == ICE_TURN_TIMER)
     {
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_TURN_TIMER");
         status = turn_session_inject_timer_message(timer_id, timer->arg);
     }
     else if (timer->type == ICE_CC_TIMER)
