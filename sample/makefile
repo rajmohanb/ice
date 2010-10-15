@@ -19,8 +19,9 @@ ICE_LIB_DEST_PATH := /root/ICE/lib
 ICE_FULL_AGENT := ice_full_agent
 ICE_LITE_AGENT := ice_lite_agent
 STUN_KEEPALIVE := stun_keepalive
+ICE_AGENT_DEMO := ice_agent_demo
 TARGET := all
-SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c
+SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c ice_agent_demo.c
 
 # Include header file path
 INCLUDE :=-I ../ -I ../binding/inc -I ../stun/msg_layer/inc -I ../ \
@@ -59,7 +60,7 @@ OBJ:=$(SRC:c=o)
 	@echo [CC] 	$< ...
 	$(CC) $(CFLAGS) -o $*.o $<
 
-$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT)
+$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT) $(ICE_AGENT_DEMO)
 
 $(ICE_LITE_AGENT) :
 	@echo "Creating ice lite sample... " $(TARGET) 
@@ -73,6 +74,12 @@ $(ICE_FULL_AGENT) :
 	$(CC) ice_full_agent.o -o $(ICE_FULL_AGENT) $(ICE_FULL_LIBRARY)
 	#$(CC) ice_full_agent.o -o $(ICE_FULL_AGENT)  -Wl,-Map,ice_full.map  $(ICE_FULL_LIBRARY)
 
+$(ICE_AGENT_DEMO) :
+	@echo "Creating ice agent demo.... " $(TARGET)
+	$(CC) $(CFLAGS) $(ICE_FULL_INC) -o ice_agent_demo.o ice_agent_demo.c
+	$(CC) ice_agent_demo.o -o $(ICE_AGENT_DEMO) $(ICE_FULL_LIBRARY)
+	#$(CC) ice_agent_demo.o -o $(ICE_AGENT_DEMO)  -Wl,-Map,ice_full.map  $(ICE_FULL_LIBRARY)
+
 $(STUN_KEEPALIVE):
 	@echo "Creating stun keepalive sample... " $(TARGET)
 	$(CC) $(CFLAGS) -o stun_keepalive.o stun_keepalive.c
@@ -84,5 +91,5 @@ clean_obj:
 
 clean:
 	@echo "Removing all sample ... "
-	rm -rf $(ICE_LITE_AGENT) $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(OBJ)
+	rm -rf $(ICE_LITE_AGENT) $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_AGENT_DEMO) $(OBJ)
 

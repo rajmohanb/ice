@@ -466,7 +466,9 @@ unsigned int platform_socket_listen(
         loop_fd++;
     } while (i < ret);
 
+#if 0
     ICE_LOG(LOG_SEV_DEBUG, "select returned activity on %d sockets", ret);
+#endif
 
     return ret;
 }
