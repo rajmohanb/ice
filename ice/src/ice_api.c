@@ -444,8 +444,6 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
     }
 
     if (!app_param) return STUN_INT_ERROR;
-    media = cp->media;
-    ice_session = media->ice_session;
 
     /** connectivity check mesages - short term credential */
     status = stun_msg_get_class(h_msg, &msg_class);
@@ -458,6 +456,10 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
 
     if (msg_class == STUN_REQUEST)
     {
+        cp = (ice_cand_pair_t *) app_param;
+        media = cp->media;
+        ice_session = media->ice_session;
+
         auth.len = stun_strlen(media->peer_pwd);
         if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
             auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
@@ -466,6 +468,10 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
     else if ((msg_class == STUN_SUCCESS_RESP) || 
              (msg_class == STUN_ERROR_RESP))
     {
+        media = (ice_media_stream_t *) app_param;
+        ice_session = media->ice_session;
+        cp = NULL;
+
         auth.len = stun_strlen(media->local_pwd);
         if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
             auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
@@ -498,7 +504,8 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
      * connectivity check messages that are sent using the relayed 
      * candidate must be encoded in a TURN DATA indication message
      */
-    if(cp->local->type == ICE_CAND_TYPE_RELAYED)
+    if((msg_class == STUN_REQUEST) && 
+       (cp->local->type == ICE_CAND_TYPE_RELAYED))
     {
         handle h_turn_session;
         stun_inet_addr_t dest = {0};
@@ -1324,8 +1331,9 @@ int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session)
 
 int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
 {
-    int32_t status = STUN_OK;
+    int32_t i, status = STUN_OK;
     ice_timer_params_t *timer;
+    ice_instance_t *instance;
 
     if ((timer_id == NULL) || (arg == NULL))
         return STUN_INVALID_PARAMS;
@@ -1343,6 +1351,9 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
                 timer->timer_id);
         return STUN_INVALID_PARAMS;
     }
+
+    instance = timer->h_instance;
+    ICE_VALIDATE_SESSION_HANDLE(timer->h_session);
 
     if(timer->type == ICE_TURN_TIMER)
     {
