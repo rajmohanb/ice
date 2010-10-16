@@ -333,6 +333,7 @@ bool platform_stop_timer(void *timer_id)
             struct_timer_node *temp = node;
 
             if (node->prev) node->prev->next = temp->next;
+            if (node->next) node->next->prev = temp->prev;
             node = temp->next;
 
             if (timer_head == temp) timer_head = temp->next;
