@@ -28,6 +28,8 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg);
 
 int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg);
 
+int32_t cc_timeout (conn_check_session_t *session, handle h_rcvdmsg);
+
 int32_t cc_ignore_event (conn_check_session_t *session, handle h_msg);
 
 int32_t conn_check_session_fsm_inject_msg(

@@ -60,6 +60,9 @@ int32_t ice_add_media_stream (ice_session_t *session,
 int32_t ice_remove_media_stream (ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 
+int32_t ice_conn_check_timer_event (ice_session_t *session, 
+                                            handle h_msg, handle *h_param);
+
 int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param);
 
 int32_t ice_session_fsm_inject_msg(ice_session_t *session, 

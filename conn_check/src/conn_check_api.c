@@ -526,6 +526,45 @@ int32_t conn_check_session_inject_received_msg(
 
 
 
+int32_t conn_check_instance_inject_timer_event(
+                    handle h_timerid, handle arg, handle *h_session)
+{
+    handle h_txn;
+    int32_t status;
+    cc_timer_params_t *timer;
+    conn_check_session_t *session;
+
+    if ((h_timerid == NULL) || (arg == NULL))
+        return STUN_INVALID_PARAMS;
+
+    timer = (cc_timer_params_t *) arg;
+    session = (conn_check_session_t *)timer->h_cc_session;
+
+    switch (timer->type)
+    {
+        case CC_STUN_TXN_TIMER:
+        {
+            status = stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
+            if (status == STUN_TERMINATED)
+            {
+                /** connectivity check transaction timed out */
+                status = conn_check_session_fsm_inject_msg(
+                                        session, CONN_CHECK_TIMER, h_txn);
+            }
+            *h_session = (handle) session;
+            break;
+        }
+
+        default:
+            status = STUN_INVALID_PARAMS;
+            break;
+    }
+
+    return status;
+}
+
+
+
 int32_t conn_check_find_session_for_recv_msg(handle h_inst, 
                                         handle h_msg, handle *h_session)
 {

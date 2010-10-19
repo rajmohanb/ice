@@ -144,6 +144,7 @@ typedef enum
     ICE_REMOTE_PARAMS,
     ICE_ADD_MEDIA,
     ICE_REMOVE_MEDIA,
+    ICE_CONN_CHECK_TIMER,
     ICE_SES_EVENT_MAX,
 } ice_session_event_t;
 
@@ -175,6 +176,7 @@ typedef enum
     ICE_MEDIA_RESTART,
     ICE_MEDIA_REMOTE_PARAMS,
     ICE_MEDIA_BOTH_LITE,
+    ICE_MEDIA_CC_TIMER,
     ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 

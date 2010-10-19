@@ -121,14 +121,26 @@ int32_t ice_cp_ignore_msg(ice_cand_pair_t *cp, handle h_msg)
 int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *cp, 
                                     ice_cp_event_t event, handle h_msg)
 {
+    int32_t status;
+    ice_cp_state_t old_state;
     ice_cand_pair_fsm_handler handler;
 
+    old_state = cp->state;
     handler = ice_cand_pair_fsm[cp->state][event];
 
     if (!handler)
         return STUN_INVALID_PARAMS;
 
-    return handler(cp, h_msg);
+    status = handler(cp, h_msg);
+
+    if (old_state != cp->state)
+    {
+        ICE_LOG(LOG_SEV_DEBUG,
+                "[ICE CAND PAIR] Candidate pair state changed from %d to %d",
+                old_state, cp->state);
+    }
+
+    return status;
 }
 
 

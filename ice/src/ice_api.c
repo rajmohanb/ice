@@ -280,7 +280,8 @@ handle ice_cc_start_timer(uint32_t duration, handle arg)
     timer->arg = arg;
     timer->type = ICE_CC_TIMER;
 
-    timer->timer_id = cp->media->ice_session->instance->start_timer_cb(duration, timer);
+    timer->timer_id = 
+        cp->media->ice_session->instance->start_timer_cb(duration, timer);
     if (timer->timer_id)
     {
         return timer;
@@ -1362,20 +1363,21 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     }
     else if (timer->type == ICE_CC_TIMER)
     {
+        ice_session_t *session = (ice_session_t *) timer->h_session;
+
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CC_TIMER");
-        status = STUN_INVALID_PARAMS;
+
+        /** conn check timer event has to be fed thru the resp media fsm */
+        status = ice_session_fsm_inject_msg(session, 
+                                        ICE_CONN_CHECK_TIMER, arg, NULL);
+
     }
     else if (timer->type == ICE_CHECK_LIST_TIMER)
     {
-        ice_session_t *session;
-        ice_instance_t *instance;
+        ice_session_t *session = (ice_session_t *) timer->h_session;
 
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CHECK_LIST_TIMER");
         
-        /** find the session for this timer event */
-        session = (ice_session_t *) timer->h_session;
-        instance = (ice_instance_t *) timer->h_instance;
-
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_CHECK_LIST_TIMER_EXPIRY, arg, NULL);
     }

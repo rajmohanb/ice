@@ -47,6 +47,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_GATHERING */
     {
@@ -54,6 +55,7 @@ static ice_media_stream_fsm_handler
         ice_media_process_relay_msg,
         ice_media_stream_check_gather_resp,
         ice_media_stream_gather_failed,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -75,6 +77,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_FROZEN */
     {
@@ -86,6 +89,7 @@ static ice_media_stream_fsm_handler
         ice_media_unfreeze,
         ice_media_stream_ignore_msg,
         ice_media_process_rx_msg,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -103,6 +107,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_restart,
         ice_media_stream_remote_params,
         ice_media_stream_dual_ice_lite,
+        ice_media_conn_check_timer_expiry,
     },
     /** ICE_MEDIA_CC_COMPLETED */
     {
@@ -117,9 +122,11 @@ static ice_media_stream_fsm_handler
         ice_media_stream_restart,
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
+        ice_media_conn_check_timer_expiry,
     },
     /** ICE_CC_MEDIA_FAILED */
     {
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -647,6 +654,15 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 }
 
                 status = conn_check_destroy_session(h_cc_inst, h_cc_dialog);
+
+                ice_media_utils_dump_cand_pair_stats(media);
+            }
+            else
+            {
+                ICE_LOG(LOG_SEV_ERROR,
+                        "[ICE MEDIA] Unable to find candidate pair for "\
+                        "the connectivity check session");
+                status = STUN_INT_ERROR;
             }
         }
         else if (status != STUN_OK)
@@ -802,6 +818,65 @@ int32_t ice_media_stream_ignore_msg(ice_media_stream_t *media, handle h_msg)
 {
     ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Event ignored");
     return STUN_OK;
+}
+
+
+int32_t ice_media_conn_check_timer_expiry(
+                            ice_media_stream_t *media, handle h_msg)
+{
+    int32_t status;
+    handle h_cc_dialog, h_cc_inst;
+    ice_timer_params_t *timer = (ice_timer_params_t *) h_msg;
+
+    status = conn_check_instance_inject_timer_event(
+                                timer->timer_id, timer->arg, &h_cc_dialog);
+    if (status == STUN_TERMINATED)
+    {
+        ice_cand_pair_t *cp = NULL;
+        conn_check_result_t check_result;
+
+        ICE_LOG(LOG_SEV_INFO, 
+                "[ICE MEDIA] Conn check sesssion terminated due to timeout");
+
+        /** 
+         * connectivity check terminated. Retrieve the overall
+         * result of the connectivity check and feed it to the 
+         * corresponding cand pair fsm. Then destroy the 
+         * connectivity check session if no longer required.
+         */
+        status = ice_utils_find_cand_pair_for_conn_check_session(
+                                                media, h_cc_dialog, &cp);
+        if (status == STUN_OK)
+        {
+            h_cc_inst = media->ice_session->instance->h_cc_inst;
+            status = conn_check_session_get_check_result(
+                                h_cc_inst, h_cc_dialog, &check_result);
+
+            if (check_result.check_succeeded == true)
+            {
+                ICE_LOG(LOG_SEV_INFO, 
+                        "[ICE MEDIA] Conn check sesssion succeeded on "\
+                        "termination. This is unexpected and illogical");
+                status = STUN_INT_ERROR;
+            }
+            else
+            {
+                status = ice_cand_pair_fsm_inject_msg(
+                        cp, ICE_CP_EVENT_CHECK_FAILED, &check_result);
+            }
+
+            status = conn_check_destroy_session(h_cc_inst, h_cc_dialog);
+        }
+        else
+        {
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[ICE MEDIA] Conn check sesssion terminated");
+        }
+
+        ice_media_utils_dump_cand_pair_stats(media);
+    }
+
+    return status;
 }
 
 

@@ -95,6 +95,12 @@ char *states[] =
     "ICE_CC_FAILED",
 };
 
+typedef struct
+{
+    void *timer_id;
+    void *arg;
+} ice_demo_timer_event_t;
+
 void app_log(/** char *file_name, uint32_t line_num, */
                 stun_log_level_t level, char *format, ...)
 {
@@ -112,16 +118,35 @@ void app_log(/** char *file_name, uint32_t line_num, */
 
 void app_timer_expiry_cb (void *timer_id, void *arg)
 {
-    int32_t status;
+    static int32_t sock = 0;
+    ice_demo_timer_event_t timer_event;
 
-    app_log (LOG_SEV_DEBUG, "in sample application timer callback");
+    app_log (LOG_SEV_DEBUG, "in sample application timer callback %d %p", timer_id, arg);
 
+    if (sock == 0)
+    {
+        sock = platform_create_socket(AF_INET, SOCK_DGRAM, 0);
+        if(sock == -1)
+        {
+            app_log(LOG_SEV_CRITICAL, "Timer event socket creation failed");
+            return;
+        }
+    }
+
+    timer_event.timer_id = timer_id;
+    timer_event.arg = arg;
+
+    platform_socket_sendto(sock, 
+                (u_char *)&timer_event, sizeof(timer_event), 0, 
+                AF_INET, DEMO_AGENT_TIMER_PORT, LOCAL_IP);
+#if 0
     /** inject timer message */
     status = ice_session_inject_timer_event(timer_id, arg);
     if (status == STUN_TERMINATED)
     {
         app_log (LOG_SEV_INFO, "ice_session_inject_timer_event() returned failure");
     }
+#endif
 
     return;
 }
@@ -644,6 +669,12 @@ void app_create_ice_instance(void)
     ice_instance_callbacks_t app_cbs;
     ice_state_event_handlers_t event_hdlrs;
 
+    if (g_inst != NULL)
+    {
+        app_log (LOG_SEV_ERROR, "ICE instance exists");
+        return;
+    }
+
     status = ice_create_instance(&g_inst);
     if (status != STUN_OK)
     {
@@ -704,6 +735,12 @@ void app_create_ice_session(void)
     ice_session_type_t ses_type;
     ice_relay_server_cfg_t turn_cfg;
 
+    if (g_session != NULL)
+    {
+        app_log (LOG_SEV_ERROR, "ICE session exists");
+        return;
+    }
+
     do
     {
         puts("+-------------------------+");
@@ -757,6 +794,12 @@ void app_add_media(void)
     int32_t status;
     struct sockaddr_in local_addr;
     ice_api_media_stream_t media;
+
+    if (g_audio != NULL)
+    {
+        app_log (LOG_SEV_ERROR, "ICE media exists");
+        return;
+    }
 
     memset(&media, 0, sizeof(media));
 
@@ -1126,6 +1169,22 @@ void ice_agent_handle_user_choice(char *choice)
 }
 
 
+void ice_agent_handle_timer_event(ice_demo_timer_event_t *event, uint32_t bytes)
+{
+    int32_t status;
+
+    /** inject timer message */
+    status = ice_session_inject_timer_event(event->timer_id, event->arg);
+    if (status == STUN_TERMINATED)
+    {
+        app_log (LOG_SEV_INFO, "ice_session_inject_timer_event() returned failure");
+        /** TODO = */
+    }
+
+    return;
+}
+
+
 int main (int argc, char *argv[])
 {
     handle h_rcvdmsg, h_target;
@@ -1171,7 +1230,8 @@ int main (int argc, char *argv[])
             }
             else if (fd_list[i] == demo_sockfds[1])
             {
-                puts("Message from timer thread");
+                ice_agent_handle_timer_event(
+                        (ice_demo_timer_event_t *)demo_buf, bytes);
             }
             else
             {

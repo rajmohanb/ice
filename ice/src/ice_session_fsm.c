@@ -58,6 +58,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_add_media_stream,
         ice_ignore_msg,
+        ice_ignore_msg,
     },
     /** ICE_SES_GATHERING */
     {
@@ -73,6 +74,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
     },
     /** ICE_SES_GATHERED */
     {
@@ -88,6 +90,7 @@ static ice_session_fsm_handler
         ice_remote_params,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
     },
     /** ICE_SES_CC_RUNNING */
     {
@@ -103,6 +106,7 @@ static ice_session_fsm_handler
         ice_remote_params,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
     },
     /** ICE_SES_CC_COMPLETED */
     {
@@ -118,6 +122,7 @@ static ice_session_fsm_handler
         ice_remote_params,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
     },
     /** ICE_SES_CC_FAILED */
     {
@@ -133,6 +138,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
     },
     /** ICE_SES_NOMINATING */
     {
@@ -148,6 +154,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
     },
     /** ICE_SES_ACTIVE */
     {
@@ -163,6 +170,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
     }
 };
 
@@ -426,7 +434,7 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     media = session->aps_media_streams[index];
 
     if (method == STUN_METHOD_BINDING)
-        event = ICE_MEDIA_CC_MSG; /** TODO - this is not right */
+        event = ICE_MEDIA_CC_MSG;
     else
         event = ICE_MEDIA_RELAY_MSG;
 
@@ -436,6 +444,13 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
         ICE_LOG(LOG_SEV_ERROR, 
                 "[ICE SESSION] Injecting of received stun message failed.");
         return STUN_INT_ERROR;
+    }
+
+    if (event  == ICE_MEDIA_CC_MSG)
+    {
+        /**
+         * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+         */
     }
 
     /** 
@@ -739,6 +754,29 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     /** no change in session state */
     
     return STUN_OK;
+}
+
+
+int32_t ice_conn_check_timer_event (ice_session_t *session, 
+                                            handle arg, handle *h_param)
+{
+    int32_t status;
+    ice_timer_params_t *timer = (ice_timer_params_t *) arg;
+    ice_media_stream_t *media;
+
+    media = (ice_media_stream_t *)timer->h_media;
+
+    /** TODO - validate media handle? */
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_CC_TIMER, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE SESSION] CC timer processing failed %d.", status);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
 }
 
 

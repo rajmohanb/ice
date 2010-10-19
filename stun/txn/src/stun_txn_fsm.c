@@ -114,7 +114,7 @@ int32_t send_req (stun_txn_context_t *txn_ctxt, handle h_msg)
     {
         txn_ctxt->h_rto_timer = txn_ctxt->instance->start_timer_cb(
                                 txn_ctxt->instance->rto, txn_ctxt->rto_params);
-        ICE_LOG (LOG_SEV_INFO, "RTO timer handle %p\n", txn_ctxt->h_rto_timer);
+        ICE_LOG (LOG_SEV_INFO, "RTO timer handle %p", txn_ctxt->h_rto_timer);
 
         txn_ctxt->rc_count += 1;
         txn_ctxt->last_rto = txn_ctxt->instance->rto; 
@@ -124,7 +124,7 @@ int32_t send_req (stun_txn_context_t *txn_ctxt, handle h_msg)
         txn_ctxt->h_overall_timer = 
             txn_ctxt->instance->start_timer_cb(
                     txn_ctxt->instance->overall_timer, txn_ctxt->oall_params);
-        ICE_LOG (LOG_SEV_INFO, "Overall Ti timer handle for reliable transport %p\n", 
+        ICE_LOG (LOG_SEV_INFO, "Overall Ti timer handle for reliable transport %p", 
                                                     txn_ctxt->h_overall_timer);
     }
 
@@ -190,7 +190,7 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
                 txn_ctxt->instance->rto + (2 * txn_ctxt->last_rto);
             txn_ctxt->h_rto_timer = txn_ctxt->instance->start_timer_cb(
                                                 new_rto, txn_ctxt->rto_params);
-            ICE_LOG (LOG_SEV_DEBUG, "RTO timer handle %p\n", txn_ctxt->h_rto_timer);
+            ICE_LOG (LOG_SEV_DEBUG, "RTO timer handle %p", txn_ctxt->h_rto_timer);
 
             txn_ctxt->last_rto = new_rto; 
         }
@@ -203,7 +203,7 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
 
 int32_t terminate_txn (stun_txn_context_t *txn_ctxt, handle h_msg)
 {
-    ICE_LOG (LOG_SEV_DEBUG, "RM timer expired.. returning STUN_TERMINATED\n");
+    ICE_LOG (LOG_SEV_DEBUG, "RM timer expired.. returning STUN_TERMINATED");
     txn_ctxt->state = STUN_OG_TXN_TERMINATED;
     return STUN_TERMINATED;
 }

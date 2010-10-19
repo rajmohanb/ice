@@ -135,6 +135,9 @@ int32_t conn_check_destroy_session(handle h_inst, handle h_session);
 int32_t conn_check_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg);
 
+int32_t conn_check_instance_inject_timer_event(
+                    handle h_timerid, handle arg, handle *h_session);
+
 int32_t conn_check_find_session_for_recv_msg(handle h_inst, 
                                         handle h_msg, handle *h_session);
 

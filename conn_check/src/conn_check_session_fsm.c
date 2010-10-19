@@ -44,7 +44,7 @@ static conn_check_session_fsm_handler
         cc_ignore_event,
         cc_handle_resp,
         cc_ignore_event,
-        cc_ignore_event,
+        cc_timeout,
     },
     /** CC_OG_TERMINATED */
     {
@@ -261,6 +261,36 @@ ERROR_EXIT_PT:
 
     return status;
 }
+
+int32_t cc_timeout (conn_check_session_t *session, handle h_txn)
+{
+    int32_t status;
+    handle h_txn_inst = session->instance->h_txn_inst;
+
+    /** 
+     * stun transaction related to this 
+     * session has timed out and terminated.
+     */
+    ICE_LOG(LOG_SEV_ERROR, 
+            "[CONN CHECK] stun txn terminated due to timeout");
+
+    status = stun_destroy_txn(h_txn_inst, h_txn, false, false);
+    if (status == STUN_OK)
+    {
+        session->cc_succeeded = false;
+        session->h_txn = session->h_req = session->h_resp = NULL;
+        session->state = CC_OG_TERMINATED;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "[CONN CHECK] Destroying of STUN transaction failed %d", 
+                status);
+    }
+    
+    return STUN_TERMINATED;
+}
+
 
 int32_t cc_ignore_event (conn_check_session_t *session, handle h_msg)
 {
