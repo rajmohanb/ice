@@ -547,8 +547,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 "returned error %d\n", status);
             return STUN_INT_ERROR;
         }
-
-    } else if (status == STUN_OK)
+    }
+    else if (status == STUN_OK)
     {
         ice_cand_pair_t *cp = NULL;
 
@@ -654,6 +654,14 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 }
 
                 status = conn_check_destroy_session(h_cc_inst, h_cc_dialog);
+                if (status != STUN_OK)
+                {
+                    ICE_LOG(LOG_SEV_ERROR, 
+                            "Destroying of connectivity check session "\
+                            "failed %d", status);
+                }
+
+                cp->h_cc_session = NULL;
 
                 ice_media_utils_dump_cand_pair_stats(media);
             }
@@ -866,6 +874,14 @@ int32_t ice_media_conn_check_timer_expiry(
             }
 
             status = conn_check_destroy_session(h_cc_inst, h_cc_dialog);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "Destroying of connectivity check session "\
+                        "failed %d", status);
+            }
+
+            cp->h_cc_session = NULL;
         }
         else
         {
