@@ -701,19 +701,38 @@ int32_t ice_media_stream_checklist_timer_expiry(
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status == STUN_OK)
     {
-#if 1
-        status = ice_cand_pair_fsm_inject_msg(pair, ICE_CP_EVENT_INIT_CHECK, NULL);
+        /** If the pair is frozen, then unfreeze before initiating the check */
+        if (pair->state == ICE_CP_FROZEN)
+            status = ice_cand_pair_fsm_inject_msg(
+                                        pair, ICE_CP_EVENT_UNFREEZE, NULL);
+
+        status = ice_cand_pair_fsm_inject_msg(pair, 
+                                        ICE_CP_EVENT_INIT_CHECK, NULL);
 
         /** restart the timer */
         if (status == STUN_OK)
             status = ice_media_utils_start_check_list_timer(media);
-#endif
+    }
+    else if (status == STUN_NOT_FOUND)
+    {
+        /**
+         * RFC 5245 sec 5.8 Scheduling Checks
+         * No more pairs available for connectivity checks.
+         * Hence terminate the check list timer
+         */
+
+        status = STUN_OK;
+
+        /** TODO
+         * 1. what should be the return value from this function?
+         * 2. Should the media state be changed to COMPLETED?
+         */
     }
     else
     {
-#if 0
-        status = ice_media_utils_start_check_list_timer(media);
-#endif
+        ICE_LOG(LOG_SEV_ERROR,
+                "Unable to determine the candidate pair for "\
+                "the next connectivity check %d", status);
     }
 
     return status;

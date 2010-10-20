@@ -943,34 +943,50 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
         return status;
     }
 
-    if (hi_prio_pair == NULL)
+    /** we are here because there is no pair in the WAITING state */
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "No more candidate pair in the WAITING state. Now need to "\
+            "choose the candidate with the highest priority pair in the "\
+            "FROZEN state");
+
+    /** 
+     * find the highest priority pair in that 
+     * check list that is in the FROZEN state 
+     */
+    for ( i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        /** we are here because there is no pair in the WAITING state */
-        
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "No more candidate pair in the WAITING state. Now need to "\
-                "choose the candidate with the highest priority pair in the "\
-                "FROZEN state = TODO");
+        cand_pair = &media->ah_cand_pairs[i];
+        if (!cand_pair->local) continue;
 
-        /** 
-         * find the highest priority pair in that check list that is 
-         * in the FROZEN state 
-         */
+        if (cand_pair->state != ICE_CP_FROZEN) continue;
 
-        /** TODO */
-        return STUN_INT_ERROR;
+        if (hi_prio_pair == NULL)
+        {
+            z = i;
+            hi_prio_pair = cand_pair;
+            continue;
+        }
+
+        if (cand_pair->priority > hi_prio_pair->priority)
+            hi_prio_pair = cand_pair;
+    }
+
+    if (hi_prio_pair != NULL)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "Choosen candidate pair index %d", z);
+        *pair = hi_prio_pair;
+        return status;
     }
 
     /**
-     * TODO - 
      * If there is no pair in the FROZEN state, then terminate the timer
      * for the particular check list
      */
     ICE_LOG(LOG_SEV_DEBUG, 
-            "No more candidate pair in the FROZEN state. So terminate"\
-            "the check list timer and go to sleep + TODO");
+            "No more candidate pairs left for this checklist. "\
+            "So terminating the check list timer for this checklist");
 
-    return status;
+    return STUN_NOT_FOUND;
 }
 
 
