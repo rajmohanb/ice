@@ -75,7 +75,7 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
             size = sizeof(stun_fingerprint_attr_t);
             break;
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
         case STUN_ATTR_CHANNEL_NUMBER:
             size = sizeof(stun_channel_number_attr_t);
             break;
@@ -113,7 +113,7 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
             break;
 
 #endif
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
 
         case STUN_ATTR_PRIORITY:
             size = sizeof(stun_priority_attr_t);
@@ -200,7 +200,7 @@ int32_t stun_utils_destroy_attr(handle stun_attr)
         case STUN_ATTR_ALTERNATE_SERVER:
         case STUN_ATTR_FINGERPRINT:
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
         case STUN_ATTR_CHANNEL_NUMBER:
         case STUN_ATTR_LIFETIME:
         case STUN_ATTR_XOR_PEER_ADDR:
@@ -211,7 +211,7 @@ int32_t stun_utils_destroy_attr(handle stun_attr)
         case STUN_ATTR_DONT_FRAGMENT:
         case STUN_ATTR_RESERVATION_TOKEN:
 #endif
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
 
         case STUN_ATTR_PRIORITY:
         case STUN_ATTR_USE_CANDIDATE:

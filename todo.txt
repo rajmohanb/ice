@@ -19,6 +19,7 @@
 17. update the ice_lite sample to demostrate the addition and deletion of media streams.
 18. Add ip address type in nwk_send_callback as one more parameter.
 19. rename the values of the enumerator stun_inet_addr_type_t.
+20. rename ice_cand_type_t enumerator values to be more appropriate.
 
 
 
@@ -26,7 +27,7 @@
 1. When peer credentials are set per media line using ice api - ice_session_set_remote_credentials(), the same needs to be propagated to all the connectivity check sessions. Though the peer credentials are not really required in ice lite scenarios, it is better to do it for both ice lite and ice full scenarios.
 2. Ignore additional attributes if present after fingerprint attribute in received message.
 3. Add function entry and exit logging
-4. split stun_msg.h into multiple headers depending on the spec in which they have been defined - stun_msg.h, ice_msg.h, turn_msg.h, etc. However, have only one header file for inclusion for the higer layer application. In that header file include all the sub header files depending on the compile time enabling such as ENABLE_ICE, ENABLE_TURN etc.
+4. split stun_msg.h into multiple headers depending on the spec in which they have been defined - stun_msg.h, ice_msg.h, turn_msg.h, etc. However, have only one header file for inclusion for the higer layer application. In that header file include all the sub header files depending on the compile time enabling such as MB_ENABLE_ICE, MB_ENABLE_TURN etc.
 5. in stun_enc_dec_utils.c file, stun_tlv_utils_get_hmac_key() function makes use of MD5 functions directly and also includes openssl header file directly. This needs to be abstracted out.
 6. Currently, no timer is started for incoming connectivity checks (basically all incoming stun server transactions). So these transactions immediately move to terminated state and are destroyed immediately. This implies that for any re-tranmissions of the stun requests from the peer, the stack ends up creating new server transactions. The spec says that ice implementations may use a 40 sec timer to handle request re-transmissions. This needs to be implemented.
 7. Write a utility routine to dump the STUN messages, so that all incoming and outgoing messages can be dumped. This will help in inter-op debugging.
@@ -42,8 +43,8 @@
 17. Add an api in msg_layer to add multiple headers at once, rather than one by one
 18. Extend the main makefile to take architecture endian type (little endian or big endian) and build type (debug or release) and pass on the CFLAGS related parameters accordingly.
 19. replace remaining usage's of inet_aton() with inet_pton() in stun encoder and decoder library source
+20. Currently compilation flags like MB_ENABLE_TURN, MB_ENABLE_ICE are being used directly in makefile for turn, ice layers respectively. These should not be defined in these makefiles but must come from the application. For eg: in the makefile of sample applications for ice full and ice lite. The sample application stun_keepalive should not use MB_ENABLE_TURN since it does not use it.
 
-20. rename ice_cand_type_t enumerator values to be more appropriate.
 
 ICE Full?
 1. As per ICE spec, the IP address version type needs to be cross checked while forming candidates?

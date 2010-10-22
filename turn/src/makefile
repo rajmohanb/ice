@@ -24,8 +24,8 @@ SRC = turn_api.c turn_session_fsm.c turn_utils.c
 INCLUDE := -I ../../ -I ../inc -I ../../stun/txn/inc -I ../../stun/msg_layer/inc \
 	-I $(ICE_APP_INCLUDE_PATH)
 
-CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DENABLE_TURN \
-		  -DENABLE_ICE $(INCLUDE)
+CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DMB_ENABLE_TURN \
+		  -DMB_ENABLE_ICE $(INCLUDE)
 
 OBJS:=$(SRC:c=o)
 

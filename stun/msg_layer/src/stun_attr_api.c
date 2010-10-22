@@ -272,7 +272,7 @@ int32_t stun_attr_xor_mapped_addr_set_port(handle h_attr, uint32_t port)
 }
 
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
 int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr, 
         stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
@@ -839,7 +839,7 @@ int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type)
 }
 
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
 int32_t stun_attr_requested_transport_set_protocol(
                         handle h_attr, stun_transport_protocol_type_t proto)
 {
@@ -864,7 +864,7 @@ int32_t stun_attr_requested_transport_set_protocol(
 #endif
 
 
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
 
 int32_t stun_attr_priority_get_priority(handle h_attr, uint32_t *priority)
 {

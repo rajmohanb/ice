@@ -85,7 +85,7 @@ static stun_attr_tlv_ops_t stun_attr_ops[] = {
         NULL,
         stun_attr_decode_fingerprint,
     },
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
     {
         STUN_ATTR_CHANNEL_NUMBER,
         stun_attr_encode_channel_number,
@@ -132,7 +132,7 @@ static stun_attr_tlv_ops_t stun_attr_ops[] = {
         stun_attr_decode_reservation_token,
     },
 #endif
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
     {
         STUN_ATTR_PRIORITY,
         stun_attr_encode_priority,
@@ -441,7 +441,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_memset(buf, 0, MSG_INTEGRITY_HMAC_BYTES);
     buf += MSG_INTEGRITY_HMAC_BYTES;
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
     if (method != STUN_METHOD_BINDING)
     {
         /** compute the hmac key - long term credentials */
@@ -1147,7 +1147,7 @@ int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf,
 
 /*============================================================================*/
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
 
 int32_t stun_attr_encode_channel_number(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
@@ -1716,7 +1716,7 @@ int32_t stun_attr_decode_reservation_token(u_char *buf_head,
 /*============================================================================*/
 #endif
 
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
 /*============================================================================*/
 
 int32_t stun_attr_encode_priority(stun_attr_hdr_t *attr, 

@@ -13,7 +13,7 @@
 #******************************************************************************/
 
 # build customization flags
-ENABLE_ICE_DEBUG := y
+MB_ENABLE_ICE_DEBUG := y
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
@@ -30,7 +30,7 @@ ICE_APP_INCLUDE_PATH := .
 # -DIS_LITTLE_ENDIAN, else add -DIS_BIG_ENDIAN
 ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN 
 
-ifeq ($(strip $(ENABLE_ICE_DEBUG)), y)
+ifeq ($(strip $(MB_ENABLE_ICE_DEBUG)), y)
 ICE_APP_CFLAGS += -g -DDEBUG
 endif
 
