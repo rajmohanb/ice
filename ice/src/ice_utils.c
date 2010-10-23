@@ -2370,6 +2370,15 @@ int32_t ice_media_utils_update_cand_pair_states(
 }
 
 
+
+int32_t ice_utils_detect_repair_role_conflicts(
+                    ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt)
+{
+    return STUN_OK;
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

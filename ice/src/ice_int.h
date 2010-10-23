@@ -231,6 +231,9 @@ struct struct_ice_media_stream
     ice_candidate_t as_local_cands[ICE_CANDIDATES_MAX_SIZE];
     ice_candidate_t as_remote_cands[ICE_CANDIDATES_MAX_SIZE];
 
+    /** triggered FIFO check queue */
+    ice_cand_pair_t triggered_pairs[ICE_MAX_CANDIDATE_PAIRS];
+
     handle h_turn_sessions[ICE_MAX_COMPONENTS];
 
     handle h_cc_svr_session;

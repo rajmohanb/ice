@@ -471,6 +471,11 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             return STUN_OK;
         }
 
+        /** TODO =
+         * RFC 5245 sec 7.2.1.1 Detecting and Repairing Role Conflicts
+         */
+        status = ice_utils_detect_repair_role_conflicts(media, stun_pkt);
+
         /** create new incoming connectivity check dialog */
         status = ice_utils_create_conn_check_session(media, stun_pkt);
         if (status != STUN_OK)
@@ -491,7 +496,13 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                 h_cc_inst, media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
-            /** if nominated, then add it to the list of valid pairs */
+            /** TODO =
+             * RFC 5245 sec 7.2.1.3 Learning Peer Reflexive Candidates
+             */
+
+            /** 
+             * if nominated, then add it to the list of valid pairs 
+             */
             if (check_result.nominated == true)
             {
                 int32_t i;
@@ -531,10 +542,12 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                     }
                 }
 
+#if 0
                 if(ice_media_utils_have_valid_list(media) == true)
                 {
                     media->state = ICE_MEDIA_CC_COMPLETED;
                 }
+#endif
             }
 
             conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
@@ -544,7 +557,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         {
             ICE_LOG (LOG_SEV_ERROR, 
                 "[ICE MEDIA] conn_check_session_inject_received_msg() "\
-                "returned error %d\n", status);
+                "returned error %d. Incoming conn check req discarded\n", 
+                status);
             return STUN_INT_ERROR;
         }
     }
