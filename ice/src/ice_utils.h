@@ -172,6 +172,14 @@ int32_t ice_media_utils_update_cand_pair_states(
 int32_t ice_utils_detect_repair_role_conflicts(
                     ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt);
 
+ice_cand_pair_t *ice_utils_lookup_pair_in_checklist(
+                            ice_media_stream_t *media, ice_candidate_t *local, 
+                            ice_candidate_t *remote);
+
+int32_t ice_utils_add_to_triggered_check_queue(ice_media_stream_t *media, 
+                            ice_candidate_t *local, ice_candidate_t *remote);
+
+
 
 /******************************************************************************/
 

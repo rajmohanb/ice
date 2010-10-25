@@ -490,6 +490,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
         if (status == STUN_TERMINATED)
         {
+            ice_cand_pair_t *cp;
+            ice_candidate_t *local, *remote;
             conn_check_result_t check_result;
 
             status = conn_check_session_get_check_result(
@@ -501,23 +503,41 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              */
 
             /** 
-             * if nominated, then add it to the list of valid pairs 
+             * RFC 5245 sec 7.2.1.4 Triggered Checks
              */
-            if (check_result.nominated == true)
-            {
-                int32_t i;
-                ice_cand_pair_t *valid_pair;
+            local = ice_utils_get_local_cand_for_transport_param(
+                                            media, stun_pkt->transport_param);
+            remote = ice_utils_get_peer_cand_for_pkt_src(
+                                            media, &(stun_pkt->src));
 
+            /**
+             * RFC 5245 sec 7.2 STUN Server Procedures
+             * It is possible (and in fact very likely) that an offerer 
+             * will receive a Binding request prior to receiving the 
+             * answer from its peer. If this happens, then add this pair 
+             * to the triggered check queue. Once the answer is received 
+             * from the peer, this pair will be handled. 
+             */
+            if (media->num_peer_comp == 0)
+            {
+                status = ice_utils_add_to_triggered_check_queue(
+                                                        media, local, remote);
+                return status;
+            }
+
+            /** check if this pair exists in the checklist */
+            cp = ice_utils_lookup_pair_in_checklist(media, local, remote);
+            if (cp == NULL)
+            {
+                ICE_LOG(LOG_SEV_INFO, "========= The pair is NOT already on the check list ==========");
+
+#if 0
                 for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
                 {
-                    valid_pair = &media->ah_valid_pairs[i];
-                    if (valid_pair->local == NULL)
+                    cp = &media->ah_valid_pairs[i];
+                    if (cp->local == NULL)
                         break;
                 }
-
-                ICE_LOG (LOG_SEV_INFO, 
-                    "[ICE MEDIA] USE-CANDIDATE is set for this connectivity "\
-                    "check request");
 
                 if (i == ICE_MAX_CANDIDATE_PAIRS)
                 {
@@ -525,29 +545,11 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         "[ICE MEDIA] Exceeded the cofigured list of valid "\
                         "pair entries");
                 }
-                else
-                {
-                    valid_pair->local = 
-                        ice_utils_get_local_cand_for_transport_param(
-                                            media, stun_pkt->transport_param);
-                    valid_pair->remote = 
-                        ice_utils_get_peer_cand_for_pkt_src(
-                                                    media, &(stun_pkt->src));
-
-                    if (valid_pair->remote == NULL)
-                    {
-                        ICE_LOG (LOG_SEV_WARNING, 
-                            "[ICE MEDIA] Ignored binding request from "\
-                            "unknown source");
-                    }
-                }
-
-#if 0
-                if(ice_media_utils_have_valid_list(media) == true)
-                {
-                    media->state = ICE_MEDIA_CC_COMPLETED;
-                }
 #endif
+            }
+            else
+            {
+                ICE_LOG(LOG_SEV_INFO, "+++++++++ The pair is already on the check list ++++++++");
             }
 
             conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);

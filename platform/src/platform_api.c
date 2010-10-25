@@ -374,7 +374,7 @@ unsigned int platform_socket_send(int sock_fd,
         unsigned char *buf, unsigned int len, int flags)
 {
     int bytes = send(sock_fd, buf, len, flags);
-    ICE_LOG(LOG_SEV_DEBUG, "Sent %d bytes", bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "[PLATFORM] Sent %d bytes", bytes);
 
     return bytes;
 }
@@ -415,7 +415,7 @@ unsigned int platform_socket_sendto(int sock_fd,
     {
         perror("sendto:");
     }
-    ICE_LOG(LOG_SEV_DEBUG, "sent %d bytes\n", bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "[PLATFORM] sent %d bytes\n", bytes);
 
     return bytes;
 }
@@ -468,7 +468,8 @@ unsigned int platform_socket_listen(
     } while (i < ret);
 
 #if 0
-    ICE_LOG(LOG_SEV_DEBUG, "select returned activity on %d sockets", ret);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[PLATFORM] select returned activity on %d sockets", ret);
 #endif
 
     return ret;
@@ -517,8 +518,9 @@ unsigned int platform_socket_recvfrom(int sock_fd, unsigned char *buf,
     inet_ntop(AF_INET, &stun_srvr.sin_addr,
                 (char *)src_ipaddr, PLATFORM_MAX_IPV4_ADDR_LEN + 1);
 
-    ICE_LOG(LOG_SEV_DEBUG, "Received packet on fd %d from %s:%d\nData: %s\n\n", 
-        sock_fd, inet_ntoa(stun_srvr.sin_addr), ntohs(stun_srvr.sin_port), buf);
+    ICE_LOG(LOG_SEV_DEBUG, "[PLATFORM] Received packet on fd %d from %s:%d\n"\
+            "Data: %s\n\n", sock_fd, inet_ntoa(stun_srvr.sin_addr), 
+            ntohs(stun_srvr.sin_port), buf);
 
     return bytes;
 }

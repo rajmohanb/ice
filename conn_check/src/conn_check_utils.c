@@ -205,7 +205,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating the response message from request msg failed");
+                "[CONN CHECK] Creating the response message from "\
+                "request msg failed");
         return status;
     }
 
@@ -219,21 +220,24 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
         status = stun_attr_software_get_value(h_req_attr[0], software, &len);
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, "Getting the software value failed");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Getting the software value failed");
             goto ERROR_EXIT_PT1;
         }
 
         status = stun_attr_create(STUN_ATTR_SOFTWARE, &(h_resp_attr[0]));
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, "Creating the software attribute failed");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Creating the software attribute failed");
             goto ERROR_EXIT_PT1;
         }
 
         status = stun_attr_software_set_value(h_resp_attr[0], software, len);
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, "setting the software value failed");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] setting the software value failed");
             goto ERROR_EXIT_PT2;
         }
 
@@ -241,11 +245,13 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
         if (status != STUN_OK)
         { 
             ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of software attribute to response message failed");
+                    "[CONN CHECK] Adding of software attribute to response "\
+                    "message failed");
             goto ERROR_EXIT_PT2;
         }
 
-        ICE_LOG(LOG_SEV_DEBUG, "Added software attribute to response msg");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[CONN CHECK] Added software attribute to response msg");
     }
 
     /* ================================================================== */
@@ -254,7 +260,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
                     STUN_ATTR_XOR_MAPPED_ADDR, &(h_resp_attr[0]));
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Creating the xor_mapped_addr attribute failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creating the xor_mapped_addr attribute failed");
         goto ERROR_EXIT_PT1;
     }
 
@@ -271,8 +278,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of the xor mapped addr to xor_mapped_addr "\
-            "attribute failed");
+                "[CONN CHECK] Setting of the xor mapped addr to "\
+                "xor_mapped_addr attribute failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -281,8 +288,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of the xor mapped port to xor_mapped_addr "\
-            "attribute failed");
+                "[CONN CHECK] Setting of the xor mapped port to "\
+                "xor_mapped_addr attribute failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -290,7 +297,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of xor mapped addr attribute to response message failed");
+                "[CONN CHECK] Adding of xor mapped addr attribute to "\
+                "response message failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -301,7 +309,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating the message intergrity attribute failed");
+                "[CONN CHECK] Creating the message integrity attribute failed");
         goto ERROR_EXIT_PT1;
     }
 
@@ -309,7 +317,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of message integrity attribute to response message failed");
+            "[CONN CHECK] Adding of message integrity attribute to "\
+            "response message failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -320,7 +329,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating the fingerprint attribute failed");
+                "[CONN CHECK] Creating the fingerprint attribute failed");
         goto ERROR_EXIT_PT1;
     }
 
@@ -328,7 +337,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of fingerprint attribute to response message failed");
+            "[CONN CHECK] Adding of fingerprint attribute to response "\
+            "message failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -459,19 +469,22 @@ int32_t conn_check_utils_verify_request_msg(
     if (status == STUN_NOT_FOUND)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "FingerPrint attribute missing. Message validation failed");
+                "[CONN CHECK] FingerPrint attribute missing. Message "\
+                "validation failed");
         return STUN_VALIDATON_FAIL;
     }
     else if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting FingerPrint attribute from the message failed");
+                "[CONN CHECK] Extracting FingerPrint attribute from the "\
+                "message failed");
         return status;
     }
 
 
     ICE_LOG(LOG_SEV_INFO, 
-            "FINGERPRINT attribute is present in the received message");
+            "[CONN CHECK] FINGERPRINT attribute is present in "\
+            "the received message");
 
     status = stun_msg_validate_fingerprint(h_msg);
     if (status == STUN_VALIDATON_FAIL)

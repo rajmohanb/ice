@@ -907,7 +907,20 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
 
     /** section 5.8 - scheduling checks */
 
-    /** TODO - first check for triggered check queue */
+    /** first look into triggered check queue */
+    for ( i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cand_pair = &media->triggered_pairs[i];
+        if (!cand_pair->local) continue;
+
+        /** TODO 
+         * found, now find a matching candidate pair in 
+         * the check list for this triffered check pair 
+         */
+        *pair = cand_pair;
+        return STUN_OK;
+    }
+
 
     /** 
      * if there is no triggered check to be sent, the agent 
@@ -2374,6 +2387,62 @@ int32_t ice_media_utils_update_cand_pair_states(
 int32_t ice_utils_detect_repair_role_conflicts(
                     ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt)
 {
+    return STUN_OK;
+}
+
+
+ice_cand_pair_t *ice_utils_lookup_pair_in_checklist(
+                                                    ice_media_stream_t *media,
+                                                    ice_candidate_t *local,
+                                                    ice_candidate_t *remote)
+{
+    int32_t i;
+    ice_cand_pair_t *cp;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+
+        if ((cp->local == local) && (cp->remote == remote))
+            return cp;
+    }
+
+    return NULL;
+}
+
+
+
+int32_t ice_utils_add_to_triggered_check_queue(ice_media_stream_t *media, 
+                                ice_candidate_t *local, ice_candidate_t *remote)
+{
+    int32_t i;
+    ice_cand_pair_t *cp;
+
+    /** find a free slot */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (media->triggered_pairs[i].local == NULL) break;
+
+    if (i == ICE_MAX_CANDIDATE_PAIRS)
+    { 
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Answer not yet received. But Queueing of the "\
+                "incoming connectivity check failed since no more resource "\
+                "available for queueing");
+
+        return STUN_NO_RESOURCE;
+    }
+
+    cp = &media->triggered_pairs[i];
+
+    cp->local = local;
+    cp->remote = remote;
+
+    /** TODO = calculate the priority */
+
+    ICE_LOG(LOG_SEV_INFO,
+            "[ICE MEDIA] Answer not yet received, hence Queued the incoming "\
+            "connectivity check");
+
     return STUN_OK;
 }
 
