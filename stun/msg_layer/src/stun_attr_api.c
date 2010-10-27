@@ -942,6 +942,45 @@ int32_t stun_attr_ice_controlling_set_tiebreaker_value(
 }
 
 
+int32_t stun_attr_ice_controlled_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak)
+{
+    stun_ice_controlled_attr_t *controlled;
+
+    if ((h_attr == NULL) || (tiebreak == NULL))
+        return STUN_INVALID_PARAMS;
+
+    controlled = (stun_ice_controlled_attr_t *) h_attr;
+
+    if (controlled->hdr.type != STUN_ATTR_ICE_CONTROLLED)
+        return STUN_INVALID_PARAMS;
+
+    *tiebreak = controlled->random_num;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlled_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak)
+{
+    stun_ice_controlled_attr_t *controlled;
+
+    if ((h_attr == NULL) || (tiebreak == 0))
+        return STUN_INVALID_PARAMS;
+
+    controlled = (stun_ice_controlled_attr_t *) h_attr;
+
+    if (controlled->hdr.type != STUN_ATTR_ICE_CONTROLLED)
+        return STUN_INVALID_PARAMS;
+
+    controlled->random_num = tiebreak;
+    controlled->hdr.length = 8;
+
+    return STUN_OK;
+}
+
+
 #endif
 
 

@@ -37,7 +37,7 @@ extern "C" {
         if (instance->aps_sessions[i] == h_session) { break; } \
 \
     if (i == ICE_MAX_CONCURRENT_SESSIONS) { \
-        ICE_LOG(LOG_SEV_ERROR, "Invalid session handle"); \
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Invalid session handle"); \
         return STUN_INVALID_PARAMS; \
     } \
 } \
@@ -100,12 +100,12 @@ void ice_turn_callback_fxn (handle h_turn_inst,
 
     if ((h_turn_inst == NULL) || (h_turn_session == NULL))
     {
-        ICE_LOG(LOG_SEV_ERROR, "Invalid parameters received in turn "\
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Invalid parameters received in turn "\
                 "callback routine. Null turn instance/session handle");
         return;
     }
 
-    ICE_LOG(LOG_SEV_DEBUG, "TURN session state changed to %s for "\
+    ICE_LOG(LOG_SEV_DEBUG, "[ICE] TURN session state changed to %s for "\
             "turn session %p", turn_states[turn_session_state], h_turn_session);
 
     switch(turn_session_state)
@@ -131,7 +131,7 @@ void ice_turn_callback_fxn (handle h_turn_inst,
     if (event == ICE_SES_EVENT_MAX)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
-            "Ignoring turn session state %d", turn_session_state);
+            "[ICE] Ignoring turn session state %d", turn_session_state);
         return;
     }
 
@@ -159,7 +159,7 @@ void ice_cc_callback_fxn (handle h_cc_inst,
 
     if ((h_cc_inst == NULL) || (h_cc_session == NULL))
     {
-        ICE_LOG (LOG_SEV_ERROR, "FIXME: parameters not valid\n");
+        ICE_LOG (LOG_SEV_ERROR, "[ICE] FIXME: parameters not valid");
         return;
     }
 
@@ -172,7 +172,7 @@ void ice_cc_callback_fxn (handle h_cc_inst,
         case CC_OG_TERMINATED:
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "Outgoing connectivity check terminated");
+                    "[ICE] Outgoing connectivity check terminated");
 
             /** declare success now? TODO - check if it is success */
             event = ICE_CONN_CHECKS_DONE;
@@ -185,11 +185,11 @@ void ice_cc_callback_fxn (handle h_cc_inst,
         case CC_IC_TERMINATED:
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "*******************************************************************\n\n");
+                    "****************************************************\n\n");
             ICE_LOG (LOG_SEV_DEBUG,
-                    "Incoming connectivity check terminated");
+                    "[ICE] Incoming connectivity check terminated");
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "\n\n*******************************************************************\n\n");
+                    "\n\n************************************************\n\n");
 
             /** feed this into the fsm */
             /* event = ICE_IC_CONN_CHECK; */
@@ -332,7 +332,7 @@ static int32_t ice_encode_and_send_message(handle h_msg,
                             (port == 0) || (transport_param == NULL))
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "Invalid parameter, hence not sending message");
+                "[ICE] Invalid parameter, hence not sending message");
         return STUN_INVALID_PARAMS;
     }
 
@@ -345,7 +345,7 @@ static int32_t ice_encode_and_send_message(handle h_msg,
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "Invalid message!! unable to retrieve STUN method type");
+                "[ICE] Invalid message!! unable to retrieve STUN method type");
         return STUN_INVALID_PARAMS;
     }
 
@@ -358,7 +358,7 @@ static int32_t ice_encode_and_send_message(handle h_msg,
         if (status != STUN_OK)
         {
             ICE_LOG (LOG_SEV_ERROR, 
-                    "Invalid message!! unable to retrieve STUN msg class");
+                    "[ICE] Invalid message!! unable to retrieve STUN msg class");
             return STUN_INVALID_PARAMS;
         }
 
@@ -397,7 +397,7 @@ static int32_t ice_encode_and_send_message(handle h_msg,
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "stun_msg_format() returned error %d\n", status);
+                "[ICE] stun_msg_format() returned error %d", status);
         stun_free(buf);
         return STUN_INT_ERROR;
     }
@@ -405,7 +405,7 @@ static int32_t ice_encode_and_send_message(handle h_msg,
     if (!sock_fd)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "some error! transport socket handle is NULL\n");
+                "[ICE] some error! transport socket handle is NULL");
         stun_free(buf);
         return STUN_INVALID_PARAMS;
     }
@@ -440,7 +440,7 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
                             (port == 0) || (transport_param == NULL))
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "Invalid parameter, hence not sending message");
+                "[ICE] Invalid parameter, hence not sending message");
         return STUN_INVALID_PARAMS;
     }
 
@@ -451,7 +451,7 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "Invalid message!! unable to retrieve STUN msg class");
+                "[ICE] Invalid message!! unable to retrieve STUN msg class");
         return STUN_INVALID_PARAMS;
     }
 
@@ -488,7 +488,7 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "stun_msg_format() returned error %d\n", status);
+                "[ICE] stun_msg_format() returned error %d", status);
         stun_free(buf);
         return STUN_INT_ERROR;
     }
@@ -496,7 +496,7 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
     if (!sock_fd)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "some error! transport socket handle is NULL\n");
+                "[ICE] some error! transport socket handle is NULL");
         stun_free(buf);
         return STUN_INVALID_PARAMS;
     }
@@ -935,7 +935,7 @@ int32_t ice_session_add_media_stream (handle h_inst, handle h_session,
 
     if (session->num_media_streams >= ICE_MAX_MEDIA_STREAMS)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Adding of media stream failed. "\
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Adding of media stream failed. "\
                "Maximum allowed media streams per session already reached.");
         return STUN_NO_RESOURCE;
     }
@@ -1129,7 +1129,8 @@ int32_t ice_session_set_peer_session_params(handle h_inst,
                                     ICE_REMOTE_PARAMS, session_params, NULL);
     if (status != STUN_OK)
     {
-        ICE_LOG (LOG_SEV_ERROR, "Processing of remote session params failed");
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] Processing of remote session params failed");
     }
 
     return status;
@@ -1157,8 +1158,8 @@ int32_t ice_session_set_peer_media_params(handle h_inst,
     if (session->peer_mode == ICE_INVALID_MODE)
     {
         ICE_LOG (LOG_SEV_ERROR,
-            "Peer ICE implementation mode is not yet set - ICE Full/Lite."\
-            "Set the same and then try to set the session parameters.");
+            "[ICE] Peer ICE implementation mode is not yet set - ICE Full/Lite"\
+            " Set the same and then try to set the session parameters.");
         return STUN_INVALID_PARAMS;
     }
 
@@ -1318,7 +1319,7 @@ int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session)
     if (session->local_mode == ICE_MODE_LITE)
     {
         ICE_LOG (LOG_SEV_ERROR,
-            "Connectivity checks are not performed for ice-lite session");
+            "[ICE] Connectivity checks are not performed for ice-lite session");
         return STUN_INVALID_PARAMS;
     }
 
@@ -1401,7 +1402,7 @@ int32_t ice_instance_find_session_for_received_msg(handle h_inst,
     if ((h_inst == NULL) || (h_msg == NULL) || 
             (h_session == NULL) || (transport_param == NULL))
     {
-        ICE_LOG(LOG_SEV_ERROR, "Invalid parameter passed when calling "\
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Invalid parameter passed when calling "\
                 "ice_instance_find_session_for_received_msg() api");
         return STUN_INVALID_PARAMS;
     }

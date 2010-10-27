@@ -86,13 +86,15 @@ int32_t stun_txn_table_txn_exists(handle h_table, handle h_txn)
     {
         if (h_txn == node->h_txn)
         {
-            ICE_LOG (LOG_SEV_INFO, "Stun txn handle found while searching");
+            ICE_LOG (LOG_SEV_INFO, 
+                    "[STUN TXN] Stun txn handle found while searching");
             return STUN_OK;
         }
         node++;
     }
 
-    ICE_LOG (LOG_SEV_ERROR, "Stun txn handle NOT FOUND while searching");
+    ICE_LOG (LOG_SEV_ERROR, 
+            "[STUN TXN] Stun txn handle NOT FOUND while searching");
     return STUN_NOT_FOUND;
 }
 
@@ -123,14 +125,14 @@ int32_t stun_txn_table_find_txn(handle h_table, handle h_msg, handle *h_txn)
         if (stun_memcmp(txn_id, node->trans_id, STUN_TXN_ID_BYTES) == 0)
         {
             *h_txn = node->h_txn;
-            ICE_LOG (LOG_SEV_INFO, "Table entry match found");
+            ICE_LOG (LOG_SEV_INFO, "[STUN TXN] Table entry match found");
             return STUN_OK;
         }
 
         node++;
     }
 
-    ICE_LOG (LOG_SEV_INFO, "Table entry match NOT found");
+    ICE_LOG (LOG_SEV_INFO, "[STUN TXN] Table entry match NOT found");
     return STUN_NOT_FOUND;
 }
 

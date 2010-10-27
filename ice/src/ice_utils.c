@@ -899,7 +899,8 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
 int32_t ice_media_utils_get_next_connectivity_check_pair(
         ice_media_stream_t *media, ice_cand_pair_t **pair)
 {
-    int32_t status, i, z = 99999;
+    int32_t status;
+    uint32_t i, z = 99999;
     ice_cand_pair_t *cand_pair, *hi_prio_pair;
 
     hi_prio_pair = NULL;
@@ -908,19 +909,23 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
     /** section 5.8 - scheduling checks */
 
     /** first look into triggered check queue */
-    for ( i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    if (media->triggered_count > 0)
     {
-        cand_pair = &media->triggered_pairs[i];
-        if (!cand_pair->local) continue;
+        for ( i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+            if (media->triggered_checks[i] != NULL) break;
 
-        /** TODO 
-         * found, now find a matching candidate pair in 
-         * the check list for this triffered check pair 
-         */
-        *pair = cand_pair;
-        return STUN_OK;
+        if(i < ICE_MAX_CANDIDATE_PAIRS)
+        {
+            ICE_LOG(LOG_SEV_INFO,
+                    "Found a triggered check for cand pair %d", i);
+
+            *pair = media->triggered_checks[i];
+
+            media->triggered_count -= 1;
+            media->triggered_checks[i] = NULL;
+            return STUN_OK;
+        }
     }
-
 
     /** 
      * if there is no triggered check to be sent, the agent 
@@ -1094,7 +1099,11 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     }
 
     /** TODO following is TEMPORARY = set session behavioral parameters  */
-    cc_params.controlling_role = true; // FIXME
+    if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
+        cc_params.controlling_role = true;
+    else
+        cc_params.controlling_role = false;
+
     cc_params.nominated = false;
     cc_params.prflx_cand_priority = 
         ice_utils_compute_peer_reflexive_candidate_priority(pair->local);
@@ -2189,7 +2198,7 @@ int32_t ice_utils_search_local_candidates(ice_media_stream_t *media,
 
 
 
-int32_t ice_utils_add_peer_reflexive_candidate(ice_cand_pair_t *cp, 
+int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp, 
                     conn_check_result_t *check, ice_candidate_t **new_prflx)
 {
     int32_t i;
@@ -2412,15 +2421,14 @@ ice_cand_pair_t *ice_utils_lookup_pair_in_checklist(
 
 
 
-int32_t ice_utils_add_to_triggered_check_queue(ice_media_stream_t *media, 
-                                ice_candidate_t *local, ice_candidate_t *remote)
+int32_t ice_utils_add_to_triggered_check_queue(
+                            ice_media_stream_t *media, ice_cand_pair_t *cp)
 {
     int32_t i;
-    ice_cand_pair_t *cp;
 
     /** find a free slot */
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-        if (media->triggered_pairs[i].local == NULL) break;
+        if (media->triggered_checks[i] == NULL) break;
 
     if (i == ICE_MAX_CANDIDATE_PAIRS)
     { 
@@ -2432,20 +2440,263 @@ int32_t ice_utils_add_to_triggered_check_queue(ice_media_stream_t *media,
         return STUN_NO_RESOURCE;
     }
 
-    cp = &media->triggered_pairs[i];
+    media->triggered_checks[i] = cp;
 
-    cp->local = local;
-    cp->remote = remote;
-
-    /** TODO = calculate the priority */
+    media->triggered_count++;
 
     ICE_LOG(LOG_SEV_INFO,
-            "[ICE MEDIA] Answer not yet received, hence Queued the incoming "\
-            "connectivity check");
+            "[ICE MEDIA] Answer not yet received, hence Queued the candidate "\
+            "pair %p in the triggered Queue at index %d", i);
 
     return STUN_OK;
 }
 
+
+
+int32_t ice_utils_search_remote_candidates(ice_media_stream_t *media, 
+                    stun_inet_addr_t *pkt_src, ice_candidate_t **found_cand)
+{
+    int32_t i;
+    ice_candidate_t *rem_cand;
+
+    /** 
+     * check if the source address of the incoming connectivity check 
+     * matches any of the remote candidates that we received in sdp answer.
+     */
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        rem_cand = &media->as_remote_cands[i];
+        if(rem_cand->type == ICE_CAND_TYPE_INVALID) continue;
+
+        /** 
+         * Note 1: not checking the transport protocol, UDP is assumed.
+         * Note 2: strncmp is not proper way to compare ip addresses, 
+         *         especially ipv6 
+         */
+        if((rem_cand->transport.type == pkt_src->host_type) &&
+           (rem_cand->transport.port == pkt_src->port) &&
+           (stun_strncmp((char *)rem_cand->transport.ip_addr, 
+                 (char *)pkt_src->ip_addr, ICE_IP_ADDR_MAX_LEN) == 0))
+        {
+            /** OK, this candidate is already part of the remote candidates */
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[ICE] The source address of the received incoming conn "\
+                    "check request is already part of the remote candidate "\
+                    "list for media %p", media);
+            *found_cand = rem_cand;
+            return STUN_OK;
+        }
+    }
+
+    return STUN_NOT_FOUND;
+}
+
+
+int32_t ice_utils_add_to_ic_check_queue_without_answer(
+                ice_media_stream_t *media, ice_candidate_t *local, 
+                conn_check_result_t *check_info, stun_inet_addr_t *remote)
+{
+    int32_t i;
+    ice_ic_check_t *ic_check;
+
+    /** find a free slot */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (media->ic_checks[i].local_cand == NULL) break;
+
+    if (i == ICE_MAX_CANDIDATE_PAIRS)
+    { 
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Answer not yet received. But Queueing of the "\
+                "incoming connectivity check failed since no more resource "\
+                "available for queueing");
+
+        return STUN_NO_RESOURCE;
+    }
+
+    ic_check = &media->ic_checks[i];
+
+    ic_check->local_cand = local;
+    stun_memcpy(&ic_check->peer_addr, remote, sizeof(stun_inet_addr_t));
+
+    /** priority */
+    ic_check->prflx_priority = check_info->prflx_priority;
+
+    media->ic_check_count++;
+
+    ICE_LOG(LOG_SEV_INFO,
+            "[ICE MEDIA] Answer not yet received, hence Queued the incoming "\
+            "connectivity check at index %d. Total count %d", 
+            i, media->ic_check_count);
+
+    return STUN_OK;
+}
+
+
+int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
+{
+    int32_t i, status;
+    ice_ic_check_t *ic_check;
+    ice_candidate_t *remote_cand;
+    ice_cand_pair_t *cp;
+
+    for (i = 0; i < media->ic_check_count; i++)
+    {
+        ic_check = &media->ic_checks[i];
+
+        /**
+         * RFC 5245 Sec 7.2.1.3 Learning Peer Reflexive Candidates
+         */
+        status = ice_utils_search_remote_candidates(media, 
+                                            &ic_check->peer_addr, &remote_cand);
+        if (status == STUN_NOT_FOUND)
+        {
+            /** Found a peer reflexive candidate */
+            status = ice_utils_add_remote_peer_reflexive_candidate(
+                                                media, ic_check, &remote_cand);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR,
+                        "[ICE] Unable to add new remote peer reflexive "\
+                        "candidate - %d", status);
+                continue;
+            }
+        }
+
+        /**
+         * RFC 5245 Sec 7.2.1.4 Triggered Checks
+         * Look up in the media checklist if there exists a candidate 
+         * pair already for the current local and remote candidates
+         */
+        cp = ice_utils_lookup_pair_in_checklist(
+                                media, ic_check->local_cand, remote_cand);
+        if (cp == NULL)
+        {
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[ICE] The pair is NOT already on the check list ...");
+
+            /** 
+             * add a new candidate pair and insert 
+             * into the checklist based on  priority 
+             */
+            status = ice_media_utils_add_new_candidate_pair(
+                                media, ic_check->local_cand, remote_cand, &cp);
+
+            /** set the state of this candidate pair to WAITING */
+            status = ice_cand_pair_fsm_inject_msg(
+                                    cp, ICE_CP_EVENT_UNFREEZE, NULL);
+
+            /** The pair is enqueued into the triggered check queue */
+            status = ice_utils_add_to_triggered_check_queue(media, cp);
+        }
+        else
+        {
+            ICE_LOG(LOG_SEV_INFO, 
+                    "The pair is already on the check list ...");
+        }
+
+
+
+        /**
+         * RFC 5245 Sec 7.2.1.5 Updating the Nominated Flag
+         */
+
+    }
+
+    return STUN_OK;
+}
+
+
+
+int32_t ice_utils_add_remote_peer_reflexive_candidate(
+                        ice_media_stream_t *media, ice_ic_check_t *check, 
+                        ice_candidate_t **new_prflx)
+{
+    int32_t i;
+    ice_candidate_t *prflx_cand;
+
+    /** RFC 5245 sec 7.1.2.2.1 - check if peer reflexive candidate */
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+        if(media->as_remote_cands[i].type == ICE_CAND_TYPE_INVALID) break;
+
+    if (i == ICE_CANDIDATES_MAX_SIZE)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "No more free remote candidates available to add the peer "\
+                "reflexive candidate. Reached the maximum configured limit.");
+
+        return STUN_NO_RESOURCE;
+    }
+
+    /** 
+     * the mapped address is not part of the local candidate list.
+     * This is a candidate - a peer reflexive candidate.
+     */
+    prflx_cand = &media->as_remote_cands[i];
+
+    /** transport params */
+    prflx_cand->transport.type = check->peer_addr.host_type;
+    memcpy(prflx_cand->transport.ip_addr, 
+                        check->peer_addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
+    prflx_cand->transport.port = check->peer_addr.port;
+
+    /** Note: protocol is assumed to be always UDP */
+    prflx_cand->transport.protocol = ICE_TRANSPORT_UDP;
+
+    /** component id */
+    prflx_cand->comp_id = check->local_cand->comp_id;
+
+    /** 
+     * copy the application transport handle. This handle is 
+     * valid only to host candidate types.
+     * revisit -- should this be moved to media component level?
+     */
+    //prflx_cand->transport_param = cp->local->transport_param;
+
+    prflx_cand->type = ICE_CAND_TYPE_PRFLX;
+
+    prflx_cand->priority = check->prflx_priority;
+
+    prflx_cand->default_cand = false;
+
+    /** TODO = foundation */
+    stun_strncpy((char *)prflx_cand->foundation, "4", 1);
+
+    *new_prflx = prflx_cand;
+
+    return STUN_OK;
+}
+
+
+
+int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media, 
+        ice_candidate_t *local, ice_candidate_t *remote, ice_cand_pair_t **cp)
+{
+    int32_t i;
+    ice_cand_pair_t *new_pair;
+
+    /** find a free slot */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (media->ah_cand_pairs[i].local == NULL) break;
+
+    if (i == ICE_MAX_CANDIDATE_PAIRS)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "[ICE] Exhausted the list of available candidate pairs "\
+                "in the checklist for media %p. Hence adding of new "\
+                "candidate pair failed", media);
+        return STUN_NO_RESOURCE;
+    }
+
+    new_pair = &media->ah_cand_pairs[i];
+
+    new_pair->local = local;
+    new_pair->remote = remote;
+
+    /** TODO = calculate pair priority? */
+
+    return STUN_OK;
+}
 
 
 /******************************************************************************/

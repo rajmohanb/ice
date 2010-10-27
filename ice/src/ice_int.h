@@ -103,6 +103,18 @@ typedef struct tag_ice_candidate
 } ice_candidate_t;
 
 
+typedef struct
+{
+    ice_candidate_t *local_cand;
+
+    stun_inet_addr_t peer_addr;
+    uint32_t prflx_priority;
+
+    handle h_transport_conn;
+
+} ice_ic_check_t;
+
+
 /** Forward declaration */
 typedef struct struct_ice_media_stream ice_media_stream_t;
 
@@ -232,7 +244,15 @@ struct struct_ice_media_stream
     ice_candidate_t as_remote_cands[ICE_CANDIDATES_MAX_SIZE];
 
     /** triggered FIFO check queue */
-    ice_cand_pair_t triggered_pairs[ICE_MAX_CANDIDATE_PAIRS];
+    uint32_t triggered_count;
+    ice_cand_pair_t *triggered_checks[ICE_MAX_CANDIDATE_PAIRS];
+
+    /** 
+     * list that stores incoming conn check pair details 
+     * when answer is not yet received from remote 
+     */
+    uint32_t ic_check_count;
+    ice_ic_check_t ic_checks[ICE_MAX_CANDIDATE_PAIRS];
 
     handle h_turn_sessions[ICE_MAX_COMPONENTS];
 

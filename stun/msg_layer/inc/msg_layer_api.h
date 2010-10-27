@@ -325,13 +325,21 @@ int32_t stun_attr_ice_controlling_get_tiebreaker_value(
 int32_t stun_attr_ice_controlling_set_tiebreaker_value(
                                             handle h_attr, uint64_t tiebreak);
 
+int32_t stun_attr_ice_controlled_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak);
+
+int32_t stun_attr_ice_controlled_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak);
+
 /* ========================================================================== */
 
+#if 0
 #define stun_attr_ice_controlled_get_tiebreaker_value(h_attr, tiebreak) \
             stun_attr_ice_controlling_get_tiebreaker_value(h_attr, tiebreak)
 
 #define stun_attr_ice_controlled_set_tiebreaker_value(h_attr, tiebreak) \
             stun_attr_ice_controlling_set_tiebreaker_value(h_attr, tiebreak)
+#endif
         
 /* ========================================================================== */
 /* ========================================================================== */

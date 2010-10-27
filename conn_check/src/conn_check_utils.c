@@ -860,7 +860,8 @@ int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code)
 }
 
 
-uint32_t cc_utils_extract_mapped_addr(handle h_msg, stun_inet_addr_t *prflx)
+uint32_t cc_utils_extract_conn_check_info(handle h_msg, 
+                                            conn_check_session_t *session)
 {
     handle h_attr;
     int32_t status;
@@ -873,7 +874,7 @@ uint32_t cc_utils_extract_mapped_addr(handle h_msg, stun_inet_addr_t *prflx)
 
     num = ICE_IP_ADDR_MAX_LEN;
     status = stun_attr_xor_mapped_addr_get_address(h_attr, 
-                                        &addr_family, prflx->ip_addr, &num);
+                        &addr_family, session->prflx_addr.ip_addr, &num);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
@@ -882,19 +883,32 @@ uint32_t cc_utils_extract_mapped_addr(handle h_msg, stun_inet_addr_t *prflx)
     }
 
     if (addr_family == STUN_ADDR_FAMILY_IPV4)
-        prflx->host_type = STUN_INET_ADDR_IPV4;
+        session->prflx_addr.host_type = STUN_INET_ADDR_IPV4;
     else if (addr_family == STUN_ADDR_FAMILY_IPV6)
-        prflx->host_type = STUN_INET_ADDR_IPV6;
+        session->prflx_addr.host_type = STUN_INET_ADDR_IPV6;
     else
-        prflx->host_type = STUN_INET_ADDR_MAX;
+        session->prflx_addr.host_type = STUN_INET_ADDR_MAX;
 
-    status = stun_attr_xor_mapped_addr_get_port(h_attr, &prflx->port);
+    status = stun_attr_xor_mapped_addr_get_port(h_attr, 
+                                            &session->prflx_addr.port);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "[CONN CHECK] Extracting xor mapped port failed", status);
         return status;
     }
+
+    /** The priority attribute will not be part of the response */
+#if 0
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_PRIORITY, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_priority_get_priority(h_attr, 
+                                        &session->prflx_cand_priority);
+    if (status != STUN_OK) return status;
+#endif
 
     return status;
 }

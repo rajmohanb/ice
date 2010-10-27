@@ -368,6 +368,19 @@ int32_t ice_media_stream_form_checklist(
     ice_media_utils_dump_cand_pair_stats(media);
 #endif
 
+
+    /**
+     * RFC 5245 Sec 7.2 STUN Server Procedures
+     * It is possible (and in fact very likely) that an offerer will receive 
+     * a Binding request prior to receiving the answer from its peer. Once the 
+     * answer is received, it MUST proceed with the remaining steps required, 
+     * namely, 7.2.1.3, 7.2.1.4, and 7.2.1.5 for full implementations. 
+     */
+    if (media->ic_check_count > 0)
+    {
+        status = ice_utils_process_pending_ic_checks(media);
+    }
+
     /** 
      * initially when the checklist is formed, 
      * the media checklist is in frozen state 
@@ -498,17 +511,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                 h_cc_inst, media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
-            /** TODO =
-             * RFC 5245 sec 7.2.1.3 Learning Peer Reflexive Candidates
-             */
-
-            /** 
-             * RFC 5245 sec 7.2.1.4 Triggered Checks
-             */
             local = ice_utils_get_local_cand_for_transport_param(
                                             media, stun_pkt->transport_param);
-            remote = ice_utils_get_peer_cand_for_pkt_src(
-                                            media, &(stun_pkt->src));
 
             /**
              * RFC 5245 sec 7.2 STUN Server Procedures
@@ -520,32 +524,35 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              */
             if (media->num_peer_comp == 0)
             {
-                status = ice_utils_add_to_triggered_check_queue(
-                                                        media, local, remote);
+                status = ice_utils_add_to_ic_check_queue_without_answer(
+                                   media, local, &check_result, &stun_pkt->src);
+
+                conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
+                media->h_cc_svr_session = NULL;
+
                 return status;
             }
+
+            /** if we are here, then answer has been received */
+
+            /** TODO =
+             * RFC 5245 sec 7.2.1.3 Learning Peer Reflexive Candidates
+             */
+            //status = ice_utils_search_remote_candidates(media, stun_pkt, **found_cand)
+
+
+            /** 
+             * RFC 5245 sec 7.2.1.4 Triggered Checks
+             */
+            remote = ice_utils_get_peer_cand_for_pkt_src(
+                                            media, &(stun_pkt->src));
+
 
             /** check if this pair exists in the checklist */
             cp = ice_utils_lookup_pair_in_checklist(media, local, remote);
             if (cp == NULL)
             {
                 ICE_LOG(LOG_SEV_INFO, "========= The pair is NOT already on the check list ==========");
-
-#if 0
-                for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-                {
-                    cp = &media->ah_valid_pairs[i];
-                    if (cp->local == NULL)
-                        break;
-                }
-
-                if (i == ICE_MAX_CANDIDATE_PAIRS)
-                {
-                    ICE_LOG (LOG_SEV_WARNING, 
-                        "[ICE MEDIA] Exceeded the cofigured list of valid "\
-                        "pair entries");
-                }
-#endif
             }
             else
             {
@@ -568,7 +575,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
     {
         ice_cand_pair_t *cp = NULL;
 
-        /** received connectivirt check binding response */
+        /** received connectivity check binding response */
         status = conn_check_session_inject_received_msg(
                                     h_cc_inst, h_cc_dialog, stun_pkt->h_msg);
         if (status == STUN_TERMINATED)
@@ -617,7 +624,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                 "from connectivity check is NOT present "\
                                 "in the media local candidate list");
                          
-                        status = ice_utils_add_peer_reflexive_candidate(
+                        status = ice_utils_add_local_peer_reflexive_candidate(
                                                 cp, &check_result, &local_cand);
                     }
 

@@ -158,7 +158,7 @@ void ice_utils_handle_agent_role_conflict(
 int32_t ice_utils_search_local_candidates(ice_media_stream_t *media, 
                     conn_check_result_t *check, ice_candidate_t **found_cand);
 
-int32_t ice_utils_add_peer_reflexive_candidate(ice_cand_pair_t *cp, 
+int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp, 
                     conn_check_result_t *check, ice_candidate_t **new_prflx);
 
 int32_t ice_utils_add_valid_pair(ice_media_stream_t *media, 
@@ -176,9 +176,24 @@ ice_cand_pair_t *ice_utils_lookup_pair_in_checklist(
                             ice_media_stream_t *media, ice_candidate_t *local, 
                             ice_candidate_t *remote);
 
-int32_t ice_utils_add_to_triggered_check_queue(ice_media_stream_t *media, 
-                            ice_candidate_t *local, ice_candidate_t *remote);
+int32_t ice_utils_add_to_triggered_check_queue(
+                            ice_media_stream_t *media, ice_cand_pair_t *cp);
 
+int32_t ice_utils_search_remote_candidates(ice_media_stream_t *media, 
+                    stun_inet_addr_t *pkt_src, ice_candidate_t **found_cand);
+
+int32_t ice_utils_add_to_ic_check_queue_without_answer(
+                ice_media_stream_t *media, ice_candidate_t *local, 
+                conn_check_result_t *check_info, stun_inet_addr_t *remote);
+
+int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media);
+
+int32_t ice_utils_add_remote_peer_reflexive_candidate(
+                        ice_media_stream_t *media, ice_ic_check_t *check, 
+                        ice_candidate_t **new_prflx);
+
+int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media, 
+        ice_candidate_t *local, ice_candidate_t *remote, ice_cand_pair_t **cp);
 
 
 /******************************************************************************/

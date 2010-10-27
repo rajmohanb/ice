@@ -452,7 +452,12 @@ int32_t conn_check_session_initiate_check(handle h_inst, handle h_session)
     session = (conn_check_session_t *) h_session;
 
     if (session->sess_type != CC_CLIENT_SESSION)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Invalid session type for initiating "\
+                "connectivity checks");
         return STUN_INVALID_PARAMS;
+    }
 
     cur_state = session->state;
     status = conn_check_session_fsm_inject_msg(session, CONN_CHECK_REQ, NULL);
@@ -625,6 +630,7 @@ int32_t conn_check_session_get_check_result(handle h_inst,
     result->controlling_role = session->controlling_role;
     result->error_code = session->error_code;
     result->nominated = session->nominated;
+    result->prflx_priority = session->prflx_cand_priority;
 
     stun_memcpy(&result->prflx_addr,
                     &session->prflx_addr, sizeof(stun_inet_addr_t));

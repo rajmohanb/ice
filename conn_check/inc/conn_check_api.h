@@ -93,6 +93,7 @@ typedef struct {
     bool_t controlling_role;
     uint32_t error_code;
     stun_inet_addr_t prflx_addr;
+    uint32_t prflx_priority;
 } conn_check_result_t;
 
 

@@ -76,8 +76,7 @@ int32_t cc_initiate (conn_check_session_t *session, handle h_msg)
     handle h_txn, h_txn_inst;
 
     status = cc_utils_create_request_msg(session, &session->h_req);
-    if (status != STUN_OK)
-        return status;
+    if (status != STUN_OK) return status;
 
     ICE_LOG(LOG_SEV_INFO,
             "<<OG CONN CHECK>> => %s %d", session->stun_server, 
@@ -188,8 +187,7 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
      * RFC 5245 sec 7.1.2 - Processing the response
      */
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
-    if (status != STUN_OK)
-        return status;
+    if (status != STUN_OK) return status;
 
     status = stun_txn_inject_received_msg(h_txn_inst, h_txn, h_rcvdmsg);
     if (status == STUN_OK)
@@ -216,7 +214,7 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "[CONN CHECK] Unable to extract the STUN msg class %d", status);
-        return status;
+        goto ERROR_EXIT_PT;
     }
 
     if (msg_class == STUN_ERROR_RESP)
@@ -228,6 +226,7 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
 
         /** get STUN error code */
         status = cc_utils_extract_error_code(h_rcvdmsg, &session->error_code);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
     else if(msg_class == STUN_SUCCESS_RESP)
     {
@@ -237,7 +236,8 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         session->cc_succeeded = true;
 
         /** extract the mapped address */
-        status = cc_utils_extract_mapped_addr(h_rcvdmsg, &session->prflx_addr);
+        status = cc_utils_extract_conn_check_info(h_rcvdmsg, session);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
     else
         goto ERROR_EXIT_PT;
@@ -258,6 +258,8 @@ ERROR_EXIT_PT:
         stun_destroy_txn(h_txn_inst, h_txn, false, false);
         session->h_txn = session->h_req = session->h_resp = NULL;
     }
+
+    session->cc_succeeded = false;
 
     return status;
 }

@@ -58,7 +58,8 @@ int32_t conn_check_utils_extract_username_components(
 
 int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code);
 
-uint32_t cc_utils_extract_mapped_addr(handle h_msg, stun_inet_addr_t *prflx);
+uint32_t cc_utils_extract_conn_check_info(handle h_msg, 
+                                            conn_check_session_t *session);
 
 
 /******************************************************************************/
