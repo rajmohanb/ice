@@ -2426,6 +2426,19 @@ int32_t ice_utils_add_to_triggered_check_queue(
 {
     int32_t i;
 
+    /** make sure this candidate pair is not already on the triggered list */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (media->triggered_checks[i] == cp)
+        {
+            ICE_LOG(LOG_SEV_INFO,
+                    "[ICE MEDIA] Answer not yet received. Hence Queueing the "\
+                    "incoming connectivity check in Triggered Q, but found "\
+                    "that this pair %p is already on the Triggered Q at "\
+                    "index %d. Hence not adding to Q now", cp, i);
+            
+            return STUN_OK;
+        }
+
     /** find a free slot */
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
         if (media->triggered_checks[i] == NULL) break;
@@ -2551,8 +2564,9 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
         if (status == STUN_NOT_FOUND)
         {
             /** Found a peer reflexive candidate */
-            status = ice_utils_add_remote_peer_reflexive_candidate(
-                                                media, ic_check, &remote_cand);
+            status = ice_utils_add_remote_peer_reflexive_candidate(media, 
+                            &ic_check->peer_addr, ic_check->local_cand->comp_id,
+                            ic_check->prflx_priority, &remote_cand);
             if (status != STUN_OK)
             {
                 ICE_LOG(LOG_SEV_ERROR,
@@ -2594,8 +2608,6 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
                     "The pair is already on the check list ...");
         }
 
-
-
         /**
          * RFC 5245 Sec 7.2.1.5 Updating the Nominated Flag
          */
@@ -2608,7 +2620,8 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
 
 
 int32_t ice_utils_add_remote_peer_reflexive_candidate(
-                        ice_media_stream_t *media, ice_ic_check_t *check, 
+                        ice_media_stream_t *media, stun_inet_addr_t *peer_addr,
+                        uint32_t prflx_comp_id, uint32_t prflx_priority, 
                         ice_candidate_t **new_prflx)
 {
     int32_t i;
@@ -2635,16 +2648,16 @@ int32_t ice_utils_add_remote_peer_reflexive_candidate(
     prflx_cand = &media->as_remote_cands[i];
 
     /** transport params */
-    prflx_cand->transport.type = check->peer_addr.host_type;
+    prflx_cand->transport.type = peer_addr->host_type;
     memcpy(prflx_cand->transport.ip_addr, 
-                        check->peer_addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
-    prflx_cand->transport.port = check->peer_addr.port;
+                        peer_addr->ip_addr, ICE_IP_ADDR_MAX_LEN);
+    prflx_cand->transport.port = peer_addr->port;
 
     /** Note: protocol is assumed to be always UDP */
     prflx_cand->transport.protocol = ICE_TRANSPORT_UDP;
 
     /** component id */
-    prflx_cand->comp_id = check->local_cand->comp_id;
+    prflx_cand->comp_id = prflx_comp_id;
 
     /** 
      * copy the application transport handle. This handle is 
@@ -2655,7 +2668,7 @@ int32_t ice_utils_add_remote_peer_reflexive_candidate(
 
     prflx_cand->type = ICE_CAND_TYPE_PRFLX;
 
-    prflx_cand->priority = check->prflx_priority;
+    prflx_cand->priority = prflx_priority;
 
     prflx_cand->default_cand = false;
 
@@ -2697,6 +2710,178 @@ int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media,
 
     return STUN_OK;
 }
+
+
+
+int32_t ice_utils_process_incoming_check(
+                ice_media_stream_t *media, ice_candidate_t *local_cand, 
+                ice_rx_stun_pkt_t *stun_pkt, conn_check_result_t *check_result)
+{
+    int32_t status;
+    ice_candidate_t *remote_cand;
+    ice_cand_pair_t *cp;
+
+    /**
+     * RFC 5245 Sec 7.2.1.3 Learning Peer Reflexive Candidates
+     */
+    status = ice_utils_search_remote_candidates(media, 
+                                        &stun_pkt->src, &remote_cand);
+    if (status == STUN_NOT_FOUND)
+    {
+        /** Found a peer reflexive candidate */
+        status = ice_utils_add_remote_peer_reflexive_candidate(
+                                    media, &stun_pkt->src, local_cand->comp_id, 
+                                    check_result->prflx_priority, &remote_cand);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE] Unable to add new remote peer reflexive "\
+                    "candidate - %d", status);
+            return status;
+        }
+    }
+
+    /**
+     * RFC 5245 Sec 7.2.1.4 Triggered Checks
+     * Look up in the media checklist if there exists a candidate 
+     * pair already for the current local and remote candidates
+     */
+    cp = ice_utils_lookup_pair_in_checklist(media, local_cand, remote_cand);
+    if (cp == NULL)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+                "[ICE] The pair is NOT already on the check list ...");
+
+        /** 
+         * add a new candidate pair and insert 
+         * into the checklist based on  priority 
+         */
+        status = ice_media_utils_add_new_candidate_pair(
+                            media, local_cand, remote_cand, &cp);
+
+        /** set the state of this candidate pair to WAITING */
+        status = ice_cand_pair_fsm_inject_msg(
+                                cp, ICE_CP_EVENT_UNFREEZE, NULL);
+
+        /** The pair is enqueued into the triggered check queue */
+        status = ice_utils_add_to_triggered_check_queue(media, cp);
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+                "The pair is already on the check list ...");
+
+        /** check the current state of the pair */
+        if ((cp->state == ICE_CP_FROZEN) || (cp->state == ICE_CP_WAITING))
+        {
+            status = ice_utils_add_to_triggered_check_queue(media, cp);
+        }
+        else if (cp->state == ICE_CP_INPROGRESS)
+        {
+            /** 
+             * cancel the in-progress transaction. In addition, 
+             * create a new connectivity check for this pair by 
+             * enqueueing this pair in the triggered check queue. 
+             * Change the state of the candidate pair to Waiting 
+             */
+        }
+        else if (cp->state == ICE_CP_FAILED)
+        {
+            /** change the state to Waiting */
+            status = ice_cand_pair_fsm_inject_msg(
+                                    cp, ICE_CP_EVENT_UNFREEZE, NULL);
+
+            /** add to triggered queue */
+            status = ice_utils_add_to_triggered_check_queue(media, cp);
+        }
+        else if (cp->state == ICE_CP_SUCCEEDED)
+        {
+            /** do nothing */
+        }
+        else
+        {
+            ICE_LOG(LOG_SEV_CRITICAL,
+                    "Unknown invalid candidate pair state %d", cp->state);
+            return status;
+        }
+    }
+
+    /**
+     * RFC 5245 Sec 7.2.1.5 Updating the Nominated Flag
+     */
+    if ((check_result->nominated == true) &&
+        (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
+    {
+        ice_cand_pair_t *valid_pair;
+        /**
+         * If the state of the pair is Succeeded, it means that the 
+         * check generated by this pair produced a successful response.
+         * This would have caused the agent to construct a valid pair 
+         * when that success response was received. The agent now sets 
+         * the nominated flag in the valid pair to true.
+         */
+
+        /** search for this pair in the valid pair list */
+        valid_pair = ice_utils_search_cand_pair_in_valid_pair_list(media, cp);
+        if (valid_pair == NULL)
+        {
+            ICE_LOG(LOG_SEV_CRITICAL,
+                    "Could not find a corresponding entry in valid list for "\
+                    "the current candidate pair for media %p. Fixme!!!", media);
+            return STUN_INT_ERROR;
+        }
+
+        if (cp->state == ICE_CP_SUCCEEDED)
+        {
+            valid_pair->nominated = true;
+        }
+        else if (cp->state == ICE_CP_INPROGRESS)
+        {
+            /** TODO = */
+            ICE_LOG(LOG_SEV_INFO,
+                    "This candidate pair check is still in progress.");
+        }
+        else
+        {
+            /** do nothing!!! */
+        }
+    }
+
+
+    return STUN_OK;
+}
+
+
+
+ice_cand_pair_t *ice_utils_search_cand_pair_in_valid_pair_list(
+                                ice_media_stream_t *media, ice_cand_pair_t *cp)
+{
+    int32_t i;
+    ice_cand_pair_t *pair;
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        pair = &media->ah_valid_pairs[i];
+        if (pair->local == NULL) continue;
+
+        if((pair->local == cp->local) &&
+           (pair->remote == cp->remote))
+        {
+            /** OK, we nailed him! */
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[ICE] Found an entry in the valid list for media %p "\
+                    "corresponding to given candidate pair", media);
+            return pair;
+        }
+    }
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE] Could NOT find an entry in the valid list for media %p "\
+            "corresponding to given candidate pair", media);
+
+    return NULL;
+}
+
 
 
 /******************************************************************************/

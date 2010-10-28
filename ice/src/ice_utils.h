@@ -189,11 +189,20 @@ int32_t ice_utils_add_to_ic_check_queue_without_answer(
 int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media);
 
 int32_t ice_utils_add_remote_peer_reflexive_candidate(
-                        ice_media_stream_t *media, ice_ic_check_t *check, 
+                        ice_media_stream_t *media, stun_inet_addr_t *peer_addr,
+                        uint32_t prflx_comp_id, uint32_t prflx_priority, 
                         ice_candidate_t **new_prflx);
 
 int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media, 
         ice_candidate_t *local, ice_candidate_t *remote, ice_cand_pair_t **cp);
+
+int32_t ice_utils_process_incoming_check(
+                ice_media_stream_t *media, ice_candidate_t *local_cand, 
+                ice_rx_stun_pkt_t *stun_pkt, conn_check_result_t *check_result);
+
+ice_cand_pair_t *ice_utils_search_cand_pair_in_valid_pair_list(
+                                ice_media_stream_t *media, ice_cand_pair_t *cp);
+
 
 
 /******************************************************************************/

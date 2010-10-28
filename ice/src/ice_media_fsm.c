@@ -503,8 +503,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
         if (status == STUN_TERMINATED)
         {
-            ice_cand_pair_t *cp;
-            ice_candidate_t *local, *remote;
+            ice_candidate_t *local;
             conn_check_result_t check_result;
 
             status = conn_check_session_get_check_result(
@@ -535,29 +534,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
             /** if we are here, then answer has been received */
 
-            /** TODO =
-             * RFC 5245 sec 7.2.1.3 Learning Peer Reflexive Candidates
-             */
-            //status = ice_utils_search_remote_candidates(media, stun_pkt, **found_cand)
-
-
-            /** 
-             * RFC 5245 sec 7.2.1.4 Triggered Checks
-             */
-            remote = ice_utils_get_peer_cand_for_pkt_src(
-                                            media, &(stun_pkt->src));
-
-
-            /** check if this pair exists in the checklist */
-            cp = ice_utils_lookup_pair_in_checklist(media, local, remote);
-            if (cp == NULL)
-            {
-                ICE_LOG(LOG_SEV_INFO, "========= The pair is NOT already on the check list ==========");
-            }
-            else
-            {
-                ICE_LOG(LOG_SEV_INFO, "+++++++++ The pair is already on the check list ++++++++");
-            }
+            status = ice_utils_process_incoming_check(
+                                    media, local, stun_pkt, &check_result);
 
             conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
             media->h_cc_svr_session = NULL;
