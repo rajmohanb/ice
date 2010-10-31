@@ -108,7 +108,10 @@ typedef struct
     ice_candidate_t *local_cand;
 
     stun_inet_addr_t peer_addr;
+
     uint32_t prflx_priority;
+    bool_t nominated;
+    bool_t controlling_role;
 
     handle h_transport_conn;
 

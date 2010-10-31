@@ -118,7 +118,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_process_rx_msg,
         ice_media_stream_restart,
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
@@ -521,7 +521,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              * to the triggered check queue. Once the answer is received 
              * from the peer, this pair will be handled. 
              */
-            if (media->num_peer_comp == 0)
+            if (media->state == ICE_MEDIA_GATHERED)
             {
                 status = ice_utils_add_to_ic_check_queue_without_answer(
                                    media, local, &check_result, &stun_pkt->src);
@@ -567,7 +567,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              * connectivity check session if no longer required.
              */
             ICE_LOG (LOG_SEV_ERROR, 
-                    "[ICE MEDIA] CHECK! CHEKC! One connectivity check done");
+                    "[ICE MEDIA] CHECK! CHECK! One connectivity check done");
 
             status = ice_utils_find_cand_pair_for_conn_check_session(
                                                     media, h_cc_dialog, &cp);
@@ -585,6 +585,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
                     /**
                      * RFC 5245 7.1.2.2.1 Discovering Peer Reflexive Candidates
+                     * search the mapped address in the received response 
+                     * against the list local canidates.
                      */
                     status = ice_utils_search_local_candidates(
                                             media, &check_result, &local_cand);
@@ -610,29 +612,30 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                      * RFC 5245 Sec 7.1.2.2.2 Constructing a Valid Pair
                      * construct a valid pair and add to the media list
                      */
-                    status = ice_utils_add_valid_pair(
-                                                media, local_cand, pkt);
+                    status = ice_utils_add_to_valid_list(media, 
+                                            local_cand, pkt, cp->nominated);
                     if (status == STUN_OK)
                     {
-                        ICE_LOG(LOG_SEV_INFO, 
-                                "[ICE MEDIA] Added a new VALID PAIR for "\
-                                "the media");
-                    }
 
-                    /**
-                     * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
-                     * - The agent changes the states for all other Frozen
-                     *   pairs for the same media stream and same foundation
-                     *   to Waiting.
-                     */
-                    status = ice_media_utils_update_cand_pair_states(media, cp);
-                    if (status != STUN_OK)
-                    {
-                        ICE_LOG(LOG_SEV_ERROR,
-                                "Updating the candidate pair states of "\
-                                "the media failed - %d", status);
+                        ICE_LOG(LOG_SEV_CRITICAL, 
+                                "************ ADDED TO VALID LIST FROM %s : %d ****************",
+                                __FILE__, __LINE__);
 
-                        /** just fallthrough ... */
+                        /**
+                         * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+                         * - The agent changes the states for all other Frozen
+                         *   pairs for the same media stream and same foundation
+                         *   to Waiting.
+                         */
+                        status = ice_media_utils_update_cand_pair_states(media, cp);
+                        if (status != STUN_OK)
+                        {
+                            ICE_LOG(LOG_SEV_ERROR,
+                                    "Updating the candidate pair states of "\
+                                    "the media failed - %d", status);
+
+                            /** just fallthrough ... */
+                        }
                     }
                 }
                 else

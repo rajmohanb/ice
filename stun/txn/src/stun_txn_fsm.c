@@ -106,9 +106,13 @@ static stun_txn_fsm_handler
 
 int32_t send_req (stun_txn_context_t *txn_ctxt, handle h_msg)
 {
+    int32_t status;
+
     txn_ctxt->h_req = h_msg;
 
-    txn_ctxt->instance->nwk_send_cb(h_msg, txn_ctxt->app_transport_param);
+    status = txn_ctxt->instance->nwk_send_cb(
+                            h_msg, txn_ctxt->app_transport_param);
+    if (status != STUN_OK) return status;
 
     if (txn_ctxt->tport == STUN_UNRELIABLE_TRANSPORT)
     {
@@ -166,8 +170,11 @@ int32_t process_resp (stun_txn_context_t *txn_ctxt, handle h_msg)
 
 int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
 {
-    txn_ctxt->instance->nwk_send_cb(txn_ctxt->h_req, 
+    int32_t status;
+
+    status = txn_ctxt->instance->nwk_send_cb(txn_ctxt->h_req, 
                                         txn_ctxt->app_transport_param);
+    if (status != STUN_OK) return status;
 
     txn_ctxt->rc_count += 1;
 
@@ -212,12 +219,14 @@ int32_t terminate_txn (stun_txn_context_t *txn_ctxt, handle h_msg)
 
 int32_t send_resp (stun_txn_context_t *txn_ctxt, handle h_msg)
 {
+    int32_t status;
+
     /** TODO - timers and state and stuff */
 
     txn_ctxt->h_resp = h_msg;
-    txn_ctxt->instance->nwk_send_cb(txn_ctxt->h_resp, 
+    status = txn_ctxt->instance->nwk_send_cb(txn_ctxt->h_resp, 
                                         txn_ctxt->app_transport_param);
-    return STUN_OK;
+    return status;
 }
 
 

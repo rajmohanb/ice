@@ -1607,7 +1607,7 @@ handle ice_utils_get_turn_session_for_transport_param(
 
 
 
-bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
+bool_t ice_media_utils_have_nominated_list(ice_media_stream_t *media)
 {
     uint32_t i;
     bool_t rtp_valid, rtcp_valid;
@@ -1623,6 +1623,8 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
     {
         valid = &media->ah_valid_pairs[i];
         if (valid->local == NULL) continue;
+
+        if (valid->nominated == false) continue;
 
         if (valid->local->comp_id == RTP_COMPONENT_ID)
             rtp_valid = true;
@@ -1654,6 +1656,7 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
     else 
         return false;
 }
+
 
 
 int32_t ice_media_utils_copy_selected_pair(ice_media_stream_t *media)
@@ -1798,6 +1801,8 @@ int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media,
         if (j >= ICE_MAX_VALID_LIST_PAIRS) break;
         valid_pair = &valid_pairs->pairs[j];
 
+        valid_pair->nominated = cand_pair->nominated;
+
         valid_pair->comp_id = cand_pair->local->comp_id;
 
         
@@ -1821,6 +1826,52 @@ int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media,
 
     return STUN_OK;
 }
+
+
+
+int32_t ice_media_utils_get_nominated_list(ice_media_stream_t *media, 
+                                    ice_media_valid_pairs_t *valid_pairs)
+{
+    int32_t i, j;
+    ice_cand_pair_t *cand_pair;
+    ice_valid_pair_t *valid_pair;
+
+    for (i = 0, j = 0 ; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cand_pair = &media->ah_valid_pairs[i];
+        if (cand_pair->local == NULL) continue;
+
+        if (j >= ICE_MAX_VALID_LIST_PAIRS) break;
+        valid_pair = &valid_pairs->pairs[j];
+
+        if (cand_pair->nominated == false) continue;
+
+        valid_pair->nominated = cand_pair->nominated;
+
+        valid_pair->comp_id = cand_pair->local->comp_id;
+
+        
+        valid_pair->local.host_type = cand_pair->local->transport.type;
+        stun_strncpy((char *)valid_pair->local.ip_addr, 
+                    (char *)cand_pair->local->transport.ip_addr, 
+                    ICE_IP_ADDR_MAX_LEN - 1);
+        valid_pair->local.port = cand_pair->local->transport.port;
+
+
+        valid_pair->peer.host_type = cand_pair->remote->transport.type;
+        stun_strncpy((char *)valid_pair->peer.ip_addr, 
+                        (char *)cand_pair->remote->transport.ip_addr,
+                        ICE_IP_ADDR_MAX_LEN - 1);
+        valid_pair->peer.port = cand_pair->remote->transport.port;
+
+        j += 1;
+    }
+
+    valid_pairs->num_valid = j;
+
+    return STUN_OK;
+}
+
 
 
 
@@ -2262,8 +2313,8 @@ int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp,
 }
 
 
-int32_t ice_utils_add_valid_pair(ice_media_stream_t *media, 
-                            ice_candidate_t *prflx_cand, ice_rx_stun_pkt_t *pkt)
+int32_t ice_utils_add_to_valid_list(ice_media_stream_t *media, 
+        ice_candidate_t *local_cand, ice_rx_stun_pkt_t *pkt, bool_t nominated)
 {
     int32_t i;
     ice_cand_pair_t *valid_pair;
@@ -2282,7 +2333,7 @@ int32_t ice_utils_add_valid_pair(ice_media_stream_t *media,
         return STUN_NO_RESOURCE;
     }
 
-    valid_pair->local = prflx_cand;
+    valid_pair->local = local_cand;
     valid_pair->remote = 
         ice_utils_get_peer_cand_for_pkt_src(media, &(pkt->src));
 
@@ -2293,6 +2344,8 @@ int32_t ice_utils_add_valid_pair(ice_media_stream_t *media,
         valid_pair->local = NULL;
         return STUN_OK;
     }
+
+    valid_pair->nominated = nominated;
 
     ICE_LOG (LOG_SEV_WARNING, "Added new valid pair for the media");
 
@@ -2459,10 +2512,11 @@ int32_t ice_utils_add_to_triggered_check_queue(
 
     ICE_LOG(LOG_SEV_INFO,
             "[ICE MEDIA] Answer not yet received, hence Queued the candidate "\
-            "pair %p in the triggered Queue at index %d", i);
+            "pair %p in the triggered Queue at index %d", cp, i);
 
     return STUN_OK;
 }
+
 
 
 
@@ -2505,6 +2559,8 @@ int32_t ice_utils_search_remote_candidates(ice_media_stream_t *media,
 }
 
 
+
+
 int32_t ice_utils_add_to_ic_check_queue_without_answer(
                 ice_media_stream_t *media, ice_candidate_t *local, 
                 conn_check_result_t *check_info, stun_inet_addr_t *remote)
@@ -2534,6 +2590,12 @@ int32_t ice_utils_add_to_ic_check_queue_without_answer(
     /** priority */
     ic_check->prflx_priority = check_info->prflx_priority;
 
+    /** nominated status */
+    ic_check->nominated = check_info->nominated;
+
+    /** role */
+    ic_check->controlling_role = check_info->controlling_role;
+
     media->ic_check_count++;
 
     ICE_LOG(LOG_SEV_INFO,
@@ -2543,6 +2605,7 @@ int32_t ice_utils_add_to_ic_check_queue_without_answer(
 
     return STUN_OK;
 }
+
 
 
 int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
@@ -2574,6 +2637,9 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
                         "candidate - %d", status);
                 continue;
             }
+
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE] Added a new remote peer reflexive candidate");
         }
 
         /**
@@ -2606,12 +2672,105 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
         {
             ICE_LOG(LOG_SEV_INFO, 
                     "The pair is already on the check list ...");
+
+            /** check the current state of the pair */
+            if ((cp->state == ICE_CP_FROZEN) || (cp->state == ICE_CP_WAITING))
+            {
+                status = ice_utils_add_to_triggered_check_queue(media, cp);
+            }
+            else if (cp->state == ICE_CP_INPROGRESS)
+            {
+                /** TODO =
+                 * cancel the in-progress transaction. In addition, 
+                 * create a new connectivity check for this pair by 
+                 * enqueueing this pair in the triggered check queue. 
+                 * Change the state of the candidate pair to Waiting 
+                 */
+            }
+            else if (cp->state == ICE_CP_FAILED)
+            {
+                /** change the state to Waiting */
+                status = ice_cand_pair_fsm_inject_msg(
+                                        cp, ICE_CP_EVENT_UNFREEZE, NULL);
+
+                /** add to triggered queue */
+                status = ice_utils_add_to_triggered_check_queue(media, cp);
+            }
+            else if (cp->state == ICE_CP_SUCCEEDED)
+            {
+                /** do nothing */
+            }
+            else
+            {
+                ICE_LOG(LOG_SEV_CRITICAL,
+                        "Unknown invalid candidate pair state %d", cp->state);
+                return status;
+            }
         }
 
         /**
+         * If the connectivity check is still in progress or 
+         * is yet to be intiiated, set the nominated flag status 
+         * as * decided by the peer who is in CONTROLLING mode.
+         */
+        if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED)
+            cp->nominated = ic_check->nominated;
+
+        
+        /**
          * RFC 5245 Sec 7.2.1.5 Updating the Nominated Flag
          */
+        if ((ic_check->nominated == true) &&
+            (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
+        {
+            ice_cand_pair_t *valid_pair;
 
+            /**
+             * If the state of the cached pair is succeeded, it means that the 
+             * incoming connectivity check from the peer had the USE-CANDIDATE
+             * attribute set and the peer has nominated the pair for the check.
+             * So update the nominated flag for this 
+             */
+
+            /** search for this pair in the valid pair list */
+            valid_pair = 
+                ice_utils_search_cand_pair_in_valid_pair_list(media, cp);
+            if (valid_pair == NULL)
+            {
+                ICE_LOG(LOG_SEV_CRITICAL,
+                        "Could not find a corresponding entry in valid list "\
+                        "for the current candidate pair for media %p. Fixme!!!",
+                        media);
+                return STUN_INT_ERROR;
+            }
+
+            valid_pair->nominated = ic_check->nominated;
+
+            if (cp->state == ICE_CP_SUCCEEDED)
+            {
+                /** 
+                 * This could conclude ICE processing for this media checklist
+                 */
+                status = ice_utils_update_media_checklist_state(
+                                                            media, valid_pair);
+            }
+            else if (cp->state == ICE_CP_INPROGRESS)
+            {
+                ICE_LOG(LOG_SEV_INFO,
+                        "This candidate pair check is still in progress.");
+
+                /**
+                 * The nominated flag for this candidate pair has been updated.
+                 * When and if the check succeeds, the candidate pair will be
+                 * added to the valid list and this flag will be reflected in
+                 * the valid list
+                 */
+            }
+            else
+            {
+                /** do nothing!!! */
+            }
+        }
     }
 
     return STUN_OK;
@@ -2813,6 +2972,7 @@ int32_t ice_utils_process_incoming_check(
         (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
     {
         ice_cand_pair_t *valid_pair;
+
         /**
          * If the state of the pair is Succeeded, it means that the 
          * check generated by this pair produced a successful response.
@@ -2820,26 +2980,36 @@ int32_t ice_utils_process_incoming_check(
          * when that success response was received. The agent now sets 
          * the nominated flag in the valid pair to true.
          */
-
-        /** search for this pair in the valid pair list */
-        valid_pair = ice_utils_search_cand_pair_in_valid_pair_list(media, cp);
-        if (valid_pair == NULL)
-        {
-            ICE_LOG(LOG_SEV_CRITICAL,
-                    "Could not find a corresponding entry in valid list for "\
-                    "the current candidate pair for media %p. Fixme!!!", media);
-            return STUN_INT_ERROR;
-        }
-
         if (cp->state == ICE_CP_SUCCEEDED)
         {
+            /** search for this pair in the valid pair list */
+            valid_pair = ice_utils_search_cand_pair_in_valid_pair_list(media, cp);
+            if (valid_pair == NULL)
+            {
+                ICE_LOG(LOG_SEV_CRITICAL,
+                        "Could not find a corresponding entry in valid list for "\
+                        "the current candidate pair for media %p. Fixme!!!", media);
+                return STUN_INT_ERROR;
+            }
+
             valid_pair->nominated = true;
+
+            /** This could conclude ICE processing for this media checklist */
+            status = ice_utils_update_media_checklist_state(media, valid_pair);
         }
         else if (cp->state == ICE_CP_INPROGRESS)
         {
-            /** TODO = */
             ICE_LOG(LOG_SEV_INFO,
                     "This candidate pair check is still in progress.");
+
+            /** 
+             * setting this flag indicates that the connectivity check for 
+             * this candidate pair has been nominated by the peer which 
+             * is in CONTROLLING role. Once and if the check succeeds for this
+             * pair and when the pair is added to the valid list, this flag
+             * will decide if the valid pair is nominated one or not.
+             */
+            cp->nominated = true;
         }
         else
         {
@@ -2880,6 +3050,124 @@ ice_cand_pair_t *ice_utils_search_cand_pair_in_valid_pair_list(
             "corresponding to given candidate pair", media);
 
     return NULL;
+}
+
+
+
+int32_t ice_utils_update_media_checklist_state(
+                    ice_media_stream_t *media, ice_cand_pair_t *valid_pair)
+{
+    int32_t status;
+
+    /**
+     * RFC 5245 Sec 8.1.2 Updating States
+     */
+
+    /** at this stage, the media state must be Running for further processing */
+    if (media->state != ICE_MEDIA_CC_RUNNING) return STUN_OK;
+
+    /** 
+     * if there are no nominated pairs in the valid 
+     * list for a media stream and the state of the 
+     * checklist is Running, ICE processing continues.
+     */
+    if (ice_utils_get_nominated_pairs_count(media) == 0) return STUN_OK;
+
+    /**
+     * If there is at least one nominated pair in the valid list for a
+     * media stream and the state of the check list is Running:
+     */
+
+    status = ice_media_utils_stop_checks_for_comp_id(
+                                        media, valid_pair->local->comp_id);
+
+    /**
+     * Once there is at least one nominated pair in the valid list for
+     * every component of at least one media stream and the state of the
+     * check list is Running:
+     *
+     * - The agent MUST change the state of processing for its check
+     *   list for that media stream to Completed.
+     */
+    if(ice_media_utils_have_nominated_list(media) == true)
+    {
+        media->state = ICE_MEDIA_CC_COMPLETED;
+    }
+
+    return STUN_OK;
+}
+
+
+uint32_t ice_utils_get_nominated_pairs_count(ice_media_stream_t *media)
+{
+    uint32_t i, count;
+
+    for (i = 0, count = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (media->ah_valid_pairs[i].nominated == true) count++;
+
+    return count;
+}
+
+
+int32_t ice_media_utils_stop_checks_for_comp_id(
+                            ice_media_stream_t *media, uint32_t comp_id)
+{
+    uint32_t i;
+    ice_cand_pair_t *cp;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+
+        if (cp->local->comp_id != comp_id) continue;
+
+        /** now component id's match */
+
+        /** 
+         * The agent MUST remove all Waiting and Frozen pairs in 
+         * the check list and triggered check queue for the same 
+         * component as the nominated pairs for that media stream.
+         */
+        if ((cp->state == ICE_CP_FROZEN) || (cp->state == ICE_CP_WAITING))
+        {
+            /** 
+             * first remove this candidate pair from 
+             * triggered check queue, if present 
+             */
+            ice_utils_remove_from_triggered_check_queue(media, cp);
+
+            cp->local = NULL;
+            cp->remote = NULL;
+            cp->state = ICE_CP_STATE_MAX;
+        }
+        else if (cp->state == ICE_CP_INPROGRESS)
+        {
+            /** TODO =
+             * If an In-Progress pair in the check list is for the same
+             * component as a nominated pair, the agent SHOULD cease
+             * retransmissions for its check if its pair priority is lower
+             * than the lowest-priority nominated pair for that component.
+             */
+        }
+    }
+
+    return STUN_OK;
+}
+
+
+
+void ice_utils_remove_from_triggered_check_queue(
+                        ice_media_stream_t *media, ice_cand_pair_t *cp)
+{
+    uint32_t i;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (media->triggered_checks[i] == cp)
+        {
+            media->triggered_checks[i] = NULL;
+            media->triggered_count -= 1;
+        }
 }
 
 

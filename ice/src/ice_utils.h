@@ -88,7 +88,7 @@ handle ice_utils_get_turn_session_for_transport_param(
 ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
                     ice_media_stream_t *media, stun_inet_addr_t *src);
 
-bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media);
+bool_t ice_media_utils_have_nominated_list(ice_media_stream_t *media);
 
 int32_t ice_media_utils_copy_selected_pair(ice_media_stream_t *media);
 
@@ -111,6 +111,9 @@ int32_t ice_utils_set_peer_media_params(
         ice_media_stream_t *media, ice_media_params_t *media_params);
 
 int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media, 
+                                    ice_media_valid_pairs_t *valid_pairs);
+
+int32_t ice_media_utils_get_nominated_list(ice_media_stream_t *media, 
                                     ice_media_valid_pairs_t *valid_pairs);
 
 int32_t ice_utils_get_media_params_in_running_state(
@@ -161,8 +164,8 @@ int32_t ice_utils_search_local_candidates(ice_media_stream_t *media,
 int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp, 
                     conn_check_result_t *check, ice_candidate_t **new_prflx);
 
-int32_t ice_utils_add_valid_pair(ice_media_stream_t *media, 
-                        ice_candidate_t *prflx_cand, ice_rx_stun_pkt_t *pkt);
+int32_t ice_utils_add_to_valid_list(ice_media_stream_t *media, 
+        ice_candidate_t *local_cand, ice_rx_stun_pkt_t *pkt, bool_t nominated);
 
 int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media);
 
@@ -202,6 +205,17 @@ int32_t ice_utils_process_incoming_check(
 
 ice_cand_pair_t *ice_utils_search_cand_pair_in_valid_pair_list(
                                 ice_media_stream_t *media, ice_cand_pair_t *cp);
+
+int32_t ice_utils_update_media_checklist_state(
+                    ice_media_stream_t *media, ice_cand_pair_t *valid_pair);
+
+uint32_t ice_utils_get_nominated_pairs_count(ice_media_stream_t *media);
+
+int32_t ice_media_utils_stop_checks_for_comp_id(
+                            ice_media_stream_t *media, uint32_t comp_id);
+
+void ice_utils_remove_from_triggered_check_queue(
+                        ice_media_stream_t *media, ice_cand_pair_t *cp);
 
 
 

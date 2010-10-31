@@ -350,6 +350,9 @@ int32_t ice_instance_find_session_for_received_msg(handle h_inst,
 int32_t ice_session_get_session_valid_pairs(handle h_inst, 
             handle h_session, ice_session_valid_pairs_t *valid_pairs);
 
+int32_t ice_session_get_nominated_pairs(handle h_inst, 
+            handle h_session, ice_session_valid_pairs_t *valid_pairs);
+
 int32_t ice_session_get_media_valid_pairs(handle h_inst, handle h_session, 
                 handle h_media, ice_media_valid_pairs_t *valid_pairs);
 

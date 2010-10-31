@@ -104,7 +104,7 @@ typedef struct
 void app_log(/** char *file_name, uint32_t line_num, */
                 stun_log_level_t level, char *format, ...)
 {
-    char buff[150];
+    char buff[300];
     va_list args;
 
     if (level > g_log_sev) return;
@@ -513,7 +513,7 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
     ice_session_valid_pairs_t valid_list;
     ice_media_valid_pairs_t *valid_media;
 
-    status = ice_session_get_session_valid_pairs(h_inst, h_session, &valid_list);
+    status = ice_session_get_nominated_pairs(h_inst, h_session, &valid_list);
     if (status != STUN_OK)
     {
         app_log (LOG_SEV_ERROR, 
@@ -527,15 +527,19 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
         valid_media = &valid_list.media_list[i];
 
         app_log (LOG_SEV_INFO, 
-                "Number of valid pairs %d\n", valid_media->num_valid);
+                "Number of Nominated pairs %d\n", valid_media->num_valid);
         app_log (LOG_SEV_INFO, "VALID LIST\n");
 
         for (j = 0; j < valid_media->num_valid; j++)
         {
             pair = &valid_media->pairs[j];
-            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d\n", 
+            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d", 
                     pair->comp_id, pair->local.ip_addr, pair->local.port,
                     pair->peer.ip_addr, pair->peer.port);
+            if (pair->nominated == true)
+                app_log (LOG_SEV_INFO, "nominated\n");
+            else
+                app_log (LOG_SEV_INFO, "NOT nominated\n");
         }
     }
 
@@ -945,6 +949,12 @@ void app_start_connectivity_checks(void)
 }
 
 
+void app_print_nominated_pair(void)
+{
+    ice_lite_sample_print_valid_list(g_inst, g_session);
+}
+
+
 void app_remove_media(void)
 {
     int32_t status = ice_session_remove_media_stream(g_inst, g_session, g_audio);
@@ -1067,9 +1077,10 @@ void ice_agent_demo_menu(void)
     puts("|  5 | display local ICE description                             |");
     puts("|  6 | set remote ICE information                                |");
     puts("|  7 | begin ICE negotiation                                     |");
-    puts("|  8 | remove media                                              |");
-    puts("|  9 | destroy ICE session                                       |");
-    puts("| 10 | destroy ICE instance                                      |");
+    puts("|  8 | get nominated pair                                        |");
+    puts("|  9 | remove media                                              |");
+    puts("| 10 | destroy ICE session                                       |");
+    puts("| 11 | destroy ICE instance                                      |");
     puts("+----------------------------------------------------------------+");
     puts("| 0 | quit                                                       |");
     puts("+----------------------------------------------------------------+");
@@ -1155,12 +1166,17 @@ void ice_agent_handle_user_choice(char *choice)
     }
     else if (ch == 8)
     {
-        app_remove_media();
+        app_print_nominated_pair();
     }
     else if (ch == 9)
     {
+        app_remove_media();
+    }
+    else if (ch == 10)
+    {
         app_destroy_ice_session();
-    } else if (ch == 10)
+    }
+    else if (ch == 11)
     {
         app_destroy_ice_instance();
     }

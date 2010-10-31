@@ -18,6 +18,7 @@ extern "C" {
 
 /******************************************************************************/
 
+
 #include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_msg.h"
@@ -27,6 +28,8 @@ extern "C" {
 #include "stun_txn_utils.h"
 #include "stun_txn_fsm.h"
 
+
+    
 int32_t stun_txn_create_instance(uint32_t max_txns, handle *h_inst)
 {
     int32_t status;
@@ -331,7 +334,7 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
     if (status != STUN_OK)
         return status;
 
-    if (msg_class ==  STUN_REQUEST)
+    if (msg_class == STUN_REQUEST)
     {
         stun_txn_utils_generate_txn_id(txn->txn_id, STUN_TXN_ID_BYTES);
 
@@ -340,7 +343,7 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         /** set in the message */
         stun_msg_set_txn_id(h_msg, txn->txn_id);
 
-        stun_txn_fsm_inject_msg(txn, STUN_REQ, h_msg);
+        status = stun_txn_fsm_inject_msg(txn, STUN_REQ, h_msg);
     }
     else if (msg_class == STUN_INDICATION)
     {
@@ -351,7 +354,7 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         stun_msg_set_txn_id(h_msg, txn->txn_id);
 
         /** send message to remote */
-        instance->nwk_send_cb(h_msg, txn->app_transport_param);
+        status = instance->nwk_send_cb(h_msg, txn->app_transport_param);
     }
     else
     {
@@ -362,11 +365,12 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         if ((status == STUN_NOT_FOUND) || (h_temp != h_txn))
             return STUN_INVALID_PARAMS;
 
-        stun_txn_fsm_inject_msg(txn, STUN_RESP, h_msg);
+        status = stun_txn_fsm_inject_msg(txn, STUN_RESP, h_msg);
     }
 
-    return STUN_OK;
+    return status;
 }
+
 
 int32_t stun_txn_inject_timer_message(handle h_timerid,
                                         handle h_timer_arg, handle *h_txn)

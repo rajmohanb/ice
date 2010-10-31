@@ -1479,6 +1479,44 @@ int32_t ice_session_get_media_valid_pairs(handle h_inst, handle h_session,
 
 
 
+int32_t ice_session_get_nominated_pairs(handle h_inst, 
+            handle h_session, ice_session_valid_pairs_t *valid_pairs)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_stream_t *media;
+    int32_t i, j, status;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (valid_pairs == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    stun_memset(valid_pairs, 0, sizeof(ice_session_valid_pairs_t));
+
+    for (i = 0, j = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+    {
+        media = session->aps_media_streams[i];
+        if(!media) continue;
+
+        if (j >= ICE_MAX_MEDIA_STREAMS) break;
+
+        status = ice_media_utils_get_nominated_list(media, 
+                                            &valid_pairs->media_list[j]);
+        if (status != STUN_OK) break;
+        j += 1;
+    }
+
+    valid_pairs->num_media = j;
+
+    return status;
+}
+
+
+
 int32_t ice_session_restart_media_stream (handle h_inst,
                                 handle h_session, handle h_media)
 {

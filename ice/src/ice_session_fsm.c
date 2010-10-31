@@ -454,8 +454,8 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     }
 
     /** 
-     * for an ice-lite agent, session becomes completed as soon 
-     * as connectivity checks are done and valid pairs are
+     * for an ice agent, session becomes completed as soon 
+     * as connectivity checks are done and nominated pairs are
      * present for each component of each media, that is, each
      * media moves into COMPLETED state
      */

@@ -62,7 +62,7 @@ extern "C" {
 #define ICE_MAX_COMPONENTS      2
 
 /** max number of valid pairs */
-#define ICE_MAX_VALID_LIST_PAIRS    2
+#define ICE_MAX_VALID_LIST_PAIRS    8
 
 /** 
  * maximum number of gathered candidates per component of per media stream
