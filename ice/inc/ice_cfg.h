@@ -77,6 +77,8 @@ extern "C" {
 #define TA_VAL_FOR_GATHERING    20 /* ms */
 #define RTO_VAL_FOR_GATHERING   100
 
+#define ICE_CC_NOMINATION_TIMER_VALUE  4000
+
 /** Ta and RTO values for connectivity checks */
 #define TA_VAL_FOR_CHECKS       20
 #define RTO_VAL_FOR_CHECKS      100
@@ -88,6 +90,7 @@ extern "C" {
 #define TRANSPORT_MTU_SIZE      1500
 
 #define ICE_DEFAULT_NOMINATION_TYPE ICE_NOMINATION_TYPE_REGULAR
+
 
 /******************************************************************************/
 

@@ -2130,7 +2130,7 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
 {
     int32_t status;
     uint32_t cc_timer_value;
-    ice_timer_params_t *timer = media->cc_timer;
+    ice_timer_params_t *timer = media->checklist_timer;
 
     if(timer == NULL)
     {
@@ -2152,7 +2152,7 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
     timer->type = ICE_CHECK_LIST_TIMER;
 
     timer->timer_id = media->ice_session->instance->start_timer_cb(
-                                            cc_timer_value, media->cc_timer);
+                                    cc_timer_value, media->checklist_timer);
     if (timer->timer_id)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
@@ -2170,6 +2170,48 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
 
     return status;
 }
+
+
+
+int32_t ice_media_utils_start_nomination_timer(ice_media_stream_t *media)
+{
+    int32_t status;
+    ice_timer_params_t *timer = media->nomination_timer;
+
+    if(timer == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE] Media conn check nomination timer param is NULL");
+        return STUN_INT_ERROR;
+    }
+
+    timer->h_instance = media->ice_session->instance;
+    timer->h_session = media->ice_session;
+    timer->h_media = media;
+    timer->arg = NULL;
+    timer->type = ICE_NOMINATION_TIMER;
+
+    timer->timer_id = media->ice_session->instance->start_timer_cb(
+                        ICE_CC_NOMINATION_TIMER_VALUE, media->nomination_timer);
+    if (timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[ICE] Started nomination timer for %d msec for media %p. "\
+                "timer id %p", ICE_CC_NOMINATION_TIMER_VALUE, media, 
+                timer->timer_id);
+        status =  STUN_OK;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[ICE] Starting of nomination timer for %d msec for media %p "\
+                "failed", ICE_CC_NOMINATION_TIMER_VALUE, media);
+        status = STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
 
 
 int32_t ice_utils_find_cand_pair_for_conn_check_session(
@@ -2329,7 +2371,8 @@ int32_t ice_utils_add_to_valid_list(ice_media_stream_t *media,
     if (i == ICE_MAX_CANDIDATE_PAIRS)
     {
         ICE_LOG(LOG_SEV_ERROR,
-                "No more slots left for adding the new valid pair for media");
+                "[ICE] No more slots left for adding the new "\
+                "valid pair for media");
         return STUN_NO_RESOURCE;
     }
 
@@ -2340,14 +2383,14 @@ int32_t ice_utils_add_to_valid_list(ice_media_stream_t *media,
     if (valid_pair->remote == NULL)
     {
         ICE_LOG (LOG_SEV_WARNING, 
-            "Ignored binding request from unknown source");
+            "[ICE] Ignored binding request from unknown source");
         valid_pair->local = NULL;
         return STUN_OK;
     }
 
     valid_pair->nominated = nominated;
 
-    ICE_LOG (LOG_SEV_WARNING, "Added new valid pair for the media");
+    ICE_LOG (LOG_SEV_WARNING, "[ICE] Added new valid pair for the media");
 
     return STUN_OK;
 }
@@ -3168,6 +3211,26 @@ void ice_utils_remove_from_triggered_check_queue(
             media->triggered_checks[i] = NULL;
             media->triggered_count -= 1;
         }
+}
+
+
+ice_cand_pair_t *ice_utils_select_nominated_cand_pair(ice_media_stream_t *media)
+{
+    uint32_t i;
+    ice_cand_pair_t *vp = NULL, *np = NULL;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        vp = &media->ah_valid_pairs[i];
+        if (vp->local == NULL) continue;
+
+        if (np == NULL)
+            np = vp;
+        else if (vp->priority > np->priority)
+            np = vp;
+    }
+
+    return np;
 }
 
 

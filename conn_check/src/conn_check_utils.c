@@ -601,10 +601,12 @@ int32_t conn_check_utils_verify_request_msg(
         goto ERROR_EXIT_PT;
     }
 
+#ifdef DEBUG2
     ICE_LOG(LOG_SEV_INFO, 
             "Local username value %s and %d length", localuser, local_len);
     ICE_LOG(LOG_SEV_INFO, 
             "Peer username value %s and %d length", peeruser, peer_len);
+#endif
     
     /** check if the username is valid for this session */
     if ((local_len != session->local_user_len) ||

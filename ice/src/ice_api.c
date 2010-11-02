@@ -1382,6 +1382,15 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_CHECK_LIST_TIMER_EXPIRY, arg, NULL);
     }
+    else if (timer->type == ICE_NOMINATION_TIMER)
+    {
+        ice_session_t *session = (ice_session_t *) timer->h_session;
+
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_NOMINATION_TIMER");
+        
+        status = ice_session_fsm_inject_msg(session, 
+                                        ICE_NOMINATION_TIMER_EXPIRY, arg, NULL);
+    }
     else
     {
         ICE_LOG (LOG_SEV_ERROR, "[ICE]: INVALID timer type");

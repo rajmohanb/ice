@@ -37,6 +37,9 @@ int32_t process_relay_server_msg (ice_session_t *session,
 int32_t ice_form_checklist(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 
+int32_t ice_nomination_timer_expired(
+            ice_session_t *session, handle arg, handle *h_param);
+
 int32_t initiate_checks(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 

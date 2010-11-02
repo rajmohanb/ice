@@ -150,6 +150,8 @@ int32_t ice_utils_copy_turn_gathered_candidates(
 
 int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media);
 
+int32_t ice_media_utils_start_nomination_timer(ice_media_stream_t *media);
+
 int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair);
 
 int32_t ice_utils_find_cand_pair_for_conn_check_session(
@@ -216,6 +218,9 @@ int32_t ice_media_utils_stop_checks_for_comp_id(
 
 void ice_utils_remove_from_triggered_check_queue(
                         ice_media_stream_t *media, ice_cand_pair_t *cp);
+
+ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
+                                            ice_media_stream_t *media);
 
 
 

@@ -29,11 +29,12 @@ typedef struct {
 
 
 typedef enum {
-    ICE_TURN_TIMER = 0,/** timer type for turn layer */
-    ICE_CC_TIMER,      /** timer type for conn check layer */
-    /** timer used in this ice layer during connectivity checks */
-    ICE_CHECK_LIST_TIMER,
-    /** that's all we have as of now */
+    ICE_TURN_TIMER = 0,     /** timer type for turn */
+    ICE_CC_TIMER,           /** timer type for conn check module */
+    ICE_CHECK_LIST_TIMER,   /** checklist timer */
+    ICE_NOMINATION_TIMER,   /** nomination timer */
+    
+    /** that's all we have as of now ... */
 } ice_timer_type_t;
 
 
@@ -160,6 +161,7 @@ typedef enum
     ICE_ADD_MEDIA,
     ICE_REMOVE_MEDIA,
     ICE_CONN_CHECK_TIMER,
+    ICE_NOMINATION_TIMER_EXPIRY,
     ICE_SES_EVENT_MAX,
 } ice_session_event_t;
 
@@ -192,6 +194,7 @@ typedef enum
     ICE_MEDIA_REMOTE_PARAMS,
     ICE_MEDIA_BOTH_LITE,
     ICE_MEDIA_CC_TIMER,
+    ICE_MEDIA_NOMINATION_TIMER,
     ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 
@@ -202,6 +205,7 @@ typedef enum
     ICE_MEDIA_GATHERED,
     ICE_MEDIA_FROZEN,
     ICE_MEDIA_CC_RUNNING,
+    ICE_MEDIA_NOMINATING,
     ICE_MEDIA_CC_COMPLETED,
     ICE_MEDIA_CC_FAILED,
     ICE_MEDIA_STATE_MAX,
@@ -231,7 +235,10 @@ struct struct_ice_media_stream
     ice_media_stream_state_t state;
 
     /** check list timer used during connectivity checks */
-    ice_timer_params_t *cc_timer;
+    ice_timer_params_t *checklist_timer;
+
+    /** connectivity checks valid pair evaluation timer */
+    ice_timer_params_t *nomination_timer;
 
     /** check list */
     uint32_t num_cand_pairs;
@@ -258,9 +265,7 @@ struct struct_ice_media_stream
     ice_ic_check_t ic_checks[ICE_MAX_CANDIDATE_PAIRS];
 
     handle h_turn_sessions[ICE_MAX_COMPONENTS];
-
     handle h_cc_svr_session;
-
 };
 
 

@@ -48,6 +48,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_GATHERING */
     {
@@ -55,6 +56,7 @@ static ice_media_stream_fsm_handler
         ice_media_process_relay_msg,
         ice_media_stream_check_gather_resp,
         ice_media_stream_gather_failed,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -78,6 +80,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_FROZEN */
     {
@@ -89,6 +92,7 @@ static ice_media_stream_fsm_handler
         ice_media_unfreeze,
         ice_media_stream_ignore_msg,
         ice_media_process_rx_msg,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -108,6 +112,23 @@ static ice_media_stream_fsm_handler
         ice_media_stream_remote_params,
         ice_media_stream_dual_ice_lite,
         ice_media_conn_check_timer_expiry,
+        ice_media_stream_evaluate_valid_pairs,
+    },
+    /** ICE_MEDIA_NOMINATING */
+    {
+        ice_media_stream_ignore_msg,
+        ice_media_process_relay_msg,
+        ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
+        ice_media_process_rx_msg,
+        ice_media_stream_restart,
+        ice_media_stream_remote_params,
+        ice_media_stream_dual_ice_lite,
+        ice_media_conn_check_timer_expiry,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_CC_COMPLETED */
     {
@@ -123,9 +144,11 @@ static ice_media_stream_fsm_handler
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
         ice_media_conn_check_timer_expiry,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_CC_MEDIA_FAILED */
     {
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -436,9 +459,9 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     media->state = ICE_MEDIA_CC_RUNNING;
 
     /** allocate memory for conn checka timer params */
-    media->cc_timer = (ice_timer_params_t *) 
+    media->checklist_timer = (ice_timer_params_t *) 
                 stun_calloc (1, sizeof(ice_timer_params_t));
-    if (media->cc_timer == NULL)
+    if (media->checklist_timer == NULL)
     {
         ICE_LOG (LOG_SEV_ERROR, 
                 "[ICE MEDIA] Memory allocation failed for ICE conn "\
@@ -447,6 +470,27 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     }
 
     status = ice_media_utils_start_check_list_timer(media);
+
+    /** 
+     * start the connectivity checks timeout timer as well. This timer 
+     * will decide as to when this agent stops the connectivity checks
+     * and evaluates the valid pairs. This timer is only applicable
+     * when the agent's role is CONTROLLING for the session.
+     */
+    if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
+    {
+        media->nomination_timer = (ice_timer_params_t *) 
+                    stun_calloc (1, sizeof(ice_timer_params_t));
+        if (media->nomination_timer == NULL)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "[ICE MEDIA] Memory allocation failed for ICE conn "\
+                    "check nomination timer");
+            return STUN_NO_RESOURCE;
+        }
+
+        status = ice_media_utils_start_nomination_timer(media);
+    }
 
     return status;
 }
@@ -616,11 +660,6 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                             local_cand, pkt, cp->nominated);
                     if (status == STUN_OK)
                     {
-
-                        ICE_LOG(LOG_SEV_CRITICAL, 
-                                "************ ADDED TO VALID LIST FROM %s : %d ****************",
-                                __FILE__, __LINE__);
-
                         /**
                          * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
                          * - The agent changes the states for all other Frozen
@@ -741,6 +780,54 @@ int32_t ice_media_stream_checklist_timer_expiry(
 
     return status;
 }
+
+
+
+int32_t ice_media_stream_evaluate_valid_pairs(
+                                    ice_media_stream_t *media, handle arg)
+{
+    ice_cand_pair_t *np;
+
+    ICE_LOG(LOG_SEV_INFO,
+            "Nomination timer expired. Time to evaluate the candidate pairs "\
+            "in valid list and nominate one of them for media %p", media);
+
+    /**
+     * RFC 5245 sec 8.1.1.1 Regular Nomination
+     */
+
+    /** make sure we have valid pairs for all the components */
+    np = ice_utils_select_nominated_cand_pair(media);
+    if (np == NULL)
+    {
+        /** 
+         * No valid pairs for this media so far. Hence the connectivity checks
+         * have failed to generate any valid pairs for this media. Hence moving
+         * the state of the media stream to Failed.
+         */
+
+        /** TODO =
+         * 1. Stop checklist timer if running.
+         * 2. stop any conn check re-transmission?
+         */
+
+        media->state = ICE_MEDIA_CC_FAILED;
+    }
+    else
+    {
+        /*
+         * When the controlling agent selects the valid pair, it repeats the
+         * check that produced this valid pair (by enqueuing the pair that
+         * generated the check into the triggered check queue), this time with
+         * the USE-CANDIDATE attribute.
+         */
+
+        media->state = ICE_MEDIA_NOMINATING;
+    }
+
+    return STUN_OK;
+}
+
 
 
 int32_t ice_media_lite_mode(ice_media_stream_t *media, handle arg)

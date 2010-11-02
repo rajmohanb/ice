@@ -29,6 +29,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
+    uint32_t count;
     stun_txn_table_node_t *nodes;
 } stun_txn_table_t;
 

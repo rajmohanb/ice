@@ -363,9 +363,19 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         /** STUN_SUCCESS_RESP or STUN_ERROR_RESP */
         status = stun_txn_table_find_txn(instance->h_table, h_msg, &h_temp);
         if ((status == STUN_NOT_FOUND) || (h_temp != h_txn))
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[STUN TXN] Could not find the transaction while "\
+                    "sending response");
             return STUN_INVALID_PARAMS;
+        }
 
         status = stun_txn_fsm_inject_msg(txn, STUN_RESP, h_msg);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "stun_txn_send_stun_message() returned %d", status);
+        }
     }
 
     return status;
@@ -482,12 +492,12 @@ int32_t stun_txn_inject_received_msg (handle h_inst,
         /** hmm... a farm fresh juicy server transaction */ 
     	stun_msg_get_txn_id(h_msg, txn_ctxt->txn_id);
 
-        ICE_LOG (LOG_SEV_DEBUG, "incoming cc check - about to add new transaction %p to table\n", h_txn);
-
         /** add it the table */
         stun_txn_table_add_txn(inst->h_table, h_txn);
 
-        ICE_LOG (LOG_SEV_DEBUG, "incoming cc check - added transaction %p to table\n", h_txn);
+        ICE_LOG (LOG_SEV_DEBUG, 
+                "[STUN TXN] incoming STUN request - added transaction "\
+                "%p to table", h_txn);
 
         status = stun_txn_fsm_inject_msg(txn_ctxt, STUN_REQ, h_msg);
     }
@@ -504,7 +514,8 @@ int32_t stun_txn_inject_received_msg (handle h_inst,
         /** just to clear doubt, if any */
         if (h_temp != txn_ctxt)
         { 
-            ICE_LOG (LOG_SEV_WARNING, "Transaction found but no match!\n");
+            ICE_LOG (LOG_SEV_WARNING, 
+                    "[STUN TXN] Transaction found but no match!");
             return STUN_INT_ERROR;
         }
 
