@@ -122,7 +122,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_stream_checklist_timer_expiry,
         ice_media_process_rx_msg,
         ice_media_stream_restart,
         ice_media_stream_remote_params,
@@ -763,7 +763,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
          * No more pairs available for connectivity checks.
          * Hence terminate the check list timer
          */
-
+        media->checklist_timer->timer_id = 0;
         status = STUN_OK;
 
         /** TODO
@@ -786,6 +786,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
 int32_t ice_media_stream_evaluate_valid_pairs(
                                     ice_media_stream_t *media, handle arg)
 {
+    int32_t count, status;
     ice_cand_pair_t *np;
 
     ICE_LOG(LOG_SEV_INFO,
@@ -795,14 +796,14 @@ int32_t ice_media_stream_evaluate_valid_pairs(
     /**
      * RFC 5245 sec 8.1.1.1 Regular Nomination
      */
-
+    
     /** make sure we have valid pairs for all the components */
-    np = ice_utils_select_nominated_cand_pair(media);
-    if (np == NULL)
+    if(ice_media_utils_have_valid_list(media) == false)
     {
         /** 
-         * No valid pairs for this media so far. Hence the connectivity checks
-         * have failed to generate any valid pairs for this media. Hence moving
+         * No valid pairs for one or more components for this media
+         * so far. That is the connectivity checks have failed to 
+         * generate any valid pairs for this media. Hence moving 
          * the state of the media stream to Failed.
          */
 
@@ -812,9 +813,21 @@ int32_t ice_media_stream_evaluate_valid_pairs(
          */
 
         media->state = ICE_MEDIA_CC_FAILED;
+
+        return STUN_OK;
     }
-    else
+
+    /** This media has atleast one nominated pair for each of it's components */
+
+    for (count = 0; count < media->num_comp; count++)
     {
+        np = ice_utils_select_nominated_cand_pair(media, (count + 1));
+        
+        /** 
+         * no need for return value check since we have already verified 
+         * availability of the nominated pair for each component 
+         */
+
         /*
          * When the controlling agent selects the valid pair, it repeats the
          * check that produced this valid pair (by enqueuing the pair that
@@ -822,10 +835,56 @@ int32_t ice_media_stream_evaluate_valid_pairs(
          * the USE-CANDIDATE attribute.
          */
 
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Candidate pair %p current state %d", 
+                np, np->state);
+
+        np->nominated = true;
+
+        /********* Fixme!!! **********/
+        np->media = media;
+        /********* Fixme!!! **********/
+
+        status = ice_utils_add_to_triggered_check_queue(media, np);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE MEDIA] Adding of nominated candidate pair %p for "\
+                    "component %d to triggered list for media %p failed", 
+                    np, (count + 1), media);
+            
+            media->state = ICE_MEDIA_CC_FAILED;
+
+            return STUN_INT_ERROR;
+        }
+
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Added nominated candidate pair %p for component "\
+                "%d to triggered list for media %p", np, (count + 1), media);
+    }
+
+    /** 
+     * make sure the checklist timer is running. If stopped, 
+     * then restart it so that the nominated triggered checks
+     * that we have added above are processed 
+     */
+    if (media->checklist_timer->timer_id == 0)
+    {
+        status = ice_media_utils_start_check_list_timer(media);
+    }
+
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Unable to start the checklist timer after adding"\
+                " the nominated pairs to triggered queue for media %p", media);
+    }
+    else
+    {
         media->state = ICE_MEDIA_NOMINATING;
     }
 
-    return STUN_OK;
+    return status;
 }
 
 

@@ -219,8 +219,10 @@ int32_t ice_media_utils_stop_checks_for_comp_id(
 void ice_utils_remove_from_triggered_check_queue(
                         ice_media_stream_t *media, ice_cand_pair_t *cp);
 
+bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media);
+
 ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
-                                            ice_media_stream_t *media);
+                                ice_media_stream_t *media, uint32_t comp_id);
 
 
 

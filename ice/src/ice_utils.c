@@ -1104,7 +1104,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     else
         cc_params.controlling_role = false;
 
-    cc_params.nominated = false;
+    cc_params.nominated = pair->nominated;
     cc_params.prflx_cand_priority = 
         ice_utils_compute_peer_reflexive_candidate_priority(pair->local);
     status = conn_check_session_set_session_params(
@@ -3214,7 +3214,41 @@ void ice_utils_remove_from_triggered_check_queue(
 }
 
 
-ice_cand_pair_t *ice_utils_select_nominated_cand_pair(ice_media_stream_t *media)
+bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
+{
+    uint32_t i;
+    bool_t rtp_valid, rtcp_valid;
+    ice_cand_pair_t *valid;
+
+    rtp_valid = rtcp_valid = false;
+    
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Number of peer components[%d] for  media handle %p", 
+            media->num_peer_comp, media);
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        valid = &media->ah_valid_pairs[i];
+        if (valid->local == NULL) continue;
+
+        if (valid->local->comp_id == RTP_COMPONENT_ID)
+            rtp_valid = true;
+        else if (valid->local->comp_id == RTCP_COMPONENT_ID)
+            rtcp_valid = true;
+    }
+
+    if ((rtp_valid == true) && (media->num_peer_comp == 1))
+        return true;
+
+    if ((rtp_valid == true) && (rtcp_valid == true))
+        return true;
+    else 
+        return false;
+}
+
+
+ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
+                                ice_media_stream_t *media, uint32_t comp_id)
 {
     uint32_t i;
     ice_cand_pair_t *vp = NULL, *np = NULL;
@@ -3224,6 +3258,8 @@ ice_cand_pair_t *ice_utils_select_nominated_cand_pair(ice_media_stream_t *media)
         vp = &media->ah_valid_pairs[i];
         if (vp->local == NULL) continue;
 
+        if (vp->local->comp_id != comp_id) continue;
+
         if (np == NULL)
             np = vp;
         else if (vp->priority > np->priority)
@@ -3232,7 +3268,6 @@ ice_cand_pair_t *ice_utils_select_nominated_cand_pair(ice_media_stream_t *media)
 
     return np;
 }
-
 
 
 /******************************************************************************/
