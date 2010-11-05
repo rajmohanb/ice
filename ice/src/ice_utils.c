@@ -584,6 +584,7 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media)
                 /** initialize the pair */
                 pair->valid_pair = false;
                 pair->nominated = false;
+                pair->check_nom_status = false;
 
                 pair->state = ICE_CP_FROZEN;
                 pair->media = media;
@@ -821,6 +822,7 @@ int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
 void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
 {
     uint32_t i, count = 0;
+    s_char nom_status[16], valid_status[16];
     ice_cand_pair_t *pair;
 
     ICE_LOG (LOG_SEV_DEBUG, 
@@ -836,14 +838,24 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
 
         if (!pair->local) continue;
 
+        if (pair->valid_pair == true)
+            stun_strcpy(valid_status, "validated");
+        else
+            stun_strcpy(valid_status, "NOT validated");
+
+        if (pair->nominated == true)
+            stun_strcpy(nom_status, "nominated");
+        else
+            stun_strcpy(nom_status, "NOT nominated");
+
         count++;
         ICE_LOG (LOG_SEV_DEBUG, 
-                "%d: [%d] %s:%d --> %s:%d %s [ %lld %s:%s ]\n", count, 
-                pair->local->comp_id, pair->local->transport.ip_addr, 
+                "%d: [%d] %s:%d --> %s:%d %s [%s] [%s] [ %lld %s:%s ]\n", 
+                count, pair->local->comp_id, pair->local->transport.ip_addr, 
                 pair->local->transport.port, pair->remote->transport.ip_addr, 
                 pair->remote->transport.port, cand_pair_states[pair->state], 
-                pair->priority, pair->local->foundation, 
-                pair->remote->foundation);
+                valid_status, nom_status, pair->priority, 
+                pair->local->foundation, pair->remote->foundation);
     }
 
     ICE_LOG (LOG_SEV_DEBUG, "Total %d valid pairs for this media\n", count);
@@ -1104,7 +1116,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     else
         cc_params.controlling_role = false;
 
-    cc_params.nominated = pair->nominated;
+    cc_params.nominated = pair->check_nom_status;
     cc_params.prflx_cand_priority = 
         ice_utils_compute_peer_reflexive_candidate_priority(pair->local);
     status = conn_check_session_set_session_params(
@@ -1611,50 +1623,62 @@ bool_t ice_media_utils_have_nominated_list(ice_media_stream_t *media)
 {
     uint32_t i;
     bool_t rtp_valid, rtcp_valid;
-    ice_cand_pair_t *valid;
+    ice_cand_pair_t *cp;
 
     rtp_valid = rtcp_valid = false;
     
     ICE_LOG(LOG_SEV_DEBUG, 
-            "Number of peer components[%d] for  media handle %p", 
-            media->num_peer_comp, media);
+            "[ICE MEDIA] Checking for nominated candidate pairs in "\
+            "the media %p.", media);
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        valid = &media->ah_valid_pairs[i];
-        if (valid->local == NULL) continue;
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
 
-        if (valid->nominated == false) continue;
+        if (cp->nominated == false) continue;
 
-        if (valid->local->comp_id == RTP_COMPONENT_ID)
+        if (cp->local->comp_id == RTP_COMPONENT_ID)
             rtp_valid = true;
-        else if (valid->local->comp_id == RTCP_COMPONENT_ID)
+        else if (cp->local->comp_id == RTCP_COMPONENT_ID)
             rtcp_valid = true;
     }
 
-    ICE_LOG(LOG_SEV_DEBUG, "returning from ice_media_utils_have_valid_list()");
-
     if (rtp_valid == true)
     {
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "Connectivity check for RTP component has succeeded "\
-                "for media %p", media);
+        ICE_LOG(LOG_SEV_DEBUG, "RTP is nominated");
     }
 
     if (rtcp_valid == true)
     {
-        ICE_LOG(LOG_SEV_DEBUG, 
-                "Connectivity check for RTCP component has succeeded "\
-                "for media %p", media);
+        ICE_LOG(LOG_SEV_DEBUG, "RTCP is nominated");
     }
 
     if ((rtp_valid == true) && (media->num_peer_comp == 1))
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And nominated candidate pairs are available for each of the "\
+                "component", media, media->num_peer_comp);
         return true;
+    }
 
     if ((rtp_valid == true) && (rtcp_valid == true))
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And nominated candidate pairs are available for each of "\
+                "the components", media, media->num_peer_comp);
         return true;
+    }
     else 
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And nominated candidate pairs are NOT YET available for "\
+                "each of the components", media, media->num_peer_comp);
         return false;
+    }
 }
 
 
@@ -1795,8 +1819,9 @@ int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media,
 
     for (i = 0, j = 0 ; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        cand_pair = &media->ah_valid_pairs[i];
+        cand_pair = &media->ah_cand_pairs[i];
         if (cand_pair->local == NULL) continue;
+        if (cand_pair->valid_pair == false) continue;
 
         if (j >= ICE_MAX_VALID_LIST_PAIRS) break;
         valid_pair = &valid_pairs->pairs[j];
@@ -1838,13 +1863,12 @@ int32_t ice_media_utils_get_nominated_list(ice_media_stream_t *media,
 
     for (i = 0, j = 0 ; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        cand_pair = &media->ah_valid_pairs[i];
+        cand_pair = &media->ah_cand_pairs[i];
         if (cand_pair->local == NULL) continue;
+        if (cand_pair->nominated == false) continue;
 
         if (j >= ICE_MAX_VALID_LIST_PAIRS) break;
         valid_pair = &valid_pairs->pairs[j];
-
-        if (cand_pair->nominated == false) continue;
 
         valid_pair->nominated = cand_pair->nominated;
 
@@ -2458,12 +2482,18 @@ int32_t ice_media_utils_update_cand_pair_states(
     int32_t i, status;
     ice_cand_pair_t *cp;
 
+    /**
+     * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+     * - The agent changes the states for all other Frozen pairs 
+     *   for the same media stream and same foundation to Waiting.
+     */
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
         cp = &media->ah_cand_pairs[i];
         if (cp->local == NULL) continue;
 
         if (cp == cur_cp) continue;
+        if (cp->state != ICE_CP_FROZEN) continue;
 
         if ((stun_strncmp((char *)cp->local->foundation, 
                           (char *)cur_cp->local->foundation, 
@@ -3146,7 +3176,7 @@ uint32_t ice_utils_get_nominated_pairs_count(ice_media_stream_t *media)
     uint32_t i, count;
 
     for (i = 0, count = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-        if (media->ah_valid_pairs[i].nominated == true) count++;
+        if (media->ah_cand_pairs[i].nominated == true) count++;
 
     return count;
 }
@@ -3218,32 +3248,52 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
 {
     uint32_t i;
     bool_t rtp_valid, rtcp_valid;
-    ice_cand_pair_t *valid;
+    ice_cand_pair_t *cp;
 
     rtp_valid = rtcp_valid = false;
     
     ICE_LOG(LOG_SEV_DEBUG, 
-            "Number of peer components[%d] for  media handle %p", 
-            media->num_peer_comp, media);
+            "[ICE MEDIA] Checking for valid candidate pairs in the media %p",
+            media);
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        valid = &media->ah_valid_pairs[i];
-        if (valid->local == NULL) continue;
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
 
-        if (valid->local->comp_id == RTP_COMPONENT_ID)
+        if (cp->valid_pair == false) continue;
+
+        if (cp->local->comp_id == RTP_COMPONENT_ID)
             rtp_valid = true;
-        else if (valid->local->comp_id == RTCP_COMPONENT_ID)
+        else if (cp->local->comp_id == RTCP_COMPONENT_ID)
             rtcp_valid = true;
     }
 
     if ((rtp_valid == true) && (media->num_peer_comp == 1))
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And valid candidate pairs are available for each of the "\
+                "component", media, media->num_peer_comp);
         return true;
+    }
 
     if ((rtp_valid == true) && (rtcp_valid == true))
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And valid candidate pairs are available for each of the "\
+                "components", media, media->num_peer_comp);
         return true;
+    }
     else 
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And valid candidate pairs are NOT YET available for each of "\
+                "the components", media, media->num_peer_comp);
         return false;
+    }
 }
 
 
@@ -3251,19 +3301,19 @@ ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
                                 ice_media_stream_t *media, uint32_t comp_id)
 {
     uint32_t i;
-    ice_cand_pair_t *vp = NULL, *np = NULL;
+    ice_cand_pair_t *cp = NULL, *np = NULL;
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        vp = &media->ah_valid_pairs[i];
-        if (vp->local == NULL) continue;
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
 
-        if (vp->local->comp_id != comp_id) continue;
+        if (cp->local->comp_id != comp_id) continue;
 
         if (np == NULL)
-            np = vp;
-        else if (vp->priority > np->priority)
-            np = vp;
+            np = cp;
+        else if (cp->priority > np->priority)
+            np = cp;
     }
 
     return np;

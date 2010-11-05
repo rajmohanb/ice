@@ -1009,7 +1009,7 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
 {
     uint32_t i;
     bool_t rtp_valid, rtcp_valid;
-    ice_cand_pair_t *valid;
+    ice_cand_pair_t *cp;
 
     rtp_valid = rtcp_valid = false;
 
@@ -1019,16 +1019,16 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
     
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        valid = &media->ah_valid_pairs[i];
-        if (valid->local == NULL) continue;
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
 
-        if (valid->local->comp_id == RTP_COMPONENT_ID)
+        if (cp->valid_pair == false) continue;
+
+        if (cp->local->comp_id == RTP_COMPONENT_ID)
             rtp_valid = true;
-        else if (valid->local->comp_id == RTCP_COMPONENT_ID)
+        else if (cp->local->comp_id == RTCP_COMPONENT_ID)
             rtcp_valid = true;
     }
-
-    ICE_LOG(LOG_SEV_DEBUG, "returning from ice_media_utils_have_valid_list()");
 
     if (rtp_valid == true)
     {

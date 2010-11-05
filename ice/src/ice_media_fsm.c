@@ -622,7 +622,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
                 if (check_result.check_succeeded == true)
                 {
-                    ice_candidate_t *local_cand;
+                    ice_candidate_t *local_cand, *remote_cand;
+                    ice_cand_pair_t *prflx_pair = NULL;
 
                     status = ice_cand_pair_fsm_inject_msg(
                             cp, ICE_EP_EVENT_CHECK_SUCCESS, &check_result);
@@ -650,30 +651,61 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                          
                         status = ice_utils_add_local_peer_reflexive_candidate(
                                                 cp, &check_result, &local_cand);
+
+                        status = ice_utils_search_remote_candidates(media, 
+                                                &stun_pkt->src, &remote_cand);
+
+                        status = ice_media_utils_add_new_candidate_pair(
+                                                    media, local_cand,
+                                                    remote_cand, &prflx_pair);
                     }
 
                     /** 
                      * RFC 5245 Sec 7.1.2.2.2 Constructing a Valid Pair
                      * construct a valid pair and add to the media list
                      */
-                    status = ice_utils_add_to_valid_list(media, 
-                                            local_cand, pkt, cp->nominated);
-                    if (status == STUN_OK)
+                    if (prflx_pair == NULL)
+                    {
+                        cp->valid_pair = true;
+                        cp->nominated = check_result.nominated;
+                    }
+                    else
+                    {
+                        prflx_pair->valid_pair = true;
+                        prflx_pair->nominated = check_result.nominated;
+                    }
+
+                    /**
+                     * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+                     * - The agent changes the states for all other Frozen
+                     *   pairs for the same media stream and same foundation
+                     *   to Waiting.
+                     */
+                    status = ice_media_utils_update_cand_pair_states(media, cp);
+                    if (status != STUN_OK)
+                    {
+                        ICE_LOG(LOG_SEV_ERROR,
+                                "Updating the candidate pair states of "\
+                                "the media failed - %d", status);
+
+                        /** just fallthrough ... */
+                    }
+
+                    if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
                     {
                         /**
-                         * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
-                         * - The agent changes the states for all other Frozen
-                         *   pairs for the same media stream and same foundation
-                         *   to Waiting.
+                         * Once there is at least one nominated pair in the 
+                         * valid list for every component of at least one 
+                         * media stream and the state of the check list is
+                         * Running:
+                         *
+                         * - The agent MUST change the state of processing 
+                         *   for its check list for that media stream to 
+                         *   Completed.
                          */
-                        status = ice_media_utils_update_cand_pair_states(media, cp);
-                        if (status != STUN_OK)
+                        if(ice_media_utils_have_nominated_list(media) == true)
                         {
-                            ICE_LOG(LOG_SEV_ERROR,
-                                    "Updating the candidate pair states of "\
-                                    "the media failed - %d", status);
-
-                            /** just fallthrough ... */
+                            media->state = ICE_MEDIA_CC_COMPLETED;
                         }
                     }
                 }
@@ -733,6 +765,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 }
 
 
+
+
 int32_t ice_media_stream_checklist_timer_expiry(
                                 ice_media_stream_t *media, handle arg)
 {
@@ -745,7 +779,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
     if (status == STUN_OK)
     {
         /** If the pair is frozen, then unfreeze before initiating the check */
-        if (pair->state == ICE_CP_FROZEN)
+        if ((pair->state == ICE_CP_FROZEN) || (pair->state == ICE_CP_SUCCEEDED))
             status = ice_cand_pair_fsm_inject_msg(
                                         pair, ICE_CP_EVENT_UNFREEZE, NULL);
 
@@ -839,11 +873,7 @@ int32_t ice_media_stream_evaluate_valid_pairs(
                 "[ICE MEDIA] Candidate pair %p current state %d", 
                 np, np->state);
 
-        np->nominated = true;
-
-        /********* Fixme!!! **********/
-        np->media = media;
-        /********* Fixme!!! **********/
+        np->check_nom_status = true;
 
         status = ice_utils_add_to_triggered_check_queue(media, np);
         if (status != STUN_OK)
