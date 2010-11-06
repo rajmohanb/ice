@@ -301,9 +301,6 @@ int32_t ice_create_session(handle h_inst,
                            ice_mode_type_t mode, 
                            handle *h_session);
 
-int32_t ice_session_set_connectivity_check_nomination_mode(handle h_inst, 
-                            handle h_session, ice_nomination_type_t nom_type);
-
 int32_t ice_session_set_relay_server_cfg(handle h_inst, 
                             handle h_session, ice_relay_server_cfg_t *relay);
 

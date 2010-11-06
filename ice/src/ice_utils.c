@@ -593,6 +593,12 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media)
 
                 /** compute the pair priority as per sec 5.7.2 */
                 ice_media_utils_compute_candidate_pair_priority(media, pair);
+
+                if (media->ice_session->instance->nomination_mode == 
+                                                ICE_NOMINATION_TYPE_AGGRESSIVE)
+                    pair->check_nom_status = true;
+                else
+                    pair->check_nom_status = false;
             }
         }
     }

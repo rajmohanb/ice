@@ -936,7 +936,7 @@ int main (int argc, char *argv[])
 
     app_initialize_ice();
 
-    status = ice_create_session(h_inst, ICE_SESSION_OUTGOING, ICE_MODE_LITE, &h_session);
+    status = ice_create_session(h_inst, ICE_SESSION_OUTGOING, &h_session);
     if (status != STUN_OK)
     {
         app_log (LOG_SEV_ERROR, "ice_create_session() returned error %d\n", status);

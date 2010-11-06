@@ -717,6 +717,9 @@ void app_create_ice_instance(void)
         goto ERROR_EXIT;
     }
 
+    status = ice_instance_set_connectivity_check_nomination_mode(
+                                        g_inst, ICE_NOMINATION_TYPE_REGULAR);
+
     app_log (LOG_SEV_INFO, "ICE instance created successfully");
     return;
 
