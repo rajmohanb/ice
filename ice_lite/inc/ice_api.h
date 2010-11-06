@@ -244,7 +244,7 @@ int32_t ice_set_client_software_name(handle h_inst, u_char *name);
 int32_t ice_destroy_instance(handle h_inst);
 
 int32_t ice_create_session(handle h_inst, 
-        ice_session_type_t session_type, ice_mode_type_t mode, handle *h_session);
+                ice_session_type_t ice_sess_type, handle *h_session);
 
 int32_t ice_session_add_media_stream (handle h_inst, handle h_session, 
                         ice_api_media_stream_t *media, handle *h_media);
