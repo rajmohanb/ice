@@ -51,8 +51,9 @@ int32_t ice_utils_get_highest_priority_nominated_valid_pair(
     high_pair = NULL;
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        pair = &media->ah_valid_pairs[i];
+        pair = &media->ah_cand_pairs[i];
         if(pair->local == NULL) continue;
+        if(pair->valid_pair == false) continue;
 
         if((pair->local->comp_id == comp_id) && (pair->priority > prio))
         {
@@ -88,8 +89,9 @@ int32_t ice_utils_get_nominated_valid_pair(
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        pair = &media->ah_valid_pairs[i];
+        pair = &media->ah_cand_pairs[i];
         if(pair->local == NULL) continue;
+        if(pair->nominated == false) continue;
 
         if(pair->local->comp_id == comp_id)
         {
@@ -2379,46 +2381,6 @@ int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp,
 }
 
 
-int32_t ice_utils_add_to_valid_list(ice_media_stream_t *media, 
-        ice_candidate_t *local_cand, ice_rx_stun_pkt_t *pkt, bool_t nominated)
-{
-    int32_t i;
-    ice_cand_pair_t *valid_pair;
-
-    /** find a free slot for the new valid pair */
-    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-    {                    
-        valid_pair = &media->ah_valid_pairs[i];
-        if (valid_pair->local == NULL) break;
-    }
-
-    if (i == ICE_MAX_CANDIDATE_PAIRS)
-    {
-        ICE_LOG(LOG_SEV_ERROR,
-                "[ICE] No more slots left for adding the new "\
-                "valid pair for media");
-        return STUN_NO_RESOURCE;
-    }
-
-    valid_pair->local = local_cand;
-    valid_pair->remote = 
-        ice_utils_get_peer_cand_for_pkt_src(media, &(pkt->src));
-
-    if (valid_pair->remote == NULL)
-    {
-        ICE_LOG (LOG_SEV_WARNING, 
-            "[ICE] Ignored binding request from unknown source");
-        valid_pair->local = NULL;
-        return STUN_OK;
-    }
-
-    valid_pair->nominated = nominated;
-
-    ICE_LOG (LOG_SEV_WARNING, "[ICE] Added new valid pair for the media");
-
-    return STUN_OK;
-}
-
 
 
 int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
@@ -3001,7 +2963,7 @@ int32_t ice_utils_process_incoming_check(
     else
     {
         ICE_LOG(LOG_SEV_INFO, 
-                "The pair is already on the check list ...");
+                "[ICE] The pair is already on the check list ...");
 
         /** check the current state of the pair */
         if ((cp->state == ICE_CP_FROZEN) || (cp->state == ICE_CP_WAITING))
@@ -3033,7 +2995,7 @@ int32_t ice_utils_process_incoming_check(
         else
         {
             ICE_LOG(LOG_SEV_CRITICAL,
-                    "Unknown invalid candidate pair state %d", cp->state);
+                    "[ICE] Unknown invalid candidate pair state %d", cp->state);
             return status;
         }
     }
@@ -3056,12 +3018,14 @@ int32_t ice_utils_process_incoming_check(
         if (cp->state == ICE_CP_SUCCEEDED)
         {
             /** search for this pair in the valid pair list */
-            valid_pair = ice_utils_search_cand_pair_in_valid_pair_list(media, cp);
+            valid_pair = 
+                ice_utils_search_cand_pair_in_valid_pair_list(media, cp);
             if (valid_pair == NULL)
             {
                 ICE_LOG(LOG_SEV_CRITICAL,
-                        "Could not find a corresponding entry in valid list for "\
-                        "the current candidate pair for media %p. Fixme!!!", media);
+                        "[ICE] Could not find a corresponding entry in "\
+                        "valid list for the current candidate pair for "\
+                        "media %p. Fixme!!!", media);
                 return STUN_INT_ERROR;
             }
 
@@ -3104,8 +3068,9 @@ ice_cand_pair_t *ice_utils_search_cand_pair_in_valid_pair_list(
 
     for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
     {
-        pair = &media->ah_valid_pairs[i];
+        pair = &media->ah_cand_pairs[i];
         if (pair->local == NULL) continue;
+        if (pair->valid_pair == false) continue;
 
         if((pair->local == cp->local) &&
            (pair->remote == cp->remote))

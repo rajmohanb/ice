@@ -528,18 +528,14 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
 
         app_log (LOG_SEV_INFO, 
                 "Number of Nominated pairs %d\n", valid_media->num_valid);
-        app_log (LOG_SEV_INFO, "VALID LIST\n");
+        app_log (LOG_SEV_INFO, "NOMINATED LIST\n");
 
         for (j = 0; j < valid_media->num_valid; j++)
         {
             pair = &valid_media->pairs[j];
-            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d", 
+            app_log (LOG_SEV_INFO, "comp id: %d local: %s:%d peer: %s:%d", 
                     pair->comp_id, pair->local.ip_addr, pair->local.port,
                     pair->peer.ip_addr, pair->peer.port);
-            if (pair->nominated == true)
-                app_log (LOG_SEV_INFO, "nominated\n");
-            else
-                app_log (LOG_SEV_INFO, "NOT nominated\n");
         }
     }
 

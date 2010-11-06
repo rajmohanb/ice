@@ -166,9 +166,6 @@ int32_t ice_utils_search_local_candidates(ice_media_stream_t *media,
 int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp, 
                     conn_check_result_t *check, ice_candidate_t **new_prflx);
 
-int32_t ice_utils_add_to_valid_list(ice_media_stream_t *media, 
-        ice_candidate_t *local_cand, ice_rx_stun_pkt_t *pkt, bool_t nominated);
-
 int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media);
 
 int32_t ice_media_utils_update_cand_pair_states(
