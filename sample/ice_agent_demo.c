@@ -83,7 +83,7 @@ static int demo_sockfds_count = 0;
 
 u_char *demo_buf;
 
-stun_log_level_t g_log_sev = LOG_SEV_DEBUG;
+stun_log_level_t g_log_sev = LOG_SEV_INFO;
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
