@@ -66,73 +66,6 @@ int32_t ice_create_instance(handle *h_inst)
 }
 
 
-static void ice_cc_callback_fxn (handle h_cc_inst, 
-        handle h_cc_session, conn_check_session_state_t state, handle data)
-{
-    int32_t status;
-    handle h_session;
-    ice_session_t *session;
-    ice_session_event_t event = ICE_SES_EVENT_MAX;
-
-    if ((h_cc_inst == NULL) || (h_cc_session == NULL))
-    {
-        ICE_LOG (LOG_SEV_ERROR, "FIXME: parameters not valid\n");
-        return;
-    }
-
-    switch(state)
-    {
-        case CC_OG_IDLE:
-        case CC_OG_CHECKING:
-        case CC_OG_INPROGRESS:
-            break;
-
-        case CC_OG_TERMINATED:
-        {
-            ICE_LOG (LOG_SEV_DEBUG, 
-                    "Outgoing connectivity check terminated");
-
-            /** declare success now? TODO - check if it is success */
-            /** event = ICE_CONN_CHECKS_DONE; */
-        }
-        break;
-
-        case CC_IC_IDLE:
-            break;
-        case CC_IC_TERMINATED:
-        {
-            ICE_LOG (LOG_SEV_DEBUG, 
-                    "*******************************************************************\n\n");
-            ICE_LOG (LOG_SEV_DEBUG,
-                    "Incoming connectivity check terminated");
-            ICE_LOG (LOG_SEV_DEBUG, 
-                    "\n\n*******************************************************************\n\n");
-
-            /** feed this into the fsm */
-            /* event = ICE_IC_CONN_CHECK; */
-        }
-        break;
-
-        default:
-            event = ICE_SES_EVENT_MAX;
-            break;
-    }
-
-    if ((state == CC_OG_TERMINATED) || (state == CC_IC_TERMINATED))
-    {
-        /** get the ice session handle who owns this turn session */
-        status = conn_check_session_get_app_param(
-                                h_cc_inst, h_cc_session, &h_session);
-
-        session = (ice_session_t *) h_session;
-
-        status = ice_session_fsm_inject_msg(session, event, data, NULL);
-    }
-
-    return;
-}
-
-
 
 static handle ice_cc_start_timer(uint32_t duration, handle arg)
 {
@@ -288,9 +221,6 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     cc_cbs.nwk_cb = ice_format_and_send_message;
     cc_cbs.start_timer_cb = ice_cc_start_timer;
     cc_cbs.stop_timer_cb = ice_stop_timer;
-
-    /** set callback function for conn check session state */
-    cc_cbs.session_state_cb = ice_cc_callback_fxn;
 
     status = conn_check_instance_set_callbacks(instance->h_cc_inst, &cc_cbs);
     if (status != STUN_OK)

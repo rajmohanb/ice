@@ -141,7 +141,6 @@ int32_t conn_check_instance_set_callbacks(
     instance->nwk_send_cb = cbs->nwk_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
-    instance->state_change_cb = cbs->session_state_cb;
 
     /** propagate app callbacks to stun txn */
     app_cbs.nwk_cb = cc_nwk_send_cb_fxn;
@@ -410,30 +409,6 @@ int32_t conn_check_destroy_session(handle h_inst, handle h_session)
     return STUN_OK;
 }
 
-int32_t conn_check_session_initiate_check(handle h_inst, handle h_session)
-{
-    conn_check_instance_t *instance;
-    conn_check_session_t *session;
-    int32_t status = STUN_OK;
-    conn_check_session_state_t cur_state;
-
-    if ((h_inst == NULL) || (h_session == NULL))
-        return STUN_INVALID_PARAMS;
-
-    instance = (conn_check_instance_t *) h_inst;
-    session = (conn_check_session_t *) h_session;
-
-    if (session->sess_type != CC_CLIENT_SESSION)
-        return STUN_INVALID_PARAMS;
-
-    cur_state = session->state;
-    status = conn_check_session_fsm_inject_msg(session, CONN_CHECK_REQ, NULL);
-
-    if (cur_state != session->state)
-        instance->state_change_cb(h_inst, h_session, session->state, NULL);
-
-    return status;
-}
 
 int32_t conn_check_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg)
@@ -445,7 +420,6 @@ int32_t conn_check_session_inject_received_msg(
 
     stun_method_type_t method;
     stun_msg_type_t class;
-    conn_check_session_state_t cur_state;
 
     if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
         return STUN_INVALID_PARAMS;
@@ -490,26 +464,7 @@ int32_t conn_check_session_inject_received_msg(
     
     session->h_resp = h_msg;
 
-    cur_state = session->state;
-    status = conn_check_session_fsm_inject_msg(session, event, h_msg);
-
-#if 0
-    if (cur_state != session->state)
-    {
-        handle data;
-
-        status = cc_utils_get_app_data_for_current_state(session, &data);
-        if (status != STUN_OK)
-        {
-            ICE_LOG (LOG_SEV_ERROR, 
-                    "conn_check_utils_get_app_data_for_current_state return error\n");
-        }
-
-        instance->state_change_cb(h_inst, h_session, session->state, data);
-    }
-#endif
-
-    return status;
+    return conn_check_session_fsm_inject_msg(session, event, h_msg);
 }
 
 
