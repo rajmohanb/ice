@@ -35,14 +35,14 @@
 #include <stun_txn_api.h>
 #include "ice_api.h"
 
-//#define ICE_IPV6
+#define ICE_IPV6
 
 
 //#define STUN_SRV_IP "198.65.166.165"
 //#define STUN_SRV_IP "75.101.138.128"
 //#define STUN_SRV_IP "216.146.46.55"
 #ifdef ICE_IPV6
-#define STUN_SRV_IP "2001:db8:0:242::67"
+#define STUN_SRV_IP "2001:db8:0:242::36"
 #else
 #define STUN_SRV_IP "192.168.1.2"
 #endif
@@ -54,7 +54,7 @@
 #define AGENT_DOMAIN "domain.org"
 
 #ifdef ICE_IPV6
-#define LOCAL_IP   "2001:db8:0:242::67"
+#define LOCAL_IP   "2001:db8:0:242::36"
 #else
 #define LOCAL_IP   "192.168.1.2"
 #endif
@@ -291,7 +291,7 @@ static void encode_session(handle h_inst, handle h_session)
 
 static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_media)
 {
-    char linebuf[80];
+    char linebuf[160];
     unsigned media_cnt = 0;
     unsigned comp0_port = 0;
     char     comp0_addr[80];
@@ -307,7 +307,7 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
 
     memset(&peer_session_desc, 0, sizeof(peer_session_desc));
 
-    peer_session_desc.ice_mode = ICE_MODE_FULL;
+    peer_session_desc.ice_mode = ICE_MODE_LITE;
     peer_session_desc.num_media = 1;
     media = &peer_session_desc.media[0];
 
@@ -322,6 +322,8 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
 
         printf(">");
         if (stdout) fflush(stdout);
+
+        memset(linebuf, 0, 160);
 
         if (fgets(linebuf, sizeof(linebuf), stdin)==NULL)
             break;
@@ -434,8 +436,13 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
                 strcpy((char *)cand->foundation, foundation);
                 cand->priority = prio;
 
-                cand->protocol = STUN_INET_ADDR_IPV4;
+                cand->protocol = ICE_TRANSPORT_UDP;
                 
+#ifdef ICE_IPV6
+                cand->ip_addr_type = STUN_INET_ADDR_IPV6;
+#else
+                cand->ip_addr_type = STUN_INET_ADDR_IPV4;
+#endif
                 strcpy((char *)cand->ip_addr, ipaddr);
                 cand->port = port;
 
@@ -1009,7 +1016,11 @@ int main (int argc, char *argv[])
                 {
                     pkt.h_msg = h_rcvdmsg;
                     pkt.transport_param = (handle) fd_list[i];
+#ifdef ICE_IPV6
+                    pkt.src.host_type = STUN_INET_ADDR_IPV6;
+#else
                     pkt.src.host_type = STUN_INET_ADDR_IPV4;
+#endif
                     strncpy((char *)pkt.src.ip_addr, (char *)address, 16);
                     pkt.src.port = port;
 

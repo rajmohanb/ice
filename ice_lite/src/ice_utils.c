@@ -25,6 +25,7 @@ extern "C" {
 #include "conn_check_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
+#include "ice_addr_sel.h"
 #include "ice_utils.h"
 
 
@@ -404,6 +405,8 @@ int32_t ice_utils_set_peer_media_params(
     stun_strncpy(media->peer_pwd, 
                         media_params->ice_pwd, ICE_MAX_PWD_LEN - 1);
 
+    ICE_LOG(LOG_SEV_INFO, "[ICE_LITE] Added %d remote candidates", x);
+
     return STUN_OK;
 }
 
@@ -561,113 +564,6 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media)
 }
 
 
-int32_t ice_media_utils_sort_candidate_pairs(ice_media_stream_t *media)
-{
-    int i, j;
-    int test;
-    ice_cand_pair_t temp;
-
-    /** we use bubble sort method here for sorting */
-    for(i = ICE_MAX_CANDIDATE_PAIRS - 1; i > 0; i--)
-    {
-        test=0;
-        for(j = 0; j < i; j++)
-        {
-            /** compare neighboring elements */
-            if(media->ah_cand_pairs[j].priority < 
-                        media->ah_cand_pairs[j+1].priority)
-            {
-                stun_memcpy(&temp, &media->ah_cand_pairs[j], sizeof(temp));
-                stun_memcpy(&media->ah_cand_pairs[j], 
-                        &media->ah_cand_pairs[j+1], sizeof(temp));
-                stun_memcpy(&media->ah_cand_pairs[j+1], &temp, sizeof(temp));
-                test = 1;
-            }
-        }
-
-        /** exit if the list is sorted! */
-        if(test==0) break;
-    }
-  
-    return STUN_OK;
-}
-
-
-
-int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
-{
-    uint32_t i, j;
-    ice_cand_pair_t *outer, *inner, *waiting_pair;
-
-    /**
-     * sec 5.7.4 computing states [Applicable for the first media stream]
-     * - For all pairs with the same foundation, it sets the state of the
-     *   pair with the lowest component ID to Waiting. If there is more
-     *   than one such pair, the one with the highest priority is used.
-     */
-
-    /** note: this is ugly, need to re-factor */
-    for (i =0 ; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-    {
-        outer = &media->ah_cand_pairs[i];
-
-        if (!outer->local) continue;
-        outer->state = ICE_CP_WAITING;
-        waiting_pair = outer;
-
-        for (j = 0; j < ICE_MAX_CANDIDATE_PAIRS; j++)
-        {
-            uint32_t len1, len2;
-            inner = &media->ah_cand_pairs[j];
-
-            if (!inner->local) continue;
-
-            if (i == j) continue;
-
-            len1 = strlen((char *)outer->local->foundation);
-            len2 = strlen((char *)inner->local->foundation);
-
-            if (len1 != len2) continue;
-
-            if (strncmp((char *)outer->local->foundation, 
-                            (char *)inner->local->foundation, len1) == 0)
-            {
-                len1 = strlen((char *)outer->remote->foundation);
-                len2 = strlen((char *)inner->remote->foundation);
-
-                if (len1 != len2) continue;
-
-                if (strncmp((char *)outer->remote->foundation, 
-                            (char *)inner->remote->foundation, len1) != 0)
-                    continue;
-
-                /** foundations matched */
-                if (inner->local->comp_id <= waiting_pair->local->comp_id)
-                {
-                    /**
-                     * note: if there is more than one such pair, the one
-                     * with the highest priority is used - tbd
-                     */
-                    waiting_pair->state = ICE_CP_FROZEN;
-                    waiting_pair = inner;
-                    waiting_pair->state = ICE_CP_WAITING;
-
-#ifdef DEBUG
-                    ICE_LOG(LOG_SEV_CRITICAL, "value i:%d and j:%d", i, j);
-                    ICE_LOG(LOG_SEV_DEBUG, 
-                            "Waiting pair found for comp id %d foundation %s:%s", 
-                            inner->local->comp_id, outer->local->foundation, 
-                            inner->local->foundation);
-#endif
-
-                }
-            }
-        }
-    }
-
-    return STUN_OK;
-}
-
 
 void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
 {
@@ -741,6 +637,7 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
 }
 
 
+#if 0
 int32_t ice_media_utils_get_next_connectivity_check_pair(
         ice_media_stream_t *media, ice_cand_pair_t **pair)
 {
@@ -807,64 +704,8 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
 
     return status;
 }
+#endif
 
-
-int32_t ice_utils_init_connectivity_check(
-                ice_media_stream_t *media, ice_cand_pair_t *pair)
-{
-    int32_t status;
-    handle h_cc_inst;
-
-    h_cc_inst = media->ice_session->instance->h_cc_inst;
-
-    status = conn_check_create_session(h_cc_inst, 
-                                    CC_CLIENT_SESSION, &pair->h_cc_session);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-                "conn_check_create_session() returned error %d", status);
-    }
-
-    status = conn_check_session_set_transport_param(
-                                h_cc_inst, pair->h_cc_session, 
-                                pair->local->transport_param);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_DEBUG, 
-            "conn_check_session_set_transport_param() returned error %d", 
-            status);
-    }
-
-    status = conn_check_session_set_peer_transport_params(h_cc_inst, 
-                            pair->h_cc_session, 
-                            pair->remote->transport.type, 
-                            pair->remote->transport.ip_addr, 
-                            pair->remote->transport.port);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_DEBUG, 
-            "conn_check_session_set_peer_transport_params() "\
-            "returned error %d", status);
-    }
-
-    /** set the ice media handle as application handle */
-    status = conn_check_session_set_app_param(h_cc_inst, 
-                                            pair->h_cc_session, media);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_DEBUG, 
-            "conn_check_session_set_app_param() returned error %d", status);
-    }
-
-    status = conn_check_session_initiate_check(h_cc_inst, pair->h_cc_session);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_DEBUG, 
-            "conn_check_session_initiate_check() returned error %d", status);
-    }
-
-    return status;
-}
 
 
 int32_t ice_utils_create_conn_check_session(
@@ -1524,9 +1365,10 @@ int32_t ice_utils_determine_session_state(ice_session_t *session)
 
 int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
 {
-    int32_t comp_loop, i, comp_id;
+    int32_t comp_loop, i, comp_id, status = STUN_OK;
     int32_t rtp_vp_cnt, rtcp_vp_cnt, vp_index = 0;
     ice_cand_pair_t *vp = &media->ah_valid_pairs[vp_index];
+    bool_t addr_sel_reqd = false;
 
     rtp_vp_cnt = rtcp_vp_cnt = 0;
 
@@ -1552,14 +1394,19 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
                 vp = &media->ah_valid_pairs[vp_index];
             }
         }
-        
-        if ((rtp_vp_cnt == 1) && (rtcp_vp_cnt == 1))
+    }
+
+
+    if (media->num_peer_comp == 1)
+    {
+        if ((rtp_vp_cnt == 1) || (rtcp_vp_cnt == 1))
         {
             media->state = ICE_MEDIA_CC_COMPLETED;
         }
-        else
+        else if ((rtp_vp_cnt > 1) || (rtcp_vp_cnt > 1))
         {
             /**
+             * RFC 5245 sec 8.2.2 Peer Is Lite
              * if there is more than one pair per component, then select a pair
              * based on local policy. Further, the media state should not move
              * to COMPLETED. This is because both the ice lite parties might 
@@ -1567,14 +1414,108 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
              * controlling agent must send an updated offer with the 
              * remote-candidates attributes set to the chosen pair.
              *
-             * The local policy here is left to the application. The stack will
-             * provide all the valid pairs per component to the application.
-             * But the state media stream will remains in RUNNING state.
+             * The local policy adopted to select a single pair is by following
+             * the procedures of RFC 3484 and using the default policy table 
+             * defined there in.
              */
+            addr_sel_reqd = true;
+        }
+        else
+        {
+            media->state = ICE_MEDIA_CC_FAILED;
+        }
+    }
+    else
+    {
+        /** implicit assumption - 2 components */
+
+        if ((rtp_vp_cnt == 0) || (rtcp_vp_cnt == 0))
+        {
+            media->state = ICE_MEDIA_CC_FAILED;
+        }
+        else if ((rtp_vp_cnt == 1) && (rtcp_vp_cnt == 1))
+        {
+            media->state = ICE_MEDIA_CC_COMPLETED;
+        }
+        else
+        {
+            /**
+             * RFC 5245 sec 8.2.2 Peer Is Lite
+             * if there is more than one pair per component, then select a pair
+             * based on local policy. Further, the media state should not move
+             * to COMPLETED. This is because both the ice lite parties might 
+             * have chosen different valid pair. To reconcile this, the 
+             * controlling agent must send an updated offer with the 
+             * remote-candidates attributes set to the chosen pair.
+             *
+             * The local policy adopted to select a single pair is by following
+             * the procedures of RFC 3484 and using the default policy table 
+             * defined there in.
+             */
+            addr_sel_reqd = true;
+        }
+    }
+
+    if (addr_sel_reqd == true)
+    {
+        int32_t j = 0;
+        ice_rfc3484_addr_pair_t *pair;
+        ice_rfc3484_addr_pair_t addr_pairs[ICE_CANDIDATES_MAX_SIZE];
+
+        comp_id = RTP_COMPONENT_ID;
+        for (comp_loop = 0, j = 0; comp_loop < media->num_peer_comp; 
+                                                    comp_loop++, comp_id++)
+        {
+            bool_t vp_rewrote = false;
+
+            pair = &addr_pairs[j];
+            stun_memset(addr_pairs, 0, sizeof(addr_pairs));
+
+            for(i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+            {
+                ice_cand_pair_t *vp = &media->ah_valid_pairs[i];
+                if (!vp->local) continue;
+
+                if (vp->local->comp_id == comp_id)
+                {
+                    stun_memcpy(&pair->src, 
+                            &vp->local->transport, sizeof(ice_transport_t));
+
+                    stun_memcpy(&pair->dest, 
+                            &vp->remote->transport, sizeof(ice_transport_t));
+
+                    pair->reachable = false;
+                    j++;
+                    pair = &addr_pairs[j];
+                }
+            }
+
+            ice_addr_sel_determine_destination_address(addr_pairs, j);
+
+            for(i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+            {
+                ice_cand_pair_t *vp = &media->ah_valid_pairs[i];
+                if (!vp->local) continue;
+
+                if (vp->local->comp_id == comp_id)
+                {
+                    stun_memset(vp, 0, sizeof(ice_cand_pair_t));
+
+                    if (vp_rewrote == false)
+                    {
+                        stun_memcpy(&vp->local->transport, 
+                                    addr_pairs[0].src, sizeof(ice_transport_t));
+                        stun_memcpy(&vp->remote->transport, 
+                                    addr_pairs[0].dest, sizeof(ice_transport_t));
+
+                        vp_rewrote = true;
+                    }
+                }
+            }
         }
     }
     
-    return STUN_OK;
+    return status;
 }
 
 
