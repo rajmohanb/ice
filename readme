@@ -14,7 +14,13 @@ their functionality
 
 6. ice_lite - ice lite layer
 
-7. platform - sample reference platform abstraction layer. This is not part of the ICE stack release and has been provided as a reference so as to aid in integration and MUST not be included in the final integrated agent application. The sample abstrction layer might make use of utilities and libraries from other sources and 3rd party.
+7. platform - sample reference platform abstraction layer. This is not part of 
+the ICE stack release and has been provided as a reference so as to aid in 
+integration and MUST not be included in the final integrated agent application. 
+The sample abstrction layer might make use of utilities and libraries from 
+other sources and 3rd party. MindBricks is not liable in whatsoever manner in 
+the event that this sample layer is used by the licensee in the final product.
+
 
 8. sample - sample code
 
