@@ -59,7 +59,7 @@ OBJ:=$(SRC:c=o)
 	@echo [CC] 	$< ...
 	$(CC) $(CFLAGS) -o $*.o $<
 
-$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT)
+$(TARGET) : clean $(STUN_KEEPALIVE) $(ICE_LITE_AGENT)
 
 $(ICE_LITE_AGENT) :
 	@echo "Creating ice lite sample... " $(TARGET) 

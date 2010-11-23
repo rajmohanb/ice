@@ -35,12 +35,11 @@
 #include <stun_txn_api.h>
 #include "ice_api.h"
 
-#define ICE_IPV6
+
+//#define ICE_IPV6
+//#define ICE_TEST_RFC3484
 
 
-//#define STUN_SRV_IP "198.65.166.165"
-//#define STUN_SRV_IP "75.101.138.128"
-//#define STUN_SRV_IP "216.146.46.55"
 #ifdef ICE_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::36"
 #else
@@ -307,7 +306,7 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
 
     memset(&peer_session_desc, 0, sizeof(peer_session_desc));
 
-    peer_session_desc.ice_mode = ICE_MODE_LITE;
+    peer_session_desc.ice_mode = ICE_MODE_FULL;
     peer_session_desc.num_media = 1;
     media = &peer_session_desc.media[0];
 
@@ -386,6 +385,9 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
                 strcpy(media->ice_ufrag, attr+strlen(attr)+1);
             } else if (strcmp(attr, "ice-pwd")==0) {
                 strcpy(media->ice_pwd, attr+strlen(attr)+1);
+            } else if (strcmp(attr, "ice-lite")==0) {
+                peer_session_desc.ice_mode = ICE_MODE_LITE;
+                app_log(LOG_SEV_INFO, "PEER is ice lite");
             } else if (strcmp(attr, "rtcp")==0) {
                 char *val = attr+strlen(attr)+1;
                 int cnt;
@@ -473,6 +475,7 @@ on_error:
 }
 
 
+
 void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
 {
     int32_t status, i, j;
@@ -500,9 +503,13 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
         for (j = 0; j < valid_media->num_valid; j++)
         {
             pair = &valid_media->pairs[j];
-            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d\n", 
+            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d", 
                     pair->comp_id, pair->local.ip_addr, pair->local.port,
                     pair->peer.ip_addr, pair->peer.port);
+            if (pair->nominated == true)
+                app_log (LOG_SEV_INFO, "Nominated\n");
+            else
+                app_log (LOG_SEV_INFO, "NOT Nominated\n");
         }
     }
 
@@ -974,6 +981,19 @@ int main (int argc, char *argv[])
     my_buf = (unsigned char *) platform_calloc (1, TRANSPORT_MTU_SIZE);
 
     ice_lite_input_remote_sdp(h_inst, h_session, h_audio);
+
+    /**
+     * Enable the following call to test scenarios where the peer is 
+     * also a ice lite implementation and has provided multiple host
+     * candidates (remember, IPv6 node can simultaneously have multiple
+     * IPv6 addresses with different scopes. In such a scenario, the ice
+     * stack will apply the rules as per rfc 3484 and nominate one of 
+     * valid pairs.
+     */
+#ifdef ICE_TEST_RFC3484
+    ice_lite_sample_print_valid_list(h_inst, h_session);
+#endif
+
     ic_msg_count = 0;
 
     while (g_cc_done == false) {

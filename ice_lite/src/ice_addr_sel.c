@@ -243,7 +243,7 @@ scope_end:
 
 
 
-static int32_t rfc3484_cmp_addr(const void *p1, const void *p2, void *arg)
+static int32_t rfc3484_cmp_addr(const void *p1, const void *p2)
 {
     int32_t addr1_src_scope, addr1_dst_scope, addr1_src_label, addr1_dst_label;
     int32_t addr2_src_scope, addr2_dst_scope, addr2_src_label, addr2_dst_label;
@@ -259,10 +259,10 @@ static int32_t rfc3484_cmp_addr(const void *p1, const void *p2, void *arg)
 
     /** Rule 1:  Avoid unusable destinations */
     if ((addr1->reachable == true) && (addr2->reachable == false))
-        return 1;
+        return -1;
 
     if ((addr1->reachable == false) && (addr2->reachable == true))
-        return -1;
+        return 1;
 
     /** 
      * The ice stack application might not want to implement the functionality
@@ -279,11 +279,11 @@ static int32_t rfc3484_cmp_addr(const void *p1, const void *p2, void *arg)
 
     if ((addr1_dst_scope == addr1_src_scope) && 
             (addr2_dst_scope != addr2_src_scope))
-        return 1;
+        return -1;
 
     if ((addr1_dst_scope != addr1_src_scope) &&
             (addr2_dst_scope == addr2_src_scope))
-        return -1;
+        return 1;
 
     /** Rule 3:  Avoid deprecated addresses */
     /** no information as to whether an address is deprecated or not */
@@ -300,33 +300,33 @@ static int32_t rfc3484_cmp_addr(const void *p1, const void *p2, void *arg)
     addr2_src_label = rfc3484_get_label(addr2->src);
     addr2_dst_label = rfc3484_get_label(addr2->dest);
 
-    if ((addr1_dst_scope == addr1_src_scope) && 
-            (addr2_dst_scope != addr2_src_scope))
-        return 1;
-
-    if ((addr1_dst_scope != addr1_src_scope) &&
-            (addr2_dst_scope == addr2_src_scope))
+    if ((addr1_dst_label == addr1_src_label) && 
+            (addr2_dst_label != addr2_src_label))
         return -1;
+
+    if ((addr1_dst_label != addr1_src_label) &&
+            (addr2_dst_label == addr2_src_label))
+        return 1;
 
     /** Rule 6:  Prefer higher precedence */
     addr1_prec = rfc3484_get_precedence(addr1->dest);
     addr2_prec = rfc3484_get_precedence(addr2->dest);
 
     if (addr1_prec > addr2_prec)
-        return 1;
+        return -1;
 
     if (addr1_prec < addr2_prec)
-        return -1;
+        return 1;
 
     /** Rule 7:  Prefer native transport */
     /** no information on whether the given address is native or encapsulated */
 
     /** Rule 8:  Prefer smaller scope */
     if (addr1_dst_scope < addr2_dst_scope)
-        return 1;
+        return -1;
 
     if (addr1_dst_scope > addr2_dst_scope)
-        return -1;
+        return 1;
 
     /** Rule 9:  Use longest matching prefix */
     if (addr1->dest->type == addr2->dest->type)
@@ -337,10 +337,10 @@ static int32_t rfc3484_cmp_addr(const void *p1, const void *p2, void *arg)
         addr2_match_bits = rfc3484_get_common_matching_prefix(addr2);
 
         if (addr1_match_bits > addr2_match_bits)
-            return 1;
+            return -1;
 
         if (addr1_match_bits < addr2_match_bits)
-            return -1;
+            return 1;
     }
 
     /** Rule 10:  Otherwise, leave the order unchanged */
@@ -352,8 +352,8 @@ static int32_t rfc3484_cmp_addr(const void *p1, const void *p2, void *arg)
 int32_t ice_addr_sel_determine_destination_address(
                     ice_rfc3484_addr_pair_t *addr_list, int32_t num)
 {
-    qsort_r(addr_list, num, 
-            sizeof(ice_rfc3484_addr_pair_t), rfc3484_cmp_addr, NULL);
+    qsort(addr_list, num, 
+            sizeof(ice_rfc3484_addr_pair_t), rfc3484_cmp_addr);
 
     return STUN_OK;
 }

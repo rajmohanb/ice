@@ -1458,15 +1458,15 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
 
     if (addr_sel_reqd == true)
     {
-        int32_t j = 0;
+        int32_t j;
         ice_rfc3484_addr_pair_t *pair;
         ice_rfc3484_addr_pair_t addr_pairs[ICE_CANDIDATES_MAX_SIZE];
 
         comp_id = RTP_COMPONENT_ID;
-        for (comp_loop = 0, j = 0; comp_loop < media->num_peer_comp; 
+        for (comp_loop = 0; comp_loop < media->num_peer_comp; 
                                                     comp_loop++, comp_id++)
         {
-            bool_t vp_rewrote = false;
+            j = 0;
 
             pair = &addr_pairs[j];
             stun_memset(addr_pairs, 0, sizeof(addr_pairs));
@@ -1478,11 +1478,9 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
 
                 if (vp->local->comp_id == comp_id)
                 {
-                    stun_memcpy(&pair->src, 
-                            &vp->local->transport, sizeof(ice_transport_t));
+                    pair->src = &vp->local->transport;
 
-                    stun_memcpy(&pair->dest, 
-                            &vp->remote->transport, sizeof(ice_transport_t));
+                    pair->dest = &vp->remote->transport;
 
                     pair->reachable = false;
                     j++;
@@ -1499,16 +1497,10 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
 
                 if (vp->local->comp_id == comp_id)
                 {
-                    stun_memset(vp, 0, sizeof(ice_cand_pair_t));
-
-                    if (vp_rewrote == false)
+                    if ((addr_pairs[0].src == &vp->local->transport) &&
+                            (addr_pairs[0].dest == &vp->remote->transport))
                     {
-                        stun_memcpy(&vp->local->transport, 
-                                    addr_pairs[0].src, sizeof(ice_transport_t));
-                        stun_memcpy(&vp->remote->transport, 
-                                    addr_pairs[0].dest, sizeof(ice_transport_t));
-
-                        vp_rewrote = true;
+                        vp->nominated = true;
                     }
                 }
             }

@@ -26,7 +26,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#define __USE_GNU
 #include <stdlib.h>
 #include <time.h>
 #include <sys/socket.h>
