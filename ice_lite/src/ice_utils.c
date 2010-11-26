@@ -358,7 +358,17 @@ int32_t ice_utils_set_peer_media_params(
             cand->priority = peer_cand->priority;
             stun_memcpy(cand->foundation, 
                     peer_cand->foundation, ICE_FOUNDATION_MAX_LEN);
-            cand->comp_id = peer_cand->component_id;
+
+            /** 
+             * the comp id is present at two places in the data provided
+             * by the application. One at comp level and the other at each
+             * candidate level. The following is just incase of a scenario
+             * where the the application does not update at both places.
+             */
+            if (peer_cand->component_id)
+                cand->comp_id = peer_cand->component_id;
+            else
+                cand->comp_id = peer_comp->comp_id;
 
             /** 
              * should we care about the following?
