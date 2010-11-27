@@ -1411,6 +1411,7 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
     {
         if ((rtp_vp_cnt == 1) || (rtcp_vp_cnt == 1))
         {
+            ice_utils_dual_lite_nominate_available_pair(media);
             media->state = ICE_MEDIA_CC_COMPLETED;
         }
         else if ((rtp_vp_cnt > 1) || (rtcp_vp_cnt > 1))
@@ -1445,6 +1446,7 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
         }
         else if ((rtp_vp_cnt == 1) && (rtcp_vp_cnt == 1))
         {
+            ice_utils_dual_lite_nominate_available_pair(media);
             media->state = ICE_MEDIA_CC_COMPLETED;
         }
         else
@@ -1518,6 +1520,22 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
     }
     
     return status;
+}
+
+
+void ice_utils_dual_lite_nominate_available_pair(ice_media_stream_t *media)
+{
+    uint32_t i;
+    
+    for(i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        ice_cand_pair_t *vp = &media->ah_valid_pairs[i];
+        if (!vp->local) continue;
+
+        vp->nominated = true;
+    }
+
+    return;
 }
 
 
