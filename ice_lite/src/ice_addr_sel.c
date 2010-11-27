@@ -26,6 +26,8 @@ extern "C" {
 
 
 #define RFC3484_DEFAULT_POLICY_TBL_SIZE     5
+#define RFC3484_DEF_PRECEDENCE              0
+#define RFC3484_DEF_LABEL                   5
 
 
 typedef struct
@@ -139,7 +141,10 @@ static int32_t rfc3484_get_precedence(ice_transport_t *addr)
         }
     }
 
-    return def_policy_table[i].precedence;
+    if (i == RFC3484_DEFAULT_POLICY_TBL_SIZE)
+        return RFC3484_DEF_PRECEDENCE;
+    else
+        return def_policy_table[i].precedence;
 }
 
 
@@ -174,7 +179,10 @@ static int32_t rfc3484_get_label(ice_transport_t *addr)
         }
     }
 
-    return def_policy_table[i].label;
+    if (i >= RFC3484_DEFAULT_POLICY_TBL_SIZE)
+        return RFC3484_DEF_LABEL;
+    else
+        return def_policy_table[i].label;
 }
 
 
