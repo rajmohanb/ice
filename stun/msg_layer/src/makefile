@@ -25,8 +25,8 @@ SRC = stun_msg_api.c stun_attr_api.c stun_utils.c
 # Include header files
 INCLUDE := -I ../inc -I ../../../ -I ../../enc_dec/src -I $(ICE_APP_INCLUDE_PATH)
 
-CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DENABLE_TURN \
-		  -DENABLE_ICE $(INCLUDE)
+CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DMB_ENABLE_TURN \
+		  -DMB_ENABLE_ICE $(INCLUDE)
 
 OBJS:=$(SRC:c=o)
 #

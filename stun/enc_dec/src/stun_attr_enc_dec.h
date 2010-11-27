@@ -105,7 +105,7 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
 int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr);
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
 int32_t stun_attr_encode_channel_number(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len);
 
@@ -161,7 +161,7 @@ int32_t stun_attr_decode_reservation_token(u_char *buf_head,
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr);
 #endif
 
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
 
 int32_t stun_attr_encode_priority(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len);

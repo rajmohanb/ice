@@ -190,7 +190,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
 
     switch(ntohs(val16) & STUN_MSG_METHOD_TYPE_BITMAP) {
         case 0x0001: msg->hdr.method = STUN_METHOD_BINDING; break;
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
         case 0x0003: msg->hdr.method = STUN_METHOD_ALLOCATE; break;
         case 0x0004: msg->hdr.method = STUN_METHOD_REFRESH; break;
         case 0x0006: msg->hdr.method = STUN_METHOD_SEND; break;

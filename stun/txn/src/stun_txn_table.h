@@ -25,6 +25,12 @@ extern "C" {
 typedef struct {
     handle h_txn;
     u_char trans_id[STUN_TXN_ID_BYTES];
+} stun_txn_table_node_t;
+
+typedef struct {
+    uint32_t size;
+    uint32_t count;
+    stun_txn_table_node_t *nodes;
 } stun_txn_table_t;
 
 #define STUN_TXN_TABLE_MAX_TXNS     25

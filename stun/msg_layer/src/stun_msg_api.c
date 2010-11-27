@@ -283,7 +283,7 @@ int32_t stun_msg_add_attributes(handle h_msg, handle *ah_attr, uint32_t num)
 
     for ( i = 0; i < num; i++)
     {
-        attr = (stun_attr_hdr_t *) ah_attr;
+        attr = (stun_attr_hdr_t *) *ah_attr;
 
         if (attr->type >= STUN_ATTR_MAX)
             return STUN_INVALID_PARAMS;

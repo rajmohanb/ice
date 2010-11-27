@@ -16,8 +16,8 @@ INCLUDE :=-I ../ -I ../ice/inc -I ../turn/inc -I ../stun/msg_layer/inc -I ../ -I
 # library files 
 LIBRARY := ../ice/lib/ice_agent_lib.a ../conn_check/lib/conn_check.a ../turn/lib/turn.a ../stun/msg_layer/lib/stun_msg_layer.a ../stun/parse_format/lib/stun_parse_format.a ../stun/transaction/lib/stun_txn.a ../platform/lib/lib_platform.a -lssl -lm -lrt -ldl
 
-CFLAGS += -g -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX -DENABLE_TURN
-#CFLAGS += -g -Wall -Wstrict-prototypes -fmudflap -c $(INCLUDE) -DLINUX -DENABLE_TURN
+CFLAGS += -g -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX -DMB_ENABLE_TURN
+#CFLAGS += -g -Wall -Wstrict-prototypes -fmudflap -c $(INCLUDE) -DLINUX -DMB_ENABLE_TURN
 
 OBJ:=$(SRC:c=o)
 

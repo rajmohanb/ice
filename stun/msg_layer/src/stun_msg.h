@@ -235,7 +235,7 @@ typedef struct {
 typedef stun_mapped_addr_attr_t stun_alt_server_attr_t;
 
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
 
 typedef struct {
 
@@ -354,7 +354,7 @@ typedef struct {
 
 #endif
 
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
 
 typedef struct
 {

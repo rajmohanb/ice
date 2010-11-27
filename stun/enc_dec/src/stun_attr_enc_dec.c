@@ -85,7 +85,7 @@ static stun_attr_tlv_ops_t stun_attr_ops[] = {
         NULL,
         stun_attr_decode_fingerprint,
     },
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
     {
         STUN_ATTR_CHANNEL_NUMBER,
         stun_attr_encode_channel_number,
@@ -132,7 +132,7 @@ static stun_attr_tlv_ops_t stun_attr_ops[] = {
         stun_attr_decode_reservation_token,
     },
 #endif
-#ifdef ENABLE_ICE
+#ifdef MB_ENABLE_ICE
     {
         STUN_ATTR_PRIORITY,
         stun_attr_encode_priority,
@@ -441,15 +441,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_memset(buf, 0, MSG_INTEGRITY_HMAC_BYTES);
     buf += MSG_INTEGRITY_HMAC_BYTES;
 
-#ifdef ENABLE_TURN
-    if (method == STUN_METHOD_ALLOCATE)
-    {
-        /** compute the hmac key - long term credentials */
-        stun_tlv_utils_get_hmac_key(h_msg, md5_key);
-        key_len = 16;
-    }
-    else
-#endif
+    if (method == STUN_METHOD_BINDING)
     {
         /** short term credential */
         strncpy((char *)md5_key, (char *)auth->password, auth->len);
@@ -860,6 +852,9 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
 
         if (inet_aton((char *)addr->address, &mapped_addr) == 0)
         {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Invalid IPv4 XOR MAPPED ADDESS %s. Encoding of XOR MAPPED"\
+                    " ADDRESS failed", addr->address); 
             return STUN_INVALID_PARAMS;
         }
         mapped_addr.s_addr = ntohl(mapped_addr.s_addr);
@@ -875,6 +870,9 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
 
         if (inet_pton(AF_INET6, (char *)addr->address, xor_addr) <= 0)
         {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Invalid IPv6 XOR MAPPED ADDESS. Encoding of XOR MAPPED "\
+                    "ADDRESS failed", addr->address); 
             return STUN_INVALID_PARAMS;
         }
 
@@ -1147,7 +1145,7 @@ int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf,
 
 /*============================================================================*/
 
-#ifdef ENABLE_TURN
+#ifdef MB_ENABLE_TURN
 
 int32_t stun_attr_encode_channel_number(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
@@ -1626,7 +1624,9 @@ int32_t stun_attr_decode_reservation_token(u_char *buf_head,
 /*============================================================================*/
 #endif
 
-#ifdef ENABLE_ICE
+
+
+#ifdef MB_ENABLE_ICE
 /*============================================================================*/
 
 int32_t stun_attr_encode_priority(stun_attr_hdr_t *attr, 

@@ -27,8 +27,8 @@ INCLUDE := -I ../../ -I ../inc -I ../../conn_check/inc \
 	-I ../../stun/txn/inc -I ../../stun/msg_layer/inc \
 	-I ../../turn/inc -I ../../stun/enc_dec/inc -I $(ICE_APP_INCLUDE_PATH)
 
-CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DENABLE_TURN \
-		  -DENABLE_ICE $(INCLUDE)
+CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DMB_ENABLE_TURN \
+		  -DMB_ENABLE_ICE $(INCLUDE)
 
 OBJS:=$(SRC:c=o)
 #
