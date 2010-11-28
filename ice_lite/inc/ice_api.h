@@ -264,6 +264,9 @@ int32_t ice_session_get_media_credentials(handle h_inst,
 int32_t ice_session_set_media_credentials(handle h_inst, 
         handle h_session, handle h_media, ice_media_credentials_t *cred);
 
+int32_t ice_session_get_media_peer_credentials(handle h_inst,
+            handle h_session, handle h_media, ice_media_credentials_t *cred);
+
 int32_t ice_session_set_peer_ice_mode(handle h_inst, 
                     handle h_session, ice_mode_type_t remote_ice_mode);
 

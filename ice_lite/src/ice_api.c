@@ -566,6 +566,34 @@ int32_t ice_session_set_media_credentials(handle h_inst,
 }
 
 
+
+int32_t ice_session_get_media_peer_credentials(handle h_inst,
+            handle h_session, handle h_media, ice_media_credentials_t *cred)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_stream_t *media;
+    int32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL) ||
+        (h_media == NULL) || (cred == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    media = (ice_media_stream_t *) h_media;
+
+    stun_memcpy(cred->ice_ufrag, media->peer_ufrag, ICE_MAX_UFRAG_LEN);
+    stun_memcpy(cred->ice_pwd, media->peer_pwd, ICE_MAX_PWD_LEN);
+
+    return STUN_OK;
+}
+
+
+
 int32_t ice_session_set_peer_session_params(handle h_inst, 
                     handle h_session, ice_session_params_t *session_params)
 {

@@ -132,6 +132,7 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
     session->h_req = h_msg;
     session->h_txn = h_txn;
 
+#ifdef ICE_STUN_REQ_VALIDATION
     /** 
      * make sure the received request message has the USERNAME
      * and MESSAGE-INTEGRITY attributes. These are a must for the conn
@@ -144,6 +145,7 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
                 "Incmoing conn check request message validation failed");
         return STUN_TERMINATED;
     }
+#endif
 
     status = conn_check_utils_extract_info_from_request_msg(session, h_msg);
     if (status != STUN_OK)

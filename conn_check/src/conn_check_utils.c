@@ -312,7 +312,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     uint32_t num;
     s_char software[MAX_STR_LEN];
     handle h_msg, h_req_attr[1], h_resp_attr[1];
-    stun_addr_family_type_t addr_family;
+    stun_addr_family_type_t addr_family = STUN_ADDR_FAMLY_INVALID;
 
     h_msg = NULL;
     status = stun_msg_create_resp_from_req(h_req, msg_type, &h_msg);

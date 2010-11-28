@@ -16,6 +16,9 @@
 
 # Macros
 
+#Enable STUN request validation
+ENABLE_ICE_STUN_REQ_VALIDATION := y
+
 # connectivity check library
 LIB := lib_ice_conncheck.a
 
@@ -28,6 +31,10 @@ INCLUDE := -I ../../ -I ../inc -I ../../stun/txn/inc \
 
 CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS)  $(INCLUDE) \
 		  -DMB_ENABLE_TURN -DMB_ENABLE_ICE
+
+ifeq ($(strip $(ENABLE_ICE_STUN_REQ_VALIDATION)), y)
+	CFLAGS += -DICE_STUN_REQ_VALIDATION
+endif
 
 OBJS:=$(SRC:c=o)
 #

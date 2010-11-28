@@ -21,9 +21,14 @@ const unsigned int CRC32_NEGL = 0xffffffffL;
 #ifdef IS_LITTLE_ENDIAN
 #define CRC32_INDEX(c) (c & 0xff)
 #define CRC32_SHIFTED(c) (c >> 8)
+#define CRC32_SWAP(c) (c)
 #else
 #define CRC32_INDEX(c) (c >> 24)
 #define CRC32_SHIFTED(c) (c << 8)
+#define CRC32_SWAP(c)  ((((c) & 0xff000000) >> 24) | \
+                        (((c) & 0x00ff0000) >>  8) | \
+                        (((c) & 0x0000ff00) <<  8) | \
+                        (((c) & 0x000000ff) << 24))
 #endif
 
 
@@ -164,6 +169,6 @@ unsigned int compute_crc32(const unsigned char *s, unsigned int n)
 
     crc ^= CRC32_NEGL;
 
-    return crc;
+    return CRC32_SWAP(crc);
 }
 
