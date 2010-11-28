@@ -325,6 +325,12 @@ int32_t ice_utils_set_peer_media_params(
     /** store the number of components of peer */
     media->num_peer_comp = media_params->num_comps;
 
+    /** reset the existing remote candidate parameter information */
+    stun_memset(media->as_remote_cands, 0, 
+            sizeof(ice_candidate_t) * ICE_CANDIDATES_MAX_SIZE);
+    stun_memset(media->peer_ufrag, 0, sizeof(char) * ICE_MAX_UFRAG_LEN);
+    stun_memset(media->peer_pwd, 0, sizeof(char) * ICE_MAX_PWD_LEN);
+
     for (j = 0; j < media_params->num_comps; j++)
     {
         ice_media_comp_t *peer_comp = &media_params->comps[j];
@@ -416,6 +422,12 @@ int32_t ice_utils_set_peer_media_params(
                         media_params->ice_pwd, ICE_MAX_PWD_LEN - 1);
 
     ICE_LOG(LOG_SEV_INFO, "[ICE_LITE] Added %d remote candidates", x);
+
+    /** reset the existing candidate and valid pairs, if any */
+    stun_memset(media->ah_valid_pairs, 0, 
+                    sizeof(ice_cand_pair_t) * ICE_MAX_CANDIDATE_PAIRS);
+    stun_memset(media->ah_cand_pairs, 0,
+                    sizeof(ice_cand_pair_t) * ICE_MAX_CANDIDATE_PAIRS);
 
     return STUN_OK;
 }

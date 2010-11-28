@@ -27,6 +27,7 @@ extern "C" {
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_session_fsm.h"
+#include "ice_media_fsm.h"
 #include "ice_utils.h"
 
 
@@ -618,7 +619,10 @@ int32_t ice_session_set_peer_media_params(handle h_inst,
     }
 
     media = (ice_media_stream_t *) h_media;
-    status = ice_utils_set_peer_media_params(media, media_params);
+    status = ice_media_stream_fsm_inject_msg(media, 
+                                ICE_MEDIA_REMOTE_PARAMS, media_params);
+    if(status != STUN_OK)
+        ICE_LOG(LOG_SEV_ERROR, "Processing of remote media params failed");
 
     return status;
 }
