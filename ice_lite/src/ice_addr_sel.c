@@ -141,7 +141,7 @@ static int32_t rfc3484_get_precedence(ice_transport_t *addr)
         }
     }
 
-    if (i == RFC3484_DEFAULT_POLICY_TBL_SIZE)
+    if (i >= RFC3484_DEFAULT_POLICY_TBL_SIZE)
         return RFC3484_DEF_PRECEDENCE;
     else
         return def_policy_table[i].precedence;
