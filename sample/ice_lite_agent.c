@@ -657,10 +657,6 @@ void app_initialize_ice(void)
 
 int ice_lite_sample_create_host_candidate(int port)
 {
-#ifdef ICE_IPV6
-    struct sockaddr_in6 from;
-    int len;
-#endif
     struct addrinfo req, *ans;
     int code, f;
     char service[16] = {0};
