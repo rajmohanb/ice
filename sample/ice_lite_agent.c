@@ -992,6 +992,23 @@ int main (int argc, char *argv[])
      */
 #ifdef ICE_TEST_RFC3484
     ice_lite_sample_print_valid_list(h_inst, h_session);
+
+    /** 
+     * if we are controlling agent, send out an offer with sdp attribute 
+     * 'remote-candidates' set to the nominated pair among the available 
+     * multiple valid pairs. Remember in this scenario, we have multiple
+     * host candidates available for a component. 
+     *
+     * And wait for answer from the peer ...
+     */
+
+    /**
+     * The answer from peer will hopefully contain a single candidate now
+     * for every component and which matches the one in default media 
+     * attribute. In which case, the ice session and media stream will
+     * move to COMPLETED state.
+     */
+    ice_lite_input_remote_sdp(h_inst, h_session, h_audio);
 #endif
 
     ic_msg_count = 0;
