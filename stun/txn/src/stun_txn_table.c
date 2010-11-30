@@ -53,7 +53,10 @@ int32_t stun_txn_create_table(uint32_t size, handle *h_table)
     table->nodes = (stun_txn_table_node_t *) stun_calloc 
                             (1, (size * sizeof(stun_txn_table_node_t)));
     if (table->nodes == NULL)
+    {
+        stun_free(table);
         return STUN_MEM_ERROR;
+    }
 
     table->size = size;
     table->count = 0;
