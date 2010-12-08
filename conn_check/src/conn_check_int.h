@@ -88,27 +88,28 @@ typedef struct
     u_char stun_server[STUN_IP_ADDR_MAX_LEN];
     uint32_t stun_port;
 
-    conn_check_session_state_t state;
-
+    cc_session_type_t sess_type;
     handle app_param;
 
     handle transport_param;
+
+    /** behavioral params */
+    bool_t nominated;
+    bool_t controlling_role;
+    uint32_t prflx_cand_priority;
+
+    /** session state */
+    conn_check_session_state_t state;
 
     handle h_txn;
     handle h_req;
     handle h_resp;
 
-    u_char prflx_ip_addr[STUN_IP_ADDR_MAX_LEN];
-    uint32_t prflx_port;
-
-    cc_session_type_t sess_type;
+    stun_inet_addr_t prflx_addr;
 
     /** connectivity check result */
     bool_t cc_succeeded;
-
-    uint32_t priority;
-
-    bool_t nominated_flag;
+    uint32_t error_code;
 
 } conn_check_session_t;
 

@@ -26,6 +26,8 @@ extern "C" {
 #include "conn_check_session_fsm.h"
 #include "conn_check_utils.h"
 
+
+    
 int32_t conn_check_create_instance(handle *h_inst)
 {
     conn_check_instance_t *instance;
@@ -223,7 +225,7 @@ int32_t conn_check_create_session(handle h_inst,
         return STUN_NO_RESOURCE;
     }
 
-    session->nominated_flag = false;
+    session->nominated = false;
     session->cc_succeeded = false;
 
     *h_session = session;
@@ -363,23 +365,6 @@ int32_t conn_check_session_get_app_param(handle h_inst,
     return STUN_OK;
 }
 
-int32_t conn_check_session_set_nominated(handle h_inst, handle h_session)
-{
-    conn_check_instance_t *instance;
-    conn_check_session_t *session;
-
-    if ((h_inst == NULL) || (h_session == NULL))
-        return STUN_INVALID_PARAMS;
-
-    instance = (conn_check_instance_t *) h_inst;
-    session = (conn_check_session_t *) h_session;
-
-    /** TODO - make sure the session still exists */
-
-    session->nominated_flag = true;
-
-    return STUN_OK;
-}
 
 int32_t conn_check_destroy_session(handle h_inst, handle h_session)
 {
@@ -510,20 +495,33 @@ int32_t conn_check_session_timer_get_session_handle (
 }
 
 
-int32_t conn_check_session_get_nominated_state(
-                handle h_inst, handle h_session, bool *nominated)
+int32_t conn_check_session_get_check_result(handle h_inst, 
+                            handle h_session, conn_check_result_t *result)
 {
     conn_check_session_t *session;
 
-    if ((h_inst == NULL) || (h_session == NULL))
+    if ((h_inst == NULL) || (h_session == NULL) || (result == NULL))
         return STUN_INVALID_PARAMS;
 
     session = (conn_check_session_t *) h_session;
 
-    *nominated = session->nominated_flag;
+    if ((session->state != CC_OG_TERMINATED) && 
+            (session->state != CC_IC_TERMINATED))
+        return STUN_INVALID_PARAMS;
+
+    result->check_succeeded = session->cc_succeeded;
+    result->controlling_role = session->controlling_role;
+    result->error_code = session->error_code;
+    result->nominated = session->nominated;
+    result->prflx_priority = session->prflx_cand_priority;
+
+    stun_memcpy(&result->prflx_addr,
+                    &session->prflx_addr, sizeof(stun_inet_addr_t));
 
     return STUN_OK;
 }
+
+
 
 
 /******************************************************************************/

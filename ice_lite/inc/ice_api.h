@@ -34,6 +34,13 @@ typedef enum
 } ice_state_t;
 
 
+typedef enum
+{
+    ICE_NEW_NOM_PAIR,
+    ICE_MISC_EVENT_MAX,
+} ice_misc_event_t;
+
+
 typedef enum {
     ICE_TRANSPORT_UDP = 0,
     ICE_TRANSPORT_TCP,
@@ -100,10 +107,14 @@ typedef void (*ice_session_state_change_event_cb) (handle h_inst,
                                         handle h_session, ice_state_t state);
 typedef void (*ice_media_state_change_event_cb) (handle h_inst, 
                         handle h_session, handle h_media, ice_state_t state);
+typedef void (*ice_session_misc_event_cb) (handle h_inst, 
+                        handle h_session, handle h_media, ice_misc_event_t event);
+
 
 typedef struct {
     ice_session_state_change_event_cb session_state_cb;
     ice_media_state_change_event_cb media_state_cb;
+    ice_session_misc_event_cb misc_event_cb;
 } ice_state_event_handlers_t;
 
 

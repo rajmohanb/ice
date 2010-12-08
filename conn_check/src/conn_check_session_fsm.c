@@ -46,13 +46,6 @@ static conn_check_session_fsm_handler
         cc_ignore_event,
         cc_ignore_event,
     },
-    /** CC_OG_INPROGRESS */
-    {
-        cc_ignore_event,
-        cc_ignore_event,
-        cc_ignore_event,
-        cc_ignore_event,
-    },
     /** CC_OG_TERMINATED */
     {
         cc_ignore_event,
@@ -109,6 +102,7 @@ int32_t cc_initiate (conn_check_session_t *session, handle h_msg)
 }
 
 
+
 int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
 {
     int32_t status;
@@ -142,7 +136,8 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Incmoing conn check request message validation failed");
+                "[CONN CHECK] Incmoing conn check request message "\
+                "validation failed");
         return STUN_TERMINATED;
     }
 #endif
@@ -154,13 +149,19 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
     }
 
     ICE_LOG(LOG_SEV_INFO, 
-            "Incoming conn check request validation succeeded. "\
+            "[CONN CHECK] Incoming conn check request validation succeeded. "\
             "All decks clear for sending response");
 
     /** if everything is fine, then go ahead and send success response */
     status = cc_utils_create_resp_from_req(
                     session, h_msg, STUN_SUCCESS_RESP, &h_resp);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creating a response from the request "\
+                "message failed");
+        return status;
+    }
 
     session->h_resp = h_resp;
 
@@ -168,7 +169,8 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
     if (status != STUN_OK)
     { 
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating a response from the request message failed");
+                "[CONN CHECK] Sending conn check response via stun "\
+                "transaction failed - %d", status);
         return status;
     }
 

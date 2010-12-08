@@ -126,12 +126,13 @@ int32_t ice_utils_get_media_params_in_running_state(
             ice_media_stream_t *media, ice_media_params_t *media_params);
 
 
-int32_t ice_utils_get_nominated_valid_pair(
-        ice_media_stream_t *media, uint32_t comp_id, ice_cand_pair_t **nom_pair);
+int32_t ice_utils_get_nominated_valid_pair(ice_media_stream_t *media, 
+                                uint32_t comp_id, ice_cand_pair_t **nom_pair);
 
 
 int32_t ice_utils_get_highest_priority_nominated_valid_pair(
-        ice_media_stream_t *media, uint32_t comp_id, ice_cand_pair_t **nom_pair);
+                                ice_media_stream_t *media, 
+                                uint32_t comp_id, ice_cand_pair_t **nom_pair);
 
 
 int32_t ice_utils_get_media_params_in_completed_state(
@@ -145,6 +146,10 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media);
 
 
 void ice_utils_dual_lite_nominate_available_pair(ice_media_stream_t *media);
+
+
+int32_t ice_utils_add_to_valid_pair(ice_media_stream_t *media, 
+                ice_rx_stun_pkt_t *rx_pkt, conn_check_result_t *check_result);
 
 
 /******************************************************************************/

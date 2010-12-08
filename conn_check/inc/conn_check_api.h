@@ -40,7 +40,6 @@ typedef enum
 {
     CC_OG_IDLE = 0,
     CC_OG_CHECKING,
-    CC_OG_INPROGRESS,
     CC_OG_TERMINATED,
 
     CC_IC_IDLE,
@@ -48,16 +47,6 @@ typedef enum
 
     CC_STATE_MAX,
 } conn_check_session_state_t;
-
-typedef struct
-{
-    bool_t cc_succeeded;
-    bool_t nominated;
-
-    u_char prflx_ip_addr[STUN_IP_ADDR_MAX_LEN];
-    uint32_t prflx_port;
-
-} conn_check_result_t;
 
 
 typedef int32_t (*conn_check_session_nwk_send_cb) (handle h_msg, 
@@ -78,6 +67,16 @@ typedef struct {
     u_char username[STUN_MAX_USERNAME_LEN];
     u_char password[STUN_MAX_PASSWORD_LEN];
 } conn_check_credentials_t;
+
+
+typedef struct {
+    bool_t check_succeeded;
+    bool_t nominated;
+    bool_t controlling_role;
+    uint32_t error_code;
+    stun_inet_addr_t prflx_addr;
+    uint32_t prflx_priority;
+} conn_check_result_t;
 
 
 /******************************************************************************/
@@ -119,13 +118,11 @@ int32_t conn_check_session_inject_received_msg(
 int32_t conn_check_find_session_for_recv_msg(handle h_inst, 
                                         handle h_msg, handle *h_session);
 
-int32_t conn_check_session_set_nominated(handle h_inst, handle h_session);
-
 int32_t conn_check_session_timer_get_session_handle (
                     handle arg, handle *h_session, handle *h_instance);
 
-int32_t conn_check_session_get_nominated_state(
-                handle h_inst, handle h_session, bool *nominated);
+int32_t conn_check_session_get_check_result(handle h_inst, 
+                                handle h_session, conn_check_result_t *result);
 
 /******************************************************************************/
 

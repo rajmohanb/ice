@@ -659,76 +659,6 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
 }
 
 
-#if 0
-int32_t ice_media_utils_get_next_connectivity_check_pair(
-        ice_media_stream_t *media, ice_cand_pair_t **pair)
-{
-    int32_t status, i;
-    ice_cand_pair_t *cand_pair, *hi_prio_pair;
-
-    hi_prio_pair = NULL;
-    status = STUN_OK;
-
-    /** section 5.8 - scheduling checks */
-
-    /** TODO - first check for triggered check queue */
-
-    /** 
-     * if there is no triggered check to be sent, the agent 
-     * must choose an ordinary check as follows...
-     */
-
-    /** 
-     * find the highest priority pair in the check list 
-     * that is in the Waiting state 
-     */
-    for ( i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-    {
-        cand_pair = &media->ah_cand_pairs[i];
-
-        if (!cand_pair->local) continue;
-
-        if (cand_pair->state != ICE_CP_WAITING) continue;
-
-        if (hi_prio_pair == NULL)
-        {
-            hi_prio_pair = cand_pair;
-            continue;
-        }
-
-        if (cand_pair->priority > hi_prio_pair->priority)
-            hi_prio_pair = cand_pair;
-    }
-
-    if (hi_prio_pair != NULL)
-    {
-        *pair = hi_prio_pair;
-        return status;
-    }
-
-    if (hi_prio_pair == NULL)
-    {
-        /** we are here because there is no pair in the WAITING state */
-
-        /** 
-         * find the highest priority pair in that check list that is 
-         * in the FROZEN state 
-         */
-
-        /** TODO */
-    }
-
-    /**
-     * TODO - 
-     * If there is no pair in the FROZEN state, then terminate the timer
-     * for the particular check list
-     */
-
-    return status;
-}
-#endif
-
-
 
 int32_t ice_utils_create_conn_check_session(
                     ice_media_stream_t *media, ice_rx_stun_pkt_t *pkt)
@@ -1548,6 +1478,59 @@ void ice_utils_dual_lite_nominate_available_pair(ice_media_stream_t *media)
     }
 
     return;
+}
+
+
+
+int32_t ice_utils_add_to_valid_pair(ice_media_stream_t *media, 
+                ice_rx_stun_pkt_t *rx_pkt, conn_check_result_t *check_result)
+{
+    int32_t i;
+    ice_cand_pair_t *valid_pair = NULL;
+    ice_candidate_t *local = NULL;
+
+    local = ice_utils_get_local_cand_for_transport_param(
+                                    media, rx_pkt->transport_param);
+    if (local == NULL) return STUN_INT_ERROR;
+
+    /** find a free slot */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        valid_pair = &media->ah_valid_pairs[i];
+        if (valid_pair->local == NULL)
+            break;
+    }
+
+    ICE_LOG (LOG_SEV_INFO, 
+        "USE-CANDIDATE is set for this connectivity check request");
+
+    if (i == ICE_MAX_CANDIDATE_PAIRS)
+    {
+        ICE_LOG (LOG_SEV_WARNING, 
+            "Exceeded the cofigured list of valid pair entries");
+        return STUN_NO_RESOURCE;
+    }
+
+    valid_pair->local = 
+        ice_utils_get_local_cand_for_transport_param(media, 
+                rx_pkt->transport_param);
+    valid_pair->remote = 
+        ice_utils_get_peer_cand_for_pkt_src(media, 
+                &(rx_pkt->src));
+
+    if (valid_pair->remote == NULL)
+    {
+        ICE_LOG (LOG_SEV_WARNING, 
+            "Ignored binding request from unknown source");
+    }
+
+    ICE_LOG (LOG_SEV_WARNING, 
+        "Connectivity check succeeded for component ID %d "\
+        "of media %p", valid_pair->local->comp_id, media);
+
+    valid_pair->nominated = true;
+
+    return STUN_OK;
 }
 
 

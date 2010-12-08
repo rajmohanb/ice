@@ -40,7 +40,7 @@ int32_t cc_utils_create_request_msg(
         return status;
     }
 
-    if (session->nominated_flag == true)
+    if (session->nominated == true)
     {
         status = stun_attr_create(STUN_ATTR_USE_CANDIDATE, &(h_attr[0]));
         if (status != STUN_OK)
@@ -319,7 +319,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating the response message from request msg failed");
+                "[CONN CHECK] Creating the response message from "\
+                "request msg failed");
         return status;
     }
 
@@ -333,14 +334,16 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
         status = stun_attr_software_get_value(h_req_attr[0], software, &len);
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, "Getting the software value failed");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Getting the software value failed");
             goto ERROR_EXIT_PT1;
         }
 
         status = stun_attr_create(STUN_ATTR_SOFTWARE, &(h_resp_attr[0]));
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, "Creating the software attribute failed");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Creating the software attribute failed");
             goto ERROR_EXIT_PT1;
         }
 
@@ -348,7 +351,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
                             h_resp_attr[0], (s_char *)software, len);
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, "setting the software value failed");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] setting the software value failed");
             goto ERROR_EXIT_PT2;
         }
 
@@ -356,11 +360,13 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
         if (status != STUN_OK)
         { 
             ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of software attribute to response message failed");
+                    "[CONN CHECK] Adding of software attribute to response "\
+                    "message failed");
             goto ERROR_EXIT_PT2;
         }
 
-        ICE_LOG(LOG_SEV_DEBUG, "Added software attribute to response msg");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[CONN CHECK] Added software attribute to response msg");
     }
 
     /* ================================================================== */
@@ -369,7 +375,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
                     STUN_ATTR_XOR_MAPPED_ADDR, &(h_resp_attr[0]));
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Creating the xor_mapped_addr attribute failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creating the xor_mapped_addr attribute failed");
         goto ERROR_EXIT_PT1;
     }
 
@@ -386,8 +393,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of the xor mapped addr to xor_mapped_addr "\
-            "attribute failed");
+                "[CONN CHECK] Setting of the xor mapped addr to "\
+                "xor_mapped_addr attribute failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -396,8 +403,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of the xor mapped port to xor_mapped_addr "\
-            "attribute failed");
+                "[CONN CHECK] Setting of the xor mapped port to "\
+                "xor_mapped_addr attribute failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -405,7 +412,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of xor mapped addr attribute to response message failed");
+                "[CONN CHECK] Adding of xor mapped addr attribute to "\
+                "response message failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -416,7 +424,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating the message intergrity attribute failed");
+                "[CONN CHECK] Creating the message integrity attribute failed");
         goto ERROR_EXIT_PT1;
     }
 
@@ -424,7 +432,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of message integrity attribute to response message failed");
+            "[CONN CHECK] Adding of message integrity attribute to "\
+            "response message failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -435,7 +444,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Creating the fingerprint attribute failed");
+                "[CONN CHECK] Creating the fingerprint attribute failed");
         goto ERROR_EXIT_PT1;
     }
 
@@ -443,7 +452,8 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of fingerprint attribute to response message failed");
+            "[CONN CHECK] Adding of fingerprint attribute to response "\
+            "message failed");
         goto ERROR_EXIT_PT2;
     }
 
@@ -512,6 +522,7 @@ int32_t cc_utils_extract_data_from_binding_resp(
 }
 
 
+
 int32_t cc_utils_get_app_data_for_current_state(
                                 conn_check_session_t *session, handle *data)
 {
@@ -521,7 +532,6 @@ int32_t cc_utils_get_app_data_for_current_state(
     {
         case CC_OG_IDLE:
         case CC_OG_CHECKING:
-        case CC_OG_INPROGRESS:
             break;
 
         case CC_OG_TERMINATED:
@@ -530,7 +540,7 @@ int32_t cc_utils_get_app_data_for_current_state(
                         stun_calloc(1, sizeof(conn_check_result_t));
             if (result == NULL) return STUN_MEM_ERROR;
 
-            result->cc_succeeded = session->cc_succeeded;
+            result->check_succeeded = session->cc_succeeded;
 
             /** TODO - copy peer reflexive address if learned */
         }
@@ -542,8 +552,8 @@ int32_t cc_utils_get_app_data_for_current_state(
                         stun_calloc(1, sizeof(conn_check_result_t));
             if (result == NULL) return STUN_MEM_ERROR;
 
-            result->cc_succeeded = session->cc_succeeded;
-            result->nominated = session->nominated_flag;
+            result->check_succeeded = session->cc_succeeded;
+            result->nominated = session->nominated;
         }
         break;
 
@@ -785,9 +795,9 @@ int32_t conn_check_utils_extract_info_from_request_msg(
     if (status != STUN_OK) return status;
 
     if (num == 1)
-        session->nominated_flag = true;
+        session->nominated = true;
     else
-        session->nominated_flag = false;
+        session->nominated = false;
 
     return status;
 }
