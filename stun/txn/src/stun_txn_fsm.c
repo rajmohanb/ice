@@ -186,8 +186,7 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
         }
         else
         {
-            uint32_t new_rto = 
-                txn_ctxt->instance->rto + (2 * txn_ctxt->last_rto);
+            uint32_t new_rto = 2 * txn_ctxt->last_rto;
             txn_ctxt->h_rto_timer = txn_ctxt->instance->start_timer_cb(
                                                 new_rto, txn_ctxt->rto_params);
             ICE_LOG (LOG_SEV_DEBUG, "RTO timer handle %p\n", txn_ctxt->h_rto_timer);
