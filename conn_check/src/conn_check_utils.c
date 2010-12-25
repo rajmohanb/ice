@@ -785,19 +785,28 @@ int32_t conn_check_utils_verify_request_msg(
 int32_t conn_check_utils_extract_info_from_request_msg(
             conn_check_session_t *session, handle h_msg)
 {
-    handle h_attrs[10];
+    handle h_attr;
     uint32_t num;
     int32_t status;
 
     num = 1;
     status = stun_msg_get_specified_attributes(
-                    h_msg, STUN_ATTR_USE_CANDIDATE, h_attrs, &num);
+                    h_msg, STUN_ATTR_USE_CANDIDATE, &h_attr, &num);
     if (status != STUN_OK) return status;
 
     if (num == 1)
         session->nominated = true;
     else
         session->nominated = false;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_PRIORITY, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_priority_get_priority(
+                        h_attr, &session->prflx_cand_priority);
+    if (status != STUN_OK) return status;
 
     return status;
 }
@@ -924,6 +933,7 @@ int32_t conn_check_utils_extract_username_components(
 
     return STUN_OK;
 }
+
 
 
 /******************************************************************************/

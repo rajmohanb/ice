@@ -1482,12 +1482,14 @@ void ice_utils_dual_lite_nominate_available_pair(ice_media_stream_t *media)
 
 
 
-int32_t ice_utils_add_to_valid_pair(ice_media_stream_t *media, 
+int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media, 
                 ice_rx_stun_pkt_t *rx_pkt, conn_check_result_t *check_result)
 {
-    int32_t i;
-    ice_cand_pair_t *valid_pair = NULL;
+    int32_t i, status;
+    ice_cand_pair_t *cp, *free_vp , *cur_np;
     ice_candidate_t *local = NULL;
+
+    free_vp = cur_np = NULL;
 
     local = ice_utils_get_local_cand_for_transport_param(
                                     media, rx_pkt->transport_param);
@@ -1496,39 +1498,144 @@ int32_t ice_utils_add_to_valid_pair(ice_media_stream_t *media,
     /** find a free slot */
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
-        valid_pair = &media->ah_valid_pairs[i];
-        if (valid_pair->local == NULL)
-            break;
+        cp = &media->ah_valid_pairs[i];
+        if (cp->local == NULL)
+        {
+            if (free_vp == NULL) free_vp = cp;
+        }
+        else
+        {
+            /** 
+             * note that at any time, there is only a single 
+             * nominated valid pair for a media component.
+             */
+            if ((cp->local->comp_id == local->comp_id) && 
+                (cp->nominated == true))
+            {
+                cur_np = cp;
+                /** break? */
+            }
+        }
     }
 
     ICE_LOG (LOG_SEV_INFO, 
         "USE-CANDIDATE is set for this connectivity check request");
 
-    if (i == ICE_MAX_CANDIDATE_PAIRS)
+    if (free_vp == NULL)
     {
         ICE_LOG (LOG_SEV_WARNING, 
             "Exceeded the cofigured list of valid pair entries");
         return STUN_NO_RESOURCE;
     }
 
-    valid_pair->local = 
-        ice_utils_get_local_cand_for_transport_param(media, 
-                rx_pkt->transport_param);
-    valid_pair->remote = 
-        ice_utils_get_peer_cand_for_pkt_src(media, 
-                &(rx_pkt->src));
-
-    if (valid_pair->remote == NULL)
+    free_vp->remote = 
+        ice_utils_get_peer_cand_for_pkt_src(media, &(rx_pkt->src));
+    if (free_vp->remote == NULL)
     {
-        ICE_LOG (LOG_SEV_WARNING, 
-            "Ignored binding request from unknown source");
+        ice_candidate_t *new_prflx_cand = NULL;
+
+        ICE_LOG (LOG_SEV_INFO, 
+            "Binding request from unknown source. Probably a PEER REFLEXIVE candidate");
+
+        /** add a new remote peer reflexive candidate */
+        status = ice_utils_add_remote_peer_reflexive_candidate(media, 
+                                &(check_result->prflx_addr), local->comp_id, 
+                                check_result->prflx_priority, &new_prflx_cand);
+
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_INFO, 
+                "Error while adding the PEER REFLEXIVE CANDIDATE");
+            return status;
+        }
+
+        free_vp->remote = new_prflx_cand;
+        free_vp->remote->priority = check_result->prflx_priority;
     }
+    
+    free_vp->local = local;
+
+    ice_media_utils_compute_candidate_pair_priority(media, free_vp);
 
     ICE_LOG (LOG_SEV_WARNING, 
         "Connectivity check succeeded for component ID %d "\
-        "of media %p", valid_pair->local->comp_id, media);
+        "of media %p", free_vp->local->comp_id, media);
 
-    valid_pair->nominated = true;
+    if (cur_np == NULL)
+    {
+        /** this is the first pair being nominated for the media component */
+        free_vp->nominated = true;
+    }
+    else
+    {
+        if (cur_np->priority < free_vp->priority)
+        {
+            free_vp->nominated = true;
+            cur_np->nominated = false;
+        }
+    }
+
+    return STUN_OK;
+}
+
+
+
+int32_t ice_utils_add_remote_peer_reflexive_candidate(
+                        ice_media_stream_t *media, stun_inet_addr_t *peer_addr,
+                        uint32_t prflx_comp_id, uint32_t prflx_priority, 
+                        ice_candidate_t **new_prflx)
+{
+    int32_t i;
+    ice_candidate_t *prflx_cand;
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+        if(media->as_remote_cands[i].type == ICE_CAND_TYPE_INVALID) break;
+
+    if (i == ICE_CANDIDATES_MAX_SIZE)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "No more free remote candidates available to add the peer "\
+                "reflexive candidate. Reached the maximum configured "\
+                "limit %d.", i);
+
+        return STUN_NO_RESOURCE;
+    }
+
+    /** 
+     * the mapped address is not part of the local candidate list.
+     * This is a candidate - a peer reflexive candidate.
+     */
+    prflx_cand = &media->as_remote_cands[i];
+
+    /** transport params */
+    prflx_cand->transport.type = peer_addr->host_type;
+    memcpy(prflx_cand->transport.ip_addr, 
+                        peer_addr->ip_addr, ICE_IP_ADDR_MAX_LEN);
+    prflx_cand->transport.port = peer_addr->port;
+
+    /** Note: protocol is assumed to be always UDP */
+    prflx_cand->transport.protocol = ICE_TRANSPORT_UDP;
+
+    /** component id */
+    prflx_cand->comp_id = prflx_comp_id;
+
+    /** 
+     * copy the application transport handle. This handle is 
+     * valid only to host candidate types.
+     * revisit -- should this be moved to media component level?
+     */
+    //prflx_cand->transport_param = cp->local->transport_param;
+
+    prflx_cand->type = ICE_CAND_TYPE_PRFLX;
+
+    prflx_cand->priority = prflx_priority;
+
+    prflx_cand->default_cand = false;
+
+    /** TODO = foundation */
+    stun_strncpy((char *)prflx_cand->foundation, "4", 1);
+
+    *new_prflx = prflx_cand;
 
     return STUN_OK;
 }

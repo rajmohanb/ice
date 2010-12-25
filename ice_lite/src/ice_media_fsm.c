@@ -122,7 +122,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             /** if nominated, then add it to the list of valid pairs */
             if (check_result.nominated == true)
             {
-                ice_utils_add_to_valid_pair(media, stun_pkt, &check_result);
+                ice_utils_add_to_valid_pair_list(
+                                    media, stun_pkt, &check_result);
 
                 if(ice_media_utils_have_valid_list(media) == true)
                 {

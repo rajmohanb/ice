@@ -296,8 +296,7 @@ int32_t ice_destroy_instance(handle h_inst)
 
 
 int32_t ice_create_session(handle h_inst, 
-                           ice_session_type_t ice_sess_type, 
-                           ice_mode_type_t mode, handle *h_session)
+                ice_session_type_t ice_sess_type, handle *h_session)
 {
     ice_instance_t *instance;
     ice_session_t *session;
@@ -308,9 +307,6 @@ int32_t ice_create_session(handle h_inst,
 
     if ((ice_sess_type != ICE_SESSION_OUTGOING) &&
         (ice_sess_type != ICE_SESSION_INCOMING))
-        return STUN_INVALID_PARAMS;
-
-    if ((mode != ICE_MODE_LITE) && (mode != ICE_MODE_FULL))
         return STUN_INVALID_PARAMS;
 
     instance = (ice_instance_t *) h_inst;
@@ -337,19 +333,8 @@ int32_t ice_create_session(handle h_inst,
         return STUN_INT_ERROR;
     }
 
-    session->local_mode = mode;
-
-    if (session->local_mode == ICE_MODE_FULL)
-    {
-        if (ice_sess_type == ICE_SESSION_OUTGOING)
-            session->role = ICE_AGENT_ROLE_CONTROLLING;
-        else 
-            session->role = ICE_AGENT_ROLE_CONTROLLED;
-    }
-    else
-    {
-        session->role = ICE_AGENT_ROLE_CONTROLLED;
-    }
+    session->local_mode = ICE_MODE_LITE;
+    session->role = ICE_AGENT_ROLE_CONTROLLING;
 
     session->state = ICE_SES_IDLE;
     session->peer_mode = ICE_INVALID_MODE;

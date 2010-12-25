@@ -148,9 +148,16 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media);
 void ice_utils_dual_lite_nominate_available_pair(ice_media_stream_t *media);
 
 
-int32_t ice_utils_add_to_valid_pair(ice_media_stream_t *media, 
+int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media, 
                 ice_rx_stun_pkt_t *rx_pkt, conn_check_result_t *check_result);
 
+int32_t ice_media_utils_compute_candidate_pair_priority(
+            ice_media_stream_t *media, ice_cand_pair_t *cand_pair);
+
+int32_t ice_utils_add_remote_peer_reflexive_candidate(
+                        ice_media_stream_t *media, stun_inet_addr_t *peer_addr,
+                        uint32_t prflx_comp_id, uint32_t prflx_priority, 
+                        ice_candidate_t **new_prflx);
 
 /******************************************************************************/
 

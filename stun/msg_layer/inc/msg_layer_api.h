@@ -263,6 +263,25 @@ int32_t stun_attr_requested_transport_set_protocol(
 
 /* ========================================================================== */
 
+
+int32_t stun_attr_priority_get_priority(handle h_attr, uint32_t *priority);
+
+int32_t stun_attr_priority_set_priority(handle h_attr, uint32_t priority);
+
+int32_t stun_attr_ice_controlling_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak);
+
+int32_t stun_attr_ice_controlling_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak);
+
+int32_t stun_attr_ice_controlled_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak);
+
+int32_t stun_attr_ice_controlled_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak);
+
+/* ========================================================================== */
+
 int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type);
 
 /* ========================================================================== */
