@@ -1572,6 +1572,9 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
         {
             free_vp->nominated = true;
             cur_np->nominated = false;
+
+            /** notify the application about the change in the nominated pair */
+            ice_utils_notify_misc_event(media, ICE_NEW_NOM_PAIR);
         }
     }
 
@@ -1638,6 +1641,19 @@ int32_t ice_utils_add_remote_peer_reflexive_candidate(
     *new_prflx = prflx_cand;
 
     return STUN_OK;
+}
+
+
+
+void ice_utils_notify_misc_event(ice_media_stream_t *media, 
+                                                ice_misc_event_t event)
+{
+    ice_session_t *session = media->ice_session;
+    ice_instance_t *instance = session->instance;
+
+    instance->misc_event_cb(instance, session, media, event);
+
+    return;
 }
 
 

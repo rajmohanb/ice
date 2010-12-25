@@ -246,6 +246,7 @@ int32_t ice_instance_register_event_handlers(handle h_inst,
 
     instance->session_state_event_cb = event_handlers->session_state_cb;
     instance->media_state_event_cb = event_handlers->media_state_cb;
+    instance->misc_event_cb = event_handlers->misc_event_cb;
     
     return STUN_OK;
 }

@@ -159,6 +159,10 @@ int32_t ice_utils_add_remote_peer_reflexive_candidate(
                         uint32_t prflx_comp_id, uint32_t prflx_priority, 
                         ice_candidate_t **new_prflx);
 
+void ice_utils_notify_misc_event(ice_media_stream_t *media, 
+                                            ice_misc_event_t event);
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

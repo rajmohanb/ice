@@ -115,8 +115,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         {
             conn_check_result_t check_result = {0};
 
-            status = conn_check_session_get_check_result(
-                                h_cc_inst, media->h_cc_svr_session, &check_result);
+            status = conn_check_session_get_check_result(h_cc_inst, 
+                                    media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
             /** if nominated, then add it to the list of valid pairs */
@@ -125,9 +125,12 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 ice_utils_add_to_valid_pair_list(
                                     media, stun_pkt, &check_result);
 
-                if(ice_media_utils_have_valid_list(media) == true)
+                if (media->state == ICE_MEDIA_CC_RUNNING)
                 {
-                    media->state = ICE_MEDIA_CC_COMPLETED;
+                    if(ice_media_utils_have_valid_list(media) == true)
+                    {
+                        media->state = ICE_MEDIA_CC_COMPLETED;
+                    }
                 }
             }
 
