@@ -517,8 +517,29 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
 }
 
 
+
+void app_media_misc_event_handler(handle h_inst, 
+                    handle h_session, handle h_media, ice_misc_event_t event)
+{
+    switch (event)
+    {
+        case ICE_NEW_NOM_PAIR:
+
+            app_log (LOG_SEV_INFO, 
+                    "Nominated pair for a component of media has changed");
+            break;
+
+        default:
+            break;
+    }
+
+    return;
+}
+
+
+
 void app_media_state_change_handler(handle h_inst, 
-                                    handle h_session, handle h_media, ice_state_t state)
+                            handle h_session, handle h_media, ice_state_t state)
 {
     switch(state)
     {
@@ -643,6 +664,7 @@ void app_initialize_ice(void)
 
     event_hdlrs.session_state_cb = app_session_state_change_handler;
     event_hdlrs.media_state_cb = app_media_state_change_handler;
+    event_hdlrs.misc_event_cb = app_media_misc_event_handler;
 
     status = ice_instance_register_event_handlers(h_inst, &event_hdlrs);
     if (status != STUN_OK)
