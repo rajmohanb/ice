@@ -25,6 +25,9 @@ int32_t stun_tlv_utils_get_hmac_key(handle h_msg, u_char *key);
 
 uint16_t stun_tlv_utils_get_stun_msg_type(stun_msg_t *msg);
 
+int32_t stun_enc_dec_utils_print_msg_header(
+                        stun_msg_t *msg, u_char *buf, uint32_t *buf_len);
+
 /******************************************************************************/
 
 #ifdef __cplusplus

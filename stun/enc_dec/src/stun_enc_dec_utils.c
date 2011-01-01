@@ -43,6 +43,30 @@ extern "C" {
 #define STUN_ALLOCATE_ERROR_RESP    0x0113
 
 
+static s_char *gs_stun_msg_types[] =
+{
+    "REQUEST",
+    "INDICATION",
+    "SUCCESS_RESP",
+    "ERROR_RESP"
+};
+
+
+static s_char *gs_stun_method_types[] =
+{
+    "",
+    "STUN BINDING",
+#ifdef MB_ENABLE_TURN
+    "STUN ALLOCATE",
+    "STUN REFRESH",
+    "STUN SEND",
+    "STUN DATA",
+    "STUN CREATE_PERMISSION",
+    "STUN CHANNEL_BIND",
+#endif
+    "",
+};
+
 
 uint16_t stun_tlv_utils_get_stun_msg_type(stun_msg_t *msg)
 {
@@ -73,6 +97,37 @@ uint16_t stun_tlv_utils_get_stun_msg_type(stun_msg_t *msg)
 
     return msg_type;
 }
+
+
+
+int32_t stun_enc_dec_utils_print_msg_header(
+                        stun_msg_t *msg, u_char *buf, uint32_t *buf_len)
+{
+    uint32_t i, bytes = 0;
+
+    bytes += stun_snprintf((char *)buf, (*buf_len - bytes), "STUN Message\n");
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), 
+            "\tMessage Type: [%s %s]\n", gs_stun_method_types[msg->hdr.method],
+            gs_stun_msg_types[msg->hdr.class_type]);
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes),
+            "\tMessage Length: %d\n", msg->stun_msg_len);
+
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), 
+            "\tMessage Cookie: 0x%8.8X\n", msg->hdr.magic_cookie);
+
+    bytes += stun_snprintf((char *)buf+bytes, 
+            (*buf_len - bytes), "\tMessage Txn ID: 0x");
+    for (i = 0; i < STUN_TXN_ID_BYTES; i++)
+        bytes += stun_snprintf((char *)buf+bytes, 
+                (*buf_len - bytes), "%2.2X", msg->hdr.trans_id[i]);
+
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), "\n");
+
+    *buf_len = bytes;
+
+    return STUN_OK;
+}
+
 
 
 /*============================================================================*/

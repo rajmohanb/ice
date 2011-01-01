@@ -48,6 +48,9 @@ int32_t stun_msg_encode(handle tlv,
             stun_auth_params_t *auth, u_char *buf, uint32_t *size);
 
 
+int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len);
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

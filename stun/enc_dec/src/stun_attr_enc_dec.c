@@ -29,107 +29,128 @@ extern "C" {
 #include "stun_enc_dec_utils.h"
 
 
-static stun_attr_tlv_ops_t stun_attr_ops[] = {
+static stun_attr_ops_t stun_attr_ops[] =
+{
     {
         STUN_ATTR_MAPPED_ADDR,
         stun_attr_encode_mapped_address,
         stun_attr_decode_mapped_address,
+        stun_attr_print_mapped_address,
     },
     {
         STUN_ATTR_USERNAME,
         stun_attr_encode_username,
         stun_attr_decode_username,
+        stun_attr_print_username,
     },
     {
         STUN_ATTR_MESSAGE_INTEGRITY,
         NULL, /** place holder, defined elsewhere */
         stun_attr_decode_message_integrity,
+        stun_attr_print_message_integrity,
     },
     {
         STUN_ATTR_ERROR_CODE,
         stun_attr_encode_error_code,
         stun_attr_decode_error_code,
+        stun_attr_print_error_code,
     },
     {
         STUN_ATTR_UNKNOWN_ATTRIBUTES,
         stun_attr_encode_unknown_attributes,
         stun_attr_decode_unknown_attributes,
+        stun_attr_print_unknown_attributes,
     },
     {
         STUN_ATTR_REALM,
         stun_attr_encode_realm,
         stun_attr_decode_realm,
+        stun_attr_print_realm,
     },
     {
         STUN_ATTR_NONCE,
         stun_attr_encode_nonce,
         stun_attr_decode_nonce,
+        stun_attr_print_nonce,
     },
     {
         STUN_ATTR_XOR_MAPPED_ADDR,
         stun_attr_encode_xor_mapped_address,
-        stun_attr_decode_xor_mapped_address
+        stun_attr_decode_xor_mapped_address,
+        stun_attr_print_xor_mapped_address,
     },
     {
         STUN_ATTR_SOFTWARE,
         stun_attr_encode_software,
         stun_attr_decode_software,
+        stun_attr_print_software,
     },
     {
         STUN_ATTR_ALTERNATE_SERVER,
         stun_attr_encode_alternate_server,
         stun_attr_decode_alternate_server,
+        stun_attr_print_alternate_server,
     },
     {
         STUN_ATTR_FINGERPRINT,
         NULL,
         stun_attr_decode_fingerprint,
+        stun_attr_print_fingerprint,
     },
 #ifdef MB_ENABLE_TURN
     {
         STUN_ATTR_CHANNEL_NUMBER,
         stun_attr_encode_channel_number,
         stun_attr_decode_channel_number,
+        stun_attr_print_channel_number,
     },
     {
         STUN_ATTR_LIFETIME,
         stun_attr_encode_lifetime,
         stun_attr_decode_lifetime,
+        stun_attr_print_lifetime,
     },
     {
         STUN_ATTR_XOR_PEER_ADDR,
         stun_attr_encode_xor_peer_address,
         stun_attr_decode_xor_peer_address,
+        stun_attr_print_xor_peer_address,
     },
     {
         STUN_ATTR_DATA,
         stun_attr_encode_data,
         stun_attr_decode_data,
+        stun_attr_print_data,
     },
     {
         STUN_ATTR_XOR_RELAYED_ADDR,
         stun_attr_encode_xor_relayed_address,
         stun_attr_decode_xor_relayed_address,
+        stun_attr_print_xor_relayed_address,
     },
     {
         STUN_ATTR_EVEN_PORT,
         stun_attr_encode_even_port,
         stun_attr_decode_even_port,
+        stun_attr_print_even_port,
     },
     {
         STUN_ATTR_REQUESTED_TRANSPORT,
         stun_attr_encode_requested_transport,
         stun_attr_decode_requested_transport,
+        stun_attr_print_requested_transport,
     },
     {
         STUN_ATTR_DONT_FRAGMENT,
         stun_attr_encode_dont_fragment,
         stun_attr_decode_dont_fragment,
+        stun_attr_print_dont_fragment,
     },
     {
         STUN_ATTR_RESERVATION_TOKEN,
         stun_attr_encode_reservation_token,
         stun_attr_decode_reservation_token,
+        stun_attr_print_reservation_token,
     },
 #endif
 #ifdef MB_ENABLE_ICE
@@ -137,21 +158,25 @@ static stun_attr_tlv_ops_t stun_attr_ops[] = {
         STUN_ATTR_PRIORITY,
         stun_attr_encode_priority,
         stun_attr_decode_priority,
+        stun_attr_print_priority,
     },
     {
         STUN_ATTR_USE_CANDIDATE,
         stun_attr_encode_use_candidate,
         stun_attr_decode_use_candidate,
+        stun_attr_print_use_candidate,
     },
     {
         STUN_ATTR_ICE_CONTROLLED,
         stun_attr_encode_ice_controlled,
         stun_attr_decode_ice_controlled,
+        stun_attr_print_ice_controlled,
     },
     {
         STUN_ATTR_ICE_CONTROLLING,
         stun_attr_encode_ice_controlling,
         stun_attr_decode_ice_controlling,
+        stun_attr_print_ice_controlling,
     },
 #endif
 };
@@ -165,11 +190,12 @@ int32_t stun_attr_encode(stun_attr_hdr_t *attr,
 
     uint32_t i;
     static uint16_t max_attr_elems = 
-        sizeof(stun_attr_ops)/sizeof(stun_attr_tlv_ops_t);
+        sizeof(stun_attr_ops)/sizeof(stun_attr_ops_t);
 
-    for(i = 0; i < max_attr_elems; i++) {
-
-        if(attr->type == stun_attr_ops[i].type) {
+    for(i = 0; i < max_attr_elems; i++)
+    {
+        if(attr->type == stun_attr_ops[i].type)
+        {
             return stun_attr_ops[i].encode(attr, buf_head, buf, max_len, len);
         }
     }
@@ -185,16 +211,17 @@ int32_t stun_attr_decode(u_char *buf_head,
     u_char *pkt = *buf;
     int32_t status;
     static uint16_t max_attr_elems = 
-        sizeof(stun_attr_ops)/sizeof(stun_attr_tlv_ops_t);
+        sizeof(stun_attr_ops)/sizeof(stun_attr_ops_t);
 
     memcpy(&val16, pkt, sizeof(uint16_t));
     val16 = ntohs(val16);
 
     pkt += 2;
 
-    for(i = 0; i < max_attr_elems; i++) {
-
-        if(val16 == stun_attr_ops[i].type) {
+    for(i = 0; i < max_attr_elems; i++)
+    {
+        if(val16 == stun_attr_ops[i].type)
+        {
             status = stun_attr_ops[i].decode(buf_head, &pkt, buf_end, attr);
             *buf = pkt;
             return status;
@@ -208,12 +235,43 @@ int32_t stun_attr_decode(u_char *buf_head,
     return status;
 }
 
+
+
+int32_t stun_attr_print(stun_msg_t *msg, u_char *buf, uint32_t *buf_len)
+{
+    uint32_t i, j, len = 0;
+    int32_t status = STUN_OK;
+    static uint16_t max_attr_elems = 
+        sizeof(stun_attr_ops)/sizeof(stun_attr_ops_t);
+
+    for (i = 0; i < msg->attr_count; i++) 
+    {
+        if (msg->pas_attr[i] == NULL) continue;
+
+        for(j = 0; j < max_attr_elems; j++)
+        {
+            if(msg->pas_attr[i]->type == stun_attr_ops[j].type)
+            {
+                len = *buf_len;
+                status = stun_attr_ops[j].print(
+                                    msg->pas_attr[i], buf, &len);
+                buf += len;
+                *buf_len -= len;
+                break;
+            }
+        }
+    }
+
+    return status;
+}
+
+
 /*============================================================================*/
 
 
 int32_t stun_attr_encode_mapped_address(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_mapped_addr_attr_t *addr;
     uint16_t val16;
     u_char *hdr_len;
@@ -241,7 +299,8 @@ int32_t stun_attr_encode_mapped_address(stun_attr_hdr_t *attr,
     buf += sizeof(uint16_t);
 
     /** address */
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         struct in_addr mapped_addr;
 
         if (inet_aton((char *)addr->address, &mapped_addr) == 0)
@@ -251,7 +310,8 @@ int32_t stun_attr_encode_mapped_address(stun_attr_hdr_t *attr,
 
         memcpy(buf, &mapped_addr, sizeof(uint32_t));
         buf += sizeof(uint32_t);
-    } else {
+    } else 
+    {
         struct in6_addr mapped_addr;
 
         if (inet_pton(AF_INET6, (char *)addr->address, &mapped_addr) <= 0)
@@ -276,8 +336,8 @@ int32_t stun_attr_encode_mapped_address(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_mapped_address(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_mapped_addr_attr_t *addr;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -306,14 +366,15 @@ int32_t stun_attr_decode_mapped_address(u_char *buf_head, u_char **buf,
     addr->port = ntohs(val16);
     pkt += 2;
 
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         struct in_addr mapped_addr;
         memcpy(&mapped_addr.s_addr, pkt, 4);
         pkt += 4;
         strncpy((char *)addr->address, 
                 inet_ntoa(mapped_addr), MAX_MAPPED_ADDRESS_LEN - 1);
-    } else {
-
+    } else
+    {
         if (inet_ntop(AF_INET6, pkt, 
                     (char *)addr->address, MAX_MAPPED_ADDRESS_LEN) == NULL)
         {
@@ -331,11 +392,25 @@ int32_t stun_attr_decode_mapped_address(u_char *buf_head, u_char **buf,
     return status;
 }
 
+
+
+int32_t stun_attr_print_mapped_address(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tMADDED ADDRESS: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_username(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_username_attr_t *username;
     uint16_t val16, pad_bytes = 0;
 
@@ -368,8 +443,8 @@ int32_t stun_attr_encode_username(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_username(u_char *buf_head, u_char **buf, 
-                            u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                            u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_username_attr_t *username;
     uint16_t val16;
     int32_t status;
@@ -411,12 +486,25 @@ ERROR_EXIT:
     return status;
 }
 
+
+int32_t stun_attr_print_username(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tUSERNAME: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_message_integrity(handle h_msg, 
         stun_attr_hdr_t *attr, u_char *msg_start, u_char *buf, 
-        uint32_t max_len, stun_auth_params_t *auth, uint32_t *len) {
-
+        uint32_t max_len, stun_auth_params_t *auth, uint32_t *len)
+{
     stun_msg_integrity_attr_t *integrity;
     stun_method_type_t method;
     uint16_t val16, key_len;
@@ -465,8 +553,8 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
 
 
 int32_t stun_attr_decode_message_integrity(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_msg_integrity_attr_t *msg_integrity;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -506,11 +594,24 @@ int32_t stun_attr_decode_message_integrity(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_print_message_integrity(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tMESSAGE INTEGRITY: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_error_code(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_error_code_attr_t *error_code;
     uint16_t val16, pad_bytes = 0;
 
@@ -550,8 +651,8 @@ int32_t stun_attr_encode_error_code(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_error_code(u_char* buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_error_code_attr_t *error_code;
     uint16_t val16;
     int32_t status;
@@ -608,11 +709,24 @@ ERROR_EXIT:
     return status;
 }
 
+
+int32_t stun_attr_print_error_code(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tERROR CODE: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_unknown_attributes(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_unknown_attributes_attr_t *unknown_attrs;
     uint16_t val16, i, pad_bytes = 0;
     u_char *temp = buf;
@@ -650,15 +764,29 @@ int32_t stun_attr_encode_unknown_attributes(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_unknown_attributes(u_char *buf_head, u_char **buf, 
-                        u_char *buf_end, stun_attr_hdr_t **attr) {
+                        u_char *buf_end, stun_attr_hdr_t **attr)
+{
     return STUN_OK;
 }
+
+
+int32_t stun_attr_print_unknown_attributes(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tUNKNOWN ATTRIBUTES: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 
 int32_t stun_attr_encode_realm(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_realm_attr_t *realm;
     uint16_t val16, pad_bytes = 0;
 
@@ -690,8 +818,8 @@ int32_t stun_attr_encode_realm(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_realm(u_char *buf_head, u_char **buf, 
-                            u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                            u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_realm_attr_t *realm;
     uint16_t val16;
     int32_t status;
@@ -733,11 +861,24 @@ ERROR_EXIT:
     return status;
 }
 
+
+int32_t stun_attr_print_realm(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tREALM: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_nonce(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_nonce_attr_t *nonce;
     uint16_t val16, pad_bytes = 0;
 
@@ -770,8 +911,8 @@ int32_t stun_attr_encode_nonce(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_nonce(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_nonce_attr_t *nonce;
     uint16_t val16;
     int32_t status;
@@ -813,11 +954,23 @@ ERROR_EXIT:
     return status;
 }
 
+
+int32_t stun_attr_print_nonce(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tNONCE: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_xor_mapped_addr_attr_t *addr;
     uint16_t val16;
     u_char *hdr_len;
@@ -846,7 +999,8 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
     buf += sizeof(uint16_t);
 
     /** address */
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         struct in_addr mapped_addr;
         uint32_t val32;
 
@@ -863,8 +1017,9 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
 
         memcpy(buf, &val32, sizeof(uint32_t));
         buf += sizeof(uint32_t);
-    } else {
-
+    }
+    else
+    {
         u_char xor_addr[16];
         uint32_t i;
 
@@ -897,8 +1052,8 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_xor_mapped_addr_attr_t *addr;
     uint16_t val16, i;
     u_char *pkt = *buf;
@@ -926,9 +1081,8 @@ int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf,
     addr->port = val16 ^ STUN_XPORT_MAGC_COOKIE_BITMAP;
     pkt += 2;
 
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
-
-#if 1
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         u_char xor_addr[4];
         memcpy(xor_addr, pkt, 4);
 
@@ -941,20 +1095,9 @@ int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf,
             perror("inet_ntop: ");
         }
         pkt += 4;
-#else
-        struct in_addr mapped_addr;
-        uint32_t val32;
-        memcpy(&val32, pkt, 4);
-        mapped_addr.s_addr = ntohl(val32);
-        mapped_addr.s_addr ^= STUN_MAGIC_COOKIE;
-        mapped_addr.s_addr = htonl(mapped_addr.s_addr);
-        pkt += 4;
-        strncpy((char *)addr->address, 
-                inet_ntoa(mapped_addr), MAX_MAPPED_ADDRESS_LEN - 1);
-#endif
-
-    } else {
-
+    }
+    else
+    {
         u_char xor_addr[16];
 
         memcpy(xor_addr, pkt, 16);
@@ -976,11 +1119,23 @@ int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_print_xor_mapped_address(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tXOR MAPPED ADDRESS: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_software(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_software_attr_t *software;
     uint16_t val16, pad_bytes = 0;
 
@@ -1010,9 +1165,11 @@ int32_t stun_attr_encode_software(stun_attr_hdr_t *attr,
     return STUN_OK;
 }
 
-int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
 
+
+int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf, 
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_software_attr_t *software;
     uint16_t val16;
     int32_t status;
@@ -1055,24 +1212,49 @@ ERROR_EXIT:
 }
 
 
+int32_t stun_attr_print_software(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tSOFTWARE: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_alternate_server(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_alternate_server(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
+                                    u_char *buf_end, stun_attr_hdr_t **attr)
+{
+    return STUN_OK;
+}
+
+int32_t stun_attr_print_alternate_server(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tALTERNATE SERVER: \n");
+    *len = bytes;
+
     return STUN_OK;
 }
 
 /*============================================================================*/
 
 int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr, 
-            u_char *msg_start, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+            u_char *msg_start, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_fingerprint_attr_t *fingerprint;
     uint16_t val16;
     uint32_t crc32;
@@ -1113,8 +1295,8 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_fingerprint_attr_t *fingerprint;
     uint16_t val16;
     uint32_t val32;
@@ -1143,19 +1325,32 @@ int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+int32_t stun_attr_print_fingerprint(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tFINGERPRINT: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 #ifdef MB_ENABLE_TURN
 
 int32_t stun_attr_encode_channel_number(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_channel_number(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_channel_number_attr_t *channel;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -1186,17 +1381,31 @@ int32_t stun_attr_decode_channel_number(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_print_channel_number(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tCHANNEL NUMBER: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_lifetime(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_lifetime(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_lifetime_attr_t *lifetime;
     uint16_t val16;
     uint32_t val32;
@@ -1225,11 +1434,24 @@ int32_t stun_attr_decode_lifetime(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_print_lifetime(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tLIFETIME: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_xor_peer_address(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_xor_peer_addr_attr_t *addr;
     uint16_t val16;
     u_char *hdr_len;
@@ -1258,7 +1480,8 @@ int32_t stun_attr_encode_xor_peer_address(stun_attr_hdr_t *attr,
     buf += sizeof(uint16_t);
 
     /** address */
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         struct in_addr mapped_addr;
         uint32_t val32;
 
@@ -1272,8 +1495,9 @@ int32_t stun_attr_encode_xor_peer_address(stun_attr_hdr_t *attr,
 
         memcpy(buf, &val32, sizeof(uint32_t));
         buf += sizeof(uint32_t);
-    } else {
-
+    }
+    else 
+    {
         u_char xor_addr[16];
         uint32_t i;
 
@@ -1303,8 +1527,8 @@ int32_t stun_attr_encode_xor_peer_address(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                        u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_xor_peer_addr_attr_t *addr;
     uint16_t val16, i;
     u_char *pkt = *buf;
@@ -1332,9 +1556,8 @@ int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf,
     addr->port = val16 ^ STUN_XPORT_MAGC_COOKIE_BITMAP;
     pkt += 2;
 
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
-
-#if 1
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         u_char xor_addr[4];
         memcpy(xor_addr, pkt, 4);
 
@@ -1347,19 +1570,9 @@ int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf,
             perror("inet_ntop: ");
         }
         pkt += 4;
-#else
-        struct in_addr peer_addr;
-        uint32_t val32;
-        memcpy(&val32, pkt, 4);
-        peer_addr.s_addr = ntohl(val32);
-        peer_addr.s_addr ^= STUN_MAGIC_COOKIE;
-        peer_addr.s_addr = htonl(peer_addr.s_addr);
-        pkt += 4;
-        strncpy((char *)addr->address, 
-                inet_ntoa(peer_addr), MAX_MAPPED_ADDRESS_LEN - 1);
-#endif
-    } else {
-
+    }
+    else 
+    {
         u_char xor_addr[16];
 
         memcpy(xor_addr, pkt, 16);
@@ -1381,24 +1594,50 @@ int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_print_xor_peer_address(
+                            stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tXOR PEER ADDRESS: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_data(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_data(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     return STUN_OK;
 }
+
+int32_t stun_attr_print_data(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tDATA: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 
 int32_t stun_attr_encode_xor_relayed_address(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_xor_relayed_addr_attr_t *addr;
     uint16_t val16;
     u_char *hdr_len;
@@ -1427,7 +1666,8 @@ int32_t stun_attr_encode_xor_relayed_address(stun_attr_hdr_t *attr,
     buf += sizeof(uint16_t);
 
     /** address */
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         struct in_addr mapped_addr;
         uint32_t val32;
 
@@ -1441,8 +1681,9 @@ int32_t stun_attr_encode_xor_relayed_address(stun_attr_hdr_t *attr,
 
         memcpy(buf, &val32, sizeof(uint32_t));
         buf += sizeof(uint32_t);
-    } else {
-
+    }
+    else
+    {
         u_char xor_addr[16];
         uint32_t i;
 
@@ -1472,8 +1713,8 @@ int32_t stun_attr_encode_xor_relayed_address(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                        u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_xor_relayed_addr_attr_t *addr;
     uint16_t val16, i;
     u_char *pkt = *buf;
@@ -1501,9 +1742,8 @@ int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf,
     addr->port = val16 ^ STUN_XPORT_MAGC_COOKIE_BITMAP;
     pkt += 2;
 
-    if(addr->family == STUN_ADDR_FAMILY_IPV4) {
-
-#if 1
+    if(addr->family == STUN_ADDR_FAMILY_IPV4)
+    {
         u_char xor_addr[4];
         memcpy(xor_addr, pkt, 4);
 
@@ -1516,19 +1756,9 @@ int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf,
             perror("inet_ntop: ");
         }
         pkt += 4;
-#else
-        struct in_addr relayed_addr;
-        uint32_t val32;
-        memcpy(&val32, pkt, 4);
-        relayed_addr.s_addr = ntohl(val32);
-        relayed_addr.s_addr ^= STUN_MAGIC_COOKIE;
-        relayed_addr.s_addr = htonl(relayed_addr.s_addr);
-        pkt += 4;
-        strncpy((char *)addr->address, 
-                inet_ntoa(relayed_addr), MAX_MAPPED_ADDRESS_LEN - 1);
-#endif
-    } else {
-
+    }
+    else
+    {
         u_char xor_addr[16];
 
         memcpy(xor_addr, pkt, 16);
@@ -1550,24 +1780,50 @@ int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_print_xor_relayed_address(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tXOR RELAYED ADDRESS: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_even_port(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_even_port(u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     return STUN_OK;
 }
+
+int32_t stun_attr_print_even_port(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tEVEN PORT: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 
 int32_t stun_attr_encode_requested_transport(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_req_transport_attr_t *tport;
     uint16_t val16;
 
@@ -1591,35 +1847,76 @@ int32_t stun_attr_encode_requested_transport(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_requested_transport(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     return STUN_OK;
 }
+
+int32_t stun_attr_print_requested_transport(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tREQUESTED TRANSPORT: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 
 int32_t stun_attr_encode_dont_fragment(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_dont_fragment(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     return STUN_OK;
 }
+
+int32_t stun_attr_print_dont_fragment(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tDONT FRAGMENT: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 
 int32_t stun_attr_encode_reservation_token(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     return STUN_OK;
 }
 
 
 int32_t stun_attr_decode_reservation_token(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     return STUN_OK;
 }
+
+int32_t stun_attr_print_reservation_token(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tRESERVATION TOKEN: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 #endif
@@ -1630,8 +1927,8 @@ int32_t stun_attr_decode_reservation_token(u_char *buf_head,
 /*============================================================================*/
 
 int32_t stun_attr_encode_priority(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_priority_attr_t *priority;
     uint16_t val16;
     uint32_t val32;
@@ -1660,8 +1957,8 @@ int32_t stun_attr_encode_priority(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_priority(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_priority_attr_t *priority;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -1687,11 +1984,23 @@ int32_t stun_attr_decode_priority(u_char *buf_head,
     return STUN_OK;
 }
 
+int32_t stun_attr_print_priority(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tPRIORITY: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_use_candidate(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_use_candidate_attr_t *use_cand;
     uint16_t val16;
 
@@ -1714,8 +2023,8 @@ int32_t stun_attr_encode_use_candidate(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_use_candidate(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_use_candidate_attr_t *use_cand;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -1736,11 +2045,23 @@ int32_t stun_attr_decode_use_candidate(u_char *buf_head,
     return STUN_OK;
 }
 
+int32_t stun_attr_print_use_candidate(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tUSE CANDIDATE: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_ice_controlled(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_ice_controlled_attr_t *controlled;
     uint16_t val16;
     uint32_t val32[2];
@@ -1770,8 +2091,8 @@ int32_t stun_attr_encode_ice_controlled(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_ice_controlled(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_ice_controlled_attr_t *controlled;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -1788,7 +2109,8 @@ int32_t stun_attr_decode_ice_controlled(u_char *buf_head,
     pkt += 2;
 
     stun_memcpy(val32, pkt, sizeof(uint64_t));
-    controlled->random_num = ((uint64_t) ntohl(val32[0]) << 32) | ntohl(val32[1]);
+    controlled->random_num = 
+        ((uint64_t) ntohl(val32[0]) << 32) | ntohl(val32[1]);
     pkt += sizeof(uint64_t);
 
     *attr = (stun_attr_hdr_t *)controlled;
@@ -1797,11 +2119,23 @@ int32_t stun_attr_decode_ice_controlled(u_char *buf_head,
     return STUN_OK;
 }
 
+int32_t stun_attr_print_ice_controlled(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tICE CONTROLLED: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode_ice_controlling(stun_attr_hdr_t *attr, 
-                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len) {
-
+                u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
+{
     stun_ice_controlling_attr_t *controlling;
     uint16_t val16;
     uint32_t val32[2];
@@ -1831,8 +2165,8 @@ int32_t stun_attr_encode_ice_controlling(stun_attr_hdr_t *attr,
 
 
 int32_t stun_attr_decode_ice_controlling(u_char *buf_head, 
-                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_ice_controlling_attr_t *controlling;
     uint16_t val16;
     u_char *pkt = *buf;
@@ -1849,7 +2183,8 @@ int32_t stun_attr_decode_ice_controlling(u_char *buf_head,
     pkt += 2;
 
     stun_memcpy(val32, pkt, sizeof(uint64_t));
-    controlling->random_num = ((uint64_t) ntohl(val32[0]) << 32) | ntohl(val32[1]);
+    controlling->random_num = 
+        ((uint64_t) ntohl(val32[0]) << 32) | ntohl(val32[1]);
     pkt += sizeof(uint64_t);
 
     *attr = (stun_attr_hdr_t *)controlling;
@@ -1857,6 +2192,19 @@ int32_t stun_attr_decode_ice_controlling(u_char *buf_head,
 
     return STUN_OK;
 }
+
+
+int32_t stun_attr_print_ice_controlling(
+                    stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes= 0;
+
+    bytes += stun_snprintf(buf, (*len - bytes), "\tICE CONTROLLING: \n");
+    *len = bytes;
+
+    return STUN_OK;
+}
+
 
 /*============================================================================*/
 
@@ -1866,8 +2214,8 @@ int32_t stun_attr_decode_ice_controlling(u_char *buf_head,
 
 int32_t stun_attr_decode_extended_attr(uint16_t attr_type, 
                                 u_char *buf_head, u_char **buf, 
-                                u_char *buf_end, stun_attr_hdr_t **attr) {
-
+                                u_char *buf_end, stun_attr_hdr_t **attr)
+{
     stun_extended_attr_t *ext_attr;
     uint16_t val16;
     u_char *pkt = *buf;

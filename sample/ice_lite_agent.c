@@ -1049,6 +1049,9 @@ int main (int argc, char *argv[])
             }
             else
             {
+                u_char log_buf[500];
+                uint32_t log_buf_len = 500;
+
                 printf ("COUNT: %d\n", ++ic_msg_count);
                 status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
                 if (status != STUN_OK)
@@ -1056,6 +1059,9 @@ int main (int argc, char *argv[])
                     app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
                     continue;
                 }
+
+                stun_msg_print (h_rcvdmsg, log_buf, log_buf_len);
+                printf (">>>>>>>>>>\n\n%s\n\n<<<<<<<<<<\n\n", log_buf);
 
                 status = ice_instance_find_session_for_received_msg(
                             h_inst, h_rcvdmsg, (handle) fd_list[i], &h_target);

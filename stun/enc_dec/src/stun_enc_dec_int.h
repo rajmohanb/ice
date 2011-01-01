@@ -46,16 +46,19 @@ extern "C" {
 #define COMP_OPTIONAL_RANGE_MAX             0xFFFF
 
 
-typedef int32_t (*stun_attr_tlv_encode) (stun_attr_hdr_t *attr, 
+typedef int32_t (*stun_attr_encode_fp) (stun_attr_hdr_t *attr, 
             u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len);
-typedef int32_t (*stun_attr_tlv_decode) (u_char *buf_head, 
+typedef int32_t (*stun_attr_decode_fp) (u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr);
+typedef int32_t (*stun_attr_print_fp) (
+                        stun_attr_hdr_t *attr, u_char *buf, uint32_t *len);
 
 typedef struct {
-    uint32_t              type;
-    stun_attr_tlv_encode encode;
-    stun_attr_tlv_decode decode;
-} stun_attr_tlv_ops_t;
+    uint32_t            type;
+    stun_attr_encode_fp encode;
+    stun_attr_decode_fp decode;
+    stun_attr_print_fp  print;
+} stun_attr_ops_t;
 
 
 /******************************************************************************/
