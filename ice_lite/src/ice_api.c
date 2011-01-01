@@ -169,9 +169,8 @@ static int32_t ice_format_and_send_message(handle h_msg,
 
     stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
 
-    printf (">>>>>>>>>>\n\n%s\n\n", buf);
     stun_msg_print(h_msg, buf, buf_len);
-    printf ("<<<<<<<<<<\n\n", buf);
+    printf (">>>>>>>>>>\n\n%s\n\n<<<<<<<<<<\n\n", buf);
 
     status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
     if (status != STUN_OK)
