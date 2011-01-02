@@ -182,6 +182,15 @@ static stun_attr_ops_t stun_attr_ops[] =
 };
 
 
+static s_char *gs_stun_addr_family_types[] =
+{
+    "INVALID FAMILY",
+    "IPV4",
+    "IPV6",
+};
+
+
+
 /*============================================================================*/
 
 int32_t stun_attr_encode(stun_attr_hdr_t *attr, 
@@ -399,7 +408,7 @@ int32_t stun_attr_print_mapped_address(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tMADDED ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   MADDED ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -491,8 +500,16 @@ int32_t stun_attr_print_username(
                             stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
+    stun_username_attr_t *username = (stun_username_attr_t *) attr;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tUSERNAME: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), 
+                "   USERNAME: length=%d, value=", username->hdr.length);
+    
+    stun_memcpy(buf+bytes, username->username, username->hdr.length);
+    bytes += username->hdr.length;
+
+    bytes += stun_snprintf((char *)buf+bytes, (*len - bytes), "\n");
+
     *len = bytes;
 
     return STUN_OK;
@@ -599,9 +616,24 @@ int32_t stun_attr_print_message_integrity(
                             stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
+    stun_msg_integrity_attr_t *intg = (stun_msg_integrity_attr_t *) attr;
 
-    bytes += stun_snprintf((char *)buf, 
-                        (*len - bytes), "\tMESSAGE INTEGRITY: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), 
+                    "   MESSAGE INTEGRITY: length=20 ");
+
+    if (intg->hdr.length)
+    {
+        bytes += stun_enc_dec_utils_print_binary_buffer(
+                buf+bytes, (*len - bytes), intg->hmac, intg->hdr.length);
+
+        bytes += stun_snprintf((char *)buf+bytes, (*len - bytes), "\n");
+    }
+    else
+    {
+        bytes += stun_snprintf((char *)buf+bytes, 
+                (*len - bytes), "value=computed while sending msg\n");
+    }
+
     *len = bytes;
 
     return STUN_OK;
@@ -716,7 +748,7 @@ int32_t stun_attr_print_error_code(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tERROR CODE: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   ERROR CODE: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -777,7 +809,7 @@ int32_t stun_attr_print_unknown_attributes(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                        (*len - bytes), "\tUNKNOWN ATTRIBUTES: \n");
+                        (*len - bytes), "   UNKNOWN ATTRIBUTES: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -868,7 +900,7 @@ int32_t stun_attr_print_realm(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tREALM: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   REALM: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -961,7 +993,7 @@ int32_t stun_attr_print_nonce(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tNONCE: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   NONCE: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1126,9 +1158,12 @@ int32_t stun_attr_print_xor_mapped_address(
                             stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
+    stun_xor_mapped_addr_attr_t *addr = (stun_xor_mapped_addr_attr_t *) attr;
 
-    bytes += stun_snprintf((char *)buf, 
-                        (*len - bytes), "\tXOR MAPPED ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), 
+            "   XOR MAPPED ADDRESS: length=%d IP address=%s Port=%d "\
+            "family=%s\n", addr->hdr.length, addr->address, addr->port, 
+            gs_stun_addr_family_types[addr->family]);
     *len = bytes;
 
     return STUN_OK;
@@ -1218,9 +1253,19 @@ ERROR_EXIT:
 int32_t stun_attr_print_software(
                             stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
+    stun_software_attr_t *software;
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tSOFTWARE: \n");
+    software = (stun_software_attr_t *) attr;
+
+    bytes += stun_snprintf((char *)buf, 
+            (*len - bytes), "   SOFTWARE: length=%d, value=", software->hdr.length);
+    
+    stun_memcpy(buf+bytes, software->software, software->hdr.length);
+    bytes += software->hdr.length;
+
+    bytes += stun_snprintf((char *)buf+bytes, (*len - bytes), "\n");
+
     *len = bytes;
 
     return STUN_OK;
@@ -1248,7 +1293,7 @@ int32_t stun_attr_print_alternate_server(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                            (*len - bytes), "\tALTERNATE SERVER: \n");
+                            (*len - bytes), "   ALTERNATE SERVER: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1329,12 +1374,31 @@ int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf,
     return STUN_OK;
 }
 
+
+
 int32_t stun_attr_print_fingerprint(
                             stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
+    stun_fingerprint_attr_t *fp = (stun_fingerprint_attr_t *) attr;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tFINGERPRINT: \n");
+    bytes += stun_snprintf((char *)buf, 
+                    (*len - bytes), "   FINGERPRINT: length=4 ");
+    if (fp->hdr.length)
+    {
+        uint32_t temp = htonl(fp->value);
+
+        bytes += stun_enc_dec_utils_print_binary_buffer(
+                buf+bytes, (*len - bytes), (u_char *)&temp, fp->hdr.length);
+
+        bytes += stun_snprintf((char *)buf+bytes, (*len - bytes), "\n");
+    }
+    else
+    {
+        bytes += stun_snprintf((char *)buf+bytes, 
+                    (*len - bytes), "value=computed while sending msg\n");
+    }
+
     *len = bytes;
 
     return STUN_OK;
@@ -1391,7 +1455,7 @@ int32_t stun_attr_print_channel_number(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tCHANNEL NUMBER: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   CHANNEL NUMBER: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1444,7 +1508,7 @@ int32_t stun_attr_print_lifetime(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tLIFETIME: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   LIFETIME: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1605,7 +1669,7 @@ int32_t stun_attr_print_xor_peer_address(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                        (*len - bytes), "\tXOR PEER ADDRESS: \n");
+                        (*len - bytes), "   XOR PEER ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1631,7 +1695,7 @@ int32_t stun_attr_print_data(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tDATA: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   DATA: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1792,7 +1856,7 @@ int32_t stun_attr_print_xor_relayed_address(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                    (*len - bytes), "\tXOR RELAYED ADDRESS: \n");
+                    (*len - bytes), "   XOR RELAYED ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1818,7 +1882,7 @@ int32_t stun_attr_print_even_port(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tEVEN PORT: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   EVEN PORT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1864,7 +1928,7 @@ int32_t stun_attr_print_requested_transport(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                    (*len - bytes), "\tREQUESTED TRANSPORT: \n");
+                    (*len - bytes), "   REQUESTED TRANSPORT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1891,7 +1955,7 @@ int32_t stun_attr_print_dont_fragment(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tDONT FRAGMENT: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   DONT FRAGMENT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1919,7 +1983,7 @@ int32_t stun_attr_print_reservation_token(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                        (*len - bytes), "\tRESERVATION TOKEN: \n");
+                        (*len - bytes), "   RESERVATION TOKEN: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1996,8 +2060,11 @@ int32_t stun_attr_print_priority(
                     stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
+    stun_priority_attr_t *prio = (stun_priority_attr_t *) attr;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tPRIORITY: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), 
+                                    "   PRIORITY: length=%d value=%d\n", 
+                                    prio->hdr.length, prio->priority);
     *len = bytes;
 
     return STUN_OK;
@@ -2058,7 +2125,8 @@ int32_t stun_attr_print_use_candidate(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tUSE CANDIDATE: \n");
+    bytes += stun_snprintf((char *)buf, 
+                    (*len - bytes), "   USE CANDIDATE: length=0\n");
     *len = bytes;
 
     return STUN_OK;
@@ -2132,7 +2200,8 @@ int32_t stun_attr_print_ice_controlled(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tICE CONTROLLED: \n");
+    bytes += stun_snprintf((char *)buf, 
+            (*len - bytes), "   ICE CONTROLLED: length=0\n");
     *len = bytes;
 
     return STUN_OK;
@@ -2208,7 +2277,7 @@ int32_t stun_attr_print_ice_controlling(
     uint32_t bytes= 0;
 
     bytes += stun_snprintf((char *)buf, 
-                        (*len - bytes), "\tICE CONTROLLING: \n");
+                    (*len - bytes), "   ICE CONTROLLING: length=0\n");
     *len = bytes;
 
     return STUN_OK;

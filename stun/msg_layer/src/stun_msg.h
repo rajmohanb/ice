@@ -41,6 +41,9 @@ extern "C" {
 #define MAX_REALM_VAL_BYTES         763
 #define MAX_ERROR_CODE_REASON_BYTES 763
 #define MAX_SOFTWARE_VAL_BYTES      763
+
+#define STUN_IPV4_FAMILY_SIZE       4
+#define STUN_IPV6_FAMILY_SIZE       16
     
 
 

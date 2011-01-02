@@ -1056,21 +1056,26 @@ int main (int argc, char *argv[])
                 status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
-                    app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
+                    app_log (LOG_SEV_ERROR, 
+                            "stun_msg_decode() returned error %d\n", status);
                     continue;
                 }
 
                 stun_msg_print (h_rcvdmsg, log_buf, log_buf_len);
-                printf (">>>>>>>>>>\n\n%s\n\n<<<<<<<<<<\n\n", log_buf);
+                app_log(LOG_SEV_INFO,
+                        ">>>>>>>>>>\nRx STUN message from %s:%d\n\n%s\n\n<<<<<<<<<<\n\n", 
+                        address, port, log_buf);
 
                 status = ice_instance_find_session_for_received_msg(
                             h_inst, h_rcvdmsg, (handle) fd_list[i], &h_target);
                 if (status == STUN_NOT_FOUND)
                 {
                     app_log(LOG_SEV_ERROR, 
-                            "No ICE session found for received message on transport fd %d", fd_list[i]);
+                            "No ICE session found for received message on "\
+                            "transport fd %d", fd_list[i]);
                     app_log(LOG_SEV_ERROR, 
-                            "Dropping the received message on transport fd %d", fd_list[i]);
+                            "Dropping the received message on transport fd %d",
+                            fd_list[i]);
                     stun_msg_destroy(h_rcvdmsg);
                 }
                 else if (status == STUN_OK)

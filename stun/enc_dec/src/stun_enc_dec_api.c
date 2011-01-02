@@ -282,7 +282,7 @@ int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len)
 
     if (msg->attr_count)
     {
-        uint32_t temp = stun_snprintf((char *)buf, buf_len, "Attributes\n");
+        uint32_t temp = stun_snprintf((char *)buf, buf_len, "Attributes:\n");
         buf += temp;
 
         len = buf_len - len - temp;
