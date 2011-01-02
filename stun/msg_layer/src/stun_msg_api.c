@@ -396,7 +396,7 @@ int32_t stun_msg_validate_message_integrity(
     stun_memcpy(buf+2, &val16, sizeof(uint16_t));
 
     /** validate the computed hmac against the one received in the message */
-    if (stun_memcmp(msg_intg->hmac, hmac, MSG_INTEGRITY_HMAC_BYTES) != 0)
+    if (stun_memcmp(msg_intg->hmac, hmac, STUN_ATTR_MSG_INTEGRITY_LEN) != 0)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "MESSAGE-INTEGRITY value mismatch. Validation failed");

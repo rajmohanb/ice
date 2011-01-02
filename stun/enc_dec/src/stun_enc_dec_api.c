@@ -167,7 +167,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
     handle h_msg;
     int32_t status;
 
-    if ((buf == NULL) OR (tlv == NULL) OR (len == 0))
+    if ((buf == NULL) OR (tlv == NULL) OR (len < STUN_MSG_HEADER_SIZE))
         return STUN_INVALID_PARAMS;
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
