@@ -399,7 +399,7 @@ int32_t stun_attr_print_mapped_address(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tMADDED ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tMADDED ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -492,7 +492,7 @@ int32_t stun_attr_print_username(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tUSERNAME: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tUSERNAME: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -600,7 +600,8 @@ int32_t stun_attr_print_message_integrity(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tMESSAGE INTEGRITY: \n");
+    bytes += stun_snprintf((char *)buf, 
+                        (*len - bytes), "\tMESSAGE INTEGRITY: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -715,7 +716,7 @@ int32_t stun_attr_print_error_code(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tERROR CODE: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tERROR CODE: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -775,7 +776,8 @@ int32_t stun_attr_print_unknown_attributes(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tUNKNOWN ATTRIBUTES: \n");
+    bytes += stun_snprintf((char *)buf, 
+                        (*len - bytes), "\tUNKNOWN ATTRIBUTES: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -866,7 +868,7 @@ int32_t stun_attr_print_realm(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tREALM: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tREALM: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -959,7 +961,7 @@ int32_t stun_attr_print_nonce(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tNONCE: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tNONCE: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1125,7 +1127,8 @@ int32_t stun_attr_print_xor_mapped_address(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tXOR MAPPED ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, 
+                        (*len - bytes), "\tXOR MAPPED ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1217,7 +1220,7 @@ int32_t stun_attr_print_software(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tSOFTWARE: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tSOFTWARE: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1244,7 +1247,8 @@ int32_t stun_attr_print_alternate_server(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tALTERNATE SERVER: \n");
+    bytes += stun_snprintf((char *)buf, 
+                            (*len - bytes), "\tALTERNATE SERVER: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1330,7 +1334,7 @@ int32_t stun_attr_print_fingerprint(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tFINGERPRINT: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tFINGERPRINT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1387,7 +1391,7 @@ int32_t stun_attr_print_channel_number(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tCHANNEL NUMBER: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tCHANNEL NUMBER: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1440,7 +1444,7 @@ int32_t stun_attr_print_lifetime(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tLIFETIME: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tLIFETIME: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1600,7 +1604,8 @@ int32_t stun_attr_print_xor_peer_address(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tXOR PEER ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, 
+                        (*len - bytes), "\tXOR PEER ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1626,7 +1631,7 @@ int32_t stun_attr_print_data(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tDATA: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tDATA: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1786,7 +1791,8 @@ int32_t stun_attr_print_xor_relayed_address(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tXOR RELAYED ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, 
+                    (*len - bytes), "\tXOR RELAYED ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1812,7 +1818,7 @@ int32_t stun_attr_print_even_port(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tEVEN PORT: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tEVEN PORT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1857,7 +1863,8 @@ int32_t stun_attr_print_requested_transport(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tREQUESTED TRANSPORT: \n");
+    bytes += stun_snprintf((char *)buf, 
+                    (*len - bytes), "\tREQUESTED TRANSPORT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1884,7 +1891,7 @@ int32_t stun_attr_print_dont_fragment(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tDONT FRAGMENT: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tDONT FRAGMENT: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1911,7 +1918,8 @@ int32_t stun_attr_print_reservation_token(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tRESERVATION TOKEN: \n");
+    bytes += stun_snprintf((char *)buf, 
+                        (*len - bytes), "\tRESERVATION TOKEN: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -1989,7 +1997,7 @@ int32_t stun_attr_print_priority(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tPRIORITY: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tPRIORITY: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -2050,7 +2058,7 @@ int32_t stun_attr_print_use_candidate(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tUSE CANDIDATE: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tUSE CANDIDATE: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -2124,7 +2132,7 @@ int32_t stun_attr_print_ice_controlled(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tICE CONTROLLED: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "\tICE CONTROLLED: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -2199,7 +2207,8 @@ int32_t stun_attr_print_ice_controlling(
 {
     uint32_t bytes= 0;
 
-    bytes += stun_snprintf(buf, (*len - bytes), "\tICE CONTROLLING: \n");
+    bytes += stun_snprintf((char *)buf, 
+                        (*len - bytes), "\tICE CONTROLLING: \n");
     *len = bytes;
 
     return STUN_OK;
