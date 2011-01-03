@@ -347,6 +347,8 @@ int32_t stun_attr_encode_mapped_address(stun_attr_hdr_t *attr,
 }
 
 
+
+
 int32_t stun_attr_decode_mapped_address(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -459,7 +461,7 @@ int32_t stun_attr_decode_username(u_char *buf_head, u_char **buf,
                             u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_username_attr_t *username;
-    uint16_t val16;
+    uint16_t val16, pad_bytes;
     int32_t status;
     u_char *pkt = *buf;
 
@@ -489,11 +491,21 @@ int32_t stun_attr_decode_username(u_char *buf_head, u_char **buf,
     }
 
     stun_memcpy(username->username, pkt, username->hdr.length);
-    pkt +=  username->hdr.length;
+    pkt += username->hdr.length;
 
-    if (username->hdr.length % 4)
+    pad_bytes = username->hdr.length % 4;
+    if (pad_bytes)
     {
-        pkt += 4 - (username->hdr.length % 4);
+        pad_bytes = 4 - pad_bytes;
+
+        if ((buf_end - pkt) < pad_bytes)
+        {
+            stun_free(username->username);
+            status = STUN_INVALID_PARAMS;
+            goto ERROR_EXIT;
+        }
+
+        pkt += pad_bytes;
     }
 
     *attr = (stun_attr_hdr_t *)username;
@@ -863,11 +875,13 @@ int32_t stun_attr_encode_realm(stun_attr_hdr_t *attr,
 }
 
 
+
+
 int32_t stun_attr_decode_realm(u_char *buf_head, u_char **buf, 
                             u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_realm_attr_t *realm;
-    uint16_t val16;
+    uint16_t val16, pad_bytes;
     int32_t status;
     u_char *pkt = *buf;
 
@@ -881,6 +895,13 @@ int32_t stun_attr_decode_realm(u_char *buf_head, u_char **buf,
     realm->hdr.length = ntohs(val16);
     pkt += 2;
 
+    if ((realm->hdr.length > MAX_REALM_VAL_BYTES) ||
+        ((buf_end - pkt) < realm->hdr.length))
+    {
+        status = STUN_INVALID_PARAMS;
+        goto ERROR_EXIT;
+    }
+
     realm->realm = stun_calloc(1, realm->hdr.length);
     if (realm->realm == NULL)
     {
@@ -891,9 +912,19 @@ int32_t stun_attr_decode_realm(u_char *buf_head, u_char **buf,
     stun_memcpy(realm->realm, pkt, realm->hdr.length);
     pkt +=  realm->hdr.length;
 
-    if (realm->hdr.length % 4)
+    pad_bytes = realm->hdr.length % 4;
+    if (pad_bytes)
     {
-        pkt += 4 - (realm->hdr.length % 4);
+        pad_bytes = 4 - pad_bytes;
+
+        if ((buf_end - pkt) < pad_bytes)
+        {
+            stun_free(realm->realm);
+            status = STUN_INVALID_PARAMS;
+            goto ERROR_EXIT;
+        }
+
+        pkt += pad_bytes;
     }
 
     *attr = (stun_attr_hdr_t *)realm;
@@ -960,7 +991,7 @@ int32_t stun_attr_decode_nonce(u_char *buf_head, u_char **buf,
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_nonce_attr_t *nonce;
-    uint16_t val16;
+    uint16_t val16, pad_bytes;
     int32_t status;
     u_char *pkt = *buf;
 
@@ -974,6 +1005,13 @@ int32_t stun_attr_decode_nonce(u_char *buf_head, u_char **buf,
     nonce->hdr.length = ntohs(val16);
     pkt += 2;
 
+    if ((nonce->hdr.length > MAX_NONCE_VAL_BYTES) ||
+        ((buf_end - pkt) < nonce->hdr.length))
+    {
+        status = STUN_INVALID_PARAMS;
+        goto ERROR_EXIT;
+    }
+
     nonce->nonce = stun_calloc(1, nonce->hdr.length);
     if (nonce->nonce == NULL)
     {
@@ -984,9 +1022,19 @@ int32_t stun_attr_decode_nonce(u_char *buf_head, u_char **buf,
     stun_memcpy(nonce->nonce, pkt, nonce->hdr.length);
     pkt +=  nonce->hdr.length;
 
-    if (nonce->hdr.length % 4)
+    pad_bytes = nonce->hdr.length % 4;
+    if (pad_bytes)
     {
-        pkt += 4 - (nonce->hdr.length % 4);
+        pad_bytes = 4 - pad_bytes;
+
+        if ((buf_end - pkt) < pad_bytes)
+        {
+            stun_free(nonce->nonce);
+            status = STUN_INVALID_PARAMS;
+            goto ERROR_EXIT;
+        }
+
+        pkt += pad_bytes;
     }
 
     *attr = (stun_attr_hdr_t *)nonce;
@@ -999,6 +1047,7 @@ ERROR_EXIT:
     stun_free(nonce);
     return status;
 }
+
 
 
 int32_t stun_attr_print_nonce(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
@@ -1221,7 +1270,7 @@ int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf,
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_software_attr_t *software;
-    uint16_t val16;
+    uint16_t val16, pad_bytes;
     int32_t status;
     u_char *pkt = *buf;
 
@@ -1251,10 +1300,20 @@ int32_t stun_attr_decode_software(u_char *buf_head, u_char **buf,
 
     stun_memcpy(software->software, pkt, software->hdr.length);
     pkt +=  software->hdr.length;
-
-    if (software->hdr.length % 4)
+ 
+    pad_bytes = software->hdr.length % 4;
+    if (pad_bytes)
     {
-        pkt += (4 -  (software->hdr.length % 4));
+        pad_bytes = 4 - pad_bytes;
+
+        if ((buf_end - pkt) < pad_bytes)
+        {
+            stun_free(software->software);
+            status = STUN_INVALID_PARAMS;
+            goto ERROR_EXIT;
+        }
+
+        pkt += pad_bytes;
     }
 
     *attr = (stun_attr_hdr_t *)software;
@@ -1267,6 +1326,7 @@ ERROR_EXIT:
     stun_free(software);
     return status;
 }
+
 
 
 int32_t stun_attr_print_software(
