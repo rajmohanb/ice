@@ -368,6 +368,14 @@ int32_t stun_attr_decode_mapped_address(u_char *buf_head, u_char **buf,
 
     pkt += 2;
 
+    if ((buf_end - pkt) < addr->hdr.length)
+    {
+        status = STUN_INVALID_PARAMS;
+        goto ERROR_EXIT;
+    }
+
+    /** check if the header length is exactly 8 OR 20 bytes? */
+
     /** skip on byte */
     pkt += 1;
 
@@ -403,6 +411,11 @@ int32_t stun_attr_decode_mapped_address(u_char *buf_head, u_char **buf,
 
     *buf = pkt;
 
+    return status;
+
+ERROR_EXIT:
+
+    stun_free(addr);
     return status;
 }
 
@@ -593,6 +606,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
 }
 
 
+
 int32_t stun_attr_decode_message_integrity(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -610,7 +624,7 @@ int32_t stun_attr_decode_message_integrity(u_char *buf_head, u_char **buf,
      * store the position at which the message integrity attribute appeared 
      * in the received stun message. The value '2' is deducted because 'pkt'
      * already points to value part of the message integrity attribute header.
-     * The called function has already moved the 'pkt' to point beyond the 
+     * The calling function has already moved the 'pkt' to point beyond the 
      * attribute type.
      */
     msg_integrity->position = pkt - buf_head - 2;
@@ -620,7 +634,9 @@ int32_t stun_attr_decode_message_integrity(u_char *buf_head, u_char **buf,
 
     pkt += 2;
 
-    if (msg_integrity->hdr.length != STUN_ATTR_MSG_INTEGRITY_LEN)
+    /** handle malformed/incomplete/corrupted messages */
+    if ((msg_integrity->hdr.length != STUN_ATTR_MSG_INTEGRITY_LEN) ||
+        ((buf_end - pkt) < msg_integrity->hdr.length))
     {
         stun_free(msg_integrity);
         return STUN_DECODE_FAILED;
@@ -634,6 +650,7 @@ int32_t stun_attr_decode_message_integrity(u_char *buf_head, u_char **buf,
 
     return STUN_OK;
 }
+
 
 
 int32_t stun_attr_print_message_integrity(
@@ -705,6 +722,7 @@ int32_t stun_attr_encode_error_code(stun_attr_hdr_t *attr,
     
     return STUN_OK;
 }
+
 
 
 int32_t stun_attr_decode_error_code(u_char* buf_head, u_char **buf, 
@@ -1146,12 +1164,14 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_xor_mapped_addr_attr_t *addr;
     uint16_t val16, i;
     u_char *pkt = *buf;
+    int32_t status = STUN_OK;
 
     addr = (stun_xor_mapped_addr_attr_t *) 
                 stun_calloc (1, sizeof(stun_xor_mapped_addr_attr_t));
@@ -1162,6 +1182,14 @@ int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf,
     stun_memcpy(&val16, pkt, sizeof(uint16_t));
     addr->hdr.length = ntohs(val16);
     pkt += 2;
+
+    if ((buf_end - pkt) < addr->hdr.length)
+    {
+        status = STUN_INVALID_PARAMS;
+        goto ERROR_EXIT;
+    }
+
+    /** check if the header length is exactly 8 OR 20 bytes? */
 
     /** skip one byte */
     pkt += 1;
@@ -1211,8 +1239,14 @@ int32_t stun_attr_decode_xor_mapped_address(u_char *buf_head, u_char **buf,
 
     *buf = pkt;
 
-    return STUN_OK;
+    return status;
+
+ERROR_EXIT:
+
+    stun_free(addr);
+    return status;
 }
+
 
 
 int32_t stun_attr_print_xor_mapped_address(
@@ -1673,12 +1707,14 @@ int32_t stun_attr_encode_xor_peer_address(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf, 
                                         u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_xor_peer_addr_attr_t *addr;
     uint16_t val16, i;
     u_char *pkt = *buf;
+    int32_t status = STUN_OK;
 
     addr = (stun_xor_peer_addr_attr_t *) 
                         stun_calloc (1, sizeof(stun_xor_peer_addr_attr_t));
@@ -1689,6 +1725,14 @@ int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf,
     stun_memcpy(&val16, pkt, sizeof(uint16_t));
     addr->hdr.length = ntohs(val16);
     pkt += 2;
+
+    if ((buf_end - pkt) < addr->hdr.length)
+    {
+        status = STUN_INVALID_PARAMS;
+        goto ERROR_EXIT;
+    }
+
+    /** check if the header length is exactly 8 OR 20 bytes? */
 
     /** skip one byte */
     pkt += 1;
@@ -1738,8 +1782,14 @@ int32_t stun_attr_decode_xor_peer_address(u_char *buf_head, u_char **buf,
 
     *buf = pkt;
 
-    return STUN_OK;
+    return status;
+
+ERROR_EXIT:
+
+    stun_free(addr);
+    return status;
 }
+
 
 
 int32_t stun_attr_print_xor_peer_address(
@@ -1860,12 +1910,14 @@ int32_t stun_attr_encode_xor_relayed_address(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf, 
                                         u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_xor_relayed_addr_attr_t *addr;
     uint16_t val16, i;
     u_char *pkt = *buf;
+    int32_t status = STUN_OK;
 
     addr = (stun_xor_relayed_addr_attr_t *) 
                 stun_calloc (1, sizeof(stun_xor_relayed_addr_attr_t));
@@ -1876,6 +1928,12 @@ int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf,
     stun_memcpy(&val16, pkt, sizeof(uint16_t));
     addr->hdr.length = ntohs(val16);
     pkt += 2;
+
+    if ((buf_end - pkt) < addr->hdr.length)
+    {
+        status = STUN_INVALID_PARAMS;
+        goto ERROR_EXIT;
+    }
 
     /** skip one byte */
     pkt += 1;
@@ -1925,8 +1983,14 @@ int32_t stun_attr_decode_xor_relayed_address(u_char *buf_head, u_char **buf,
 
     *buf = pkt;
 
-    return STUN_OK;
+    return status;
+
+ERROR_EXIT:
+
+    stun_free(addr);
+    return status;
 }
+
 
 
 int32_t stun_attr_print_xor_relayed_address(
