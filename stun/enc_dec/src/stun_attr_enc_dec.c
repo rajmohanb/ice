@@ -729,7 +729,7 @@ int32_t stun_attr_decode_error_code(u_char* buf_head, u_char **buf,
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_error_code_attr_t *error_code;
-    uint16_t val16;
+    uint16_t val16, pad_bytes;
     int32_t status;
     u_char *pkt = *buf;
 
@@ -743,6 +743,14 @@ int32_t stun_attr_decode_error_code(u_char* buf_head, u_char **buf,
     error_code->hdr.length = ntohs(val16);
 
     pkt += 2;
+
+    /** handle malformed/incomplete/corrupted messages */
+    if ((error_code->hdr.length > (MAX_ERROR_CODE_REASON_BYTES+4)) ||
+        ((buf_end - pkt) < error_code->hdr.length))
+    {
+        status = STUN_DECODE_FAILED;
+        goto ERROR_EXIT;
+    }
 
     /** skip 2 reserved bytes out of 21 bits */
     pkt += 2;
@@ -767,9 +775,19 @@ int32_t stun_attr_decode_error_code(u_char* buf_head, u_char **buf,
     stun_memcpy(error_code->reason, pkt, error_code->hdr.length - 4);
     pkt += (error_code->hdr.length - 4);
 
-    if (error_code->hdr.length % 4)
+    pad_bytes = error_code->hdr.length % 4;
+    if (pad_bytes)
     {
-        pkt += 4 - (error_code->hdr.length % 4);
+        pad_bytes = 4 - pad_bytes;
+
+        if ((buf_end - pkt) < pad_bytes)
+        {
+            stun_free(error_code->reason);
+            status = STUN_INVALID_PARAMS;
+            goto ERROR_EXIT;
+        }
+
+        pkt += pad_bytes;
     }
 
     *attr = (stun_attr_hdr_t *) error_code;
@@ -1456,6 +1474,8 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
 }
 
 
+
+
 int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -1476,6 +1496,14 @@ int32_t stun_attr_decode_fingerprint(u_char *buf_head, u_char **buf,
     stun_memcpy(&val16, pkt, sizeof(uint16_t));
     fingerprint->hdr.length = ntohs(val16);
     pkt += 2;
+
+    /** handle malformed/incomplete/corrupted messages */
+    if ((fingerprint->hdr.length != STUN_ATTR_FINGERPRINT_LEN) ||
+        ((buf_end - pkt) < fingerprint->hdr.length))
+    {
+        stun_free(fingerprint);
+        return STUN_DECODE_FAILED;
+    }
 
     stun_memcpy(&val32, pkt, sizeof(uint32_t));
     fingerprint->value = ntohl(val32);
@@ -2171,6 +2199,7 @@ int32_t stun_attr_encode_priority(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_priority(u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -2206,6 +2235,7 @@ int32_t stun_attr_decode_priority(u_char *buf_head,
 
     return STUN_OK;
 }
+
 
 int32_t stun_attr_print_priority(
                     stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
@@ -2248,6 +2278,7 @@ int32_t stun_attr_encode_use_candidate(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_use_candidate(u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -2276,6 +2307,8 @@ int32_t stun_attr_decode_use_candidate(u_char *buf_head,
 
     return STUN_OK;
 }
+
+
 
 int32_t stun_attr_print_use_candidate(
                     stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
@@ -2323,6 +2356,7 @@ int32_t stun_attr_encode_ice_controlled(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_ice_controlled(u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -2349,16 +2383,18 @@ int32_t stun_attr_decode_ice_controlled(u_char *buf_head,
         return STUN_INVALID_PARAMS;
     }
 
-    stun_memcpy(val32, pkt, sizeof(uint64_t));
+    stun_memcpy(val32, pkt, STUN_ATTR_ICE_CONTROLLED_LEN);
     controlled->random_num = 
         ((uint64_t) ntohl(val32[0]) << 32) | ntohl(val32[1]);
-    pkt += sizeof(uint64_t);
+    pkt += STUN_ATTR_ICE_CONTROLLED_LEN;
 
     *attr = (stun_attr_hdr_t *)controlled;
     *buf = pkt;
 
     return STUN_OK;
 }
+
+
 
 int32_t stun_attr_print_ice_controlled(
                     stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
@@ -2417,6 +2453,7 @@ int32_t stun_attr_encode_ice_controlling(stun_attr_hdr_t *attr,
 }
 
 
+
 int32_t stun_attr_decode_ice_controlling(u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
 {
@@ -2443,16 +2480,17 @@ int32_t stun_attr_decode_ice_controlling(u_char *buf_head,
         return STUN_INVALID_PARAMS;
     }
 
-    stun_memcpy(val32, pkt, sizeof(uint64_t));
+    stun_memcpy(val32, pkt, STUN_ATTR_ICE_CONTROLLING_LEN);
     controlling->random_num = 
         ((uint64_t) ntohl(val32[0]) << 32) | ntohl(val32[1]);
-    pkt += sizeof(uint64_t);
+    pkt += STUN_ATTR_ICE_CONTROLLING_LEN;
 
     *attr = (stun_attr_hdr_t *)controlling;
     *buf = pkt;
 
     return STUN_OK;
 }
+
 
 
 int32_t stun_attr_print_ice_controlling(
@@ -2491,7 +2529,7 @@ int32_t stun_attr_decode_extended_attr(uint16_t attr_type,
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
     stun_extended_attr_t *ext_attr;
-    uint16_t val16;
+    uint16_t val16, temp;
     u_char *pkt = *buf;
 
     ext_attr = (stun_extended_attr_t *) 
@@ -2509,11 +2547,21 @@ int32_t stun_attr_decode_extended_attr(uint16_t attr_type,
     ext_attr->hdr.length = ntohs(val16);
     pkt += 2;
 
+    /** handle malformed/incomplete/corrupted message */
+    if ((buf_end - pkt) < ext_attr->hdr.length)
+    {
+        stun_free(ext_attr);
+        return STUN_INVALID_PARAMS;
+    }
+
+    /** move the pointer by the length indicated but copy only limited data */
+    temp = ext_attr->hdr.length;
+
     if (ext_attr->hdr.length > STUN_EXT_ATTR_VALUE_LEN)
         ext_attr->hdr.length = STUN_EXT_ATTR_VALUE_LEN;
 
     stun_memcpy(ext_attr->value, pkt, ext_attr->hdr.length);
-    pkt +=  ext_attr->hdr.length;
+    pkt += temp;
 
     *attr = (stun_attr_hdr_t *)ext_attr;
     *buf = pkt;
