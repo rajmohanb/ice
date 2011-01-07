@@ -1651,7 +1651,8 @@ void ice_utils_notify_misc_event(ice_media_stream_t *media,
     ice_session_t *session = media->ice_session;
     ice_instance_t *instance = session->instance;
 
-    instance->misc_event_cb(instance, session, media, event);
+    if (instance->misc_event_cb)
+        instance->misc_event_cb(instance, session, media, event);
 
     return;
 }
