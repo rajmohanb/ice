@@ -12,8 +12,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef TURN_SESSION_FSM__H
-#define TURN_SESSION_FSM__H
+#ifndef ICE_ADDR_SEL__H
+#define ICE_ADDR_SEL__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -21,33 +21,16 @@ extern "C" {
 
 /******************************************************************************/
 
+typedef struct
+{
+    ice_transport_t *src;
+    ice_transport_t *dest;
+    bool_t          reachable;
+} ice_rfc3484_addr_pair_t;
 
-int32_t send_alloc_req (turn_session_t *session, handle h_msg);
 
-int32_t process_alloc_resp (turn_session_t *session, handle h_msg);
-
-int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg);
-
-int32_t send_perm_req (turn_session_t *session, handle h_msg);
-
-int32_t process_perm_resp (turn_session_t *session, handle h_msg);
-
-int32_t turn_init_dealloc (turn_session_t *session, handle h_msg);
-
-int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg);
-
-int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg);
-
-int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg);
-
-int32_t turn_send_ind(turn_session_t *session, handle h_msg);
-
-int32_t turn_data_ind(turn_session_t *session, handle h_msg);
-
-int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
-
-int32_t turn_session_fsm_inject_msg(turn_session_t *session, 
-                                    turn_event_t event, handle h_msg);
+int32_t ice_addr_sel_determine_destination_address(
+                    ice_rfc3484_addr_pair_t *addr_list, int32_t num);
 
 
 /******************************************************************************/

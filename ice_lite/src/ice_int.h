@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -226,6 +226,12 @@ typedef struct
      */
     ice_session_state_change_event_cb session_state_event_cb;
     ice_media_state_change_event_cb media_state_event_cb;
+
+    /** 
+     * agent application event handler callback routine
+     * for notification of miscellaneous events
+     */
+    ice_session_misc_event_cb misc_event_cb;
 
     handle *aps_sessions[ICE_MAX_CONCURRENT_SESSIONS];
 

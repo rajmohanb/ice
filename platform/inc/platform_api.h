@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -21,11 +21,12 @@ extern "C" {
 
 /******************************************************************************/
 
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <stdlib.h> /** for rand() */
+#include <stdlib.h>
 #include <time.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -35,7 +35,9 @@
 #include <stun_txn_api.h>
 #include "ice_api.h"
 
+
 //#define ICE_IPV6
+//#define ICE_TEST_RFC3484
 
 
 //#define STUN_SRV_IP "198.65.166.165"
@@ -291,7 +293,7 @@ static void encode_session(handle h_inst, handle h_session)
 
 static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_media)
 {
-    char linebuf[80];
+    char linebuf[160];
     unsigned media_cnt = 0;
     unsigned comp0_port = 0;
     char     comp0_addr[80];
@@ -322,6 +324,8 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
 
         printf(">");
         if (stdout) fflush(stdout);
+
+        memset(linebuf, 0, 160);
 
         if (fgets(linebuf, sizeof(linebuf), stdin)==NULL)
             break;
@@ -384,6 +388,9 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
                 strcpy(media->ice_ufrag, attr+strlen(attr)+1);
             } else if (strcmp(attr, "ice-pwd")==0) {
                 strcpy(media->ice_pwd, attr+strlen(attr)+1);
+            } else if (strcmp(attr, "ice-lite")==0) {
+                peer_session_desc.ice_mode = ICE_MODE_LITE;
+                app_log(LOG_SEV_INFO, "PEER is ice lite");
             } else if (strcmp(attr, "rtcp")==0) {
                 char *val = attr+strlen(attr)+1;
                 int cnt;
@@ -434,8 +441,13 @@ static void ice_lite_input_remote_sdp(handle h_inst, handle h_session, handle h_
                 strcpy((char *)cand->foundation, foundation);
                 cand->priority = prio;
 
-                cand->protocol = STUN_INET_ADDR_IPV4;
+                cand->protocol = ICE_TRANSPORT_UDP;
                 
+#ifdef ICE_IPV6
+                cand->ip_addr_type = STUN_INET_ADDR_IPV6;
+#else
+                cand->ip_addr_type = STUN_INET_ADDR_IPV4;
+#endif
                 strcpy((char *)cand->ip_addr, ipaddr);
                 cand->port = port;
 
@@ -466,6 +478,7 @@ on_error:
 }
 
 
+
 void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
 {
     int32_t status, i, j;
@@ -493,9 +506,13 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
         for (j = 0; j < valid_media->num_valid; j++)
         {
             pair = &valid_media->pairs[j];
-            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d\n", 
+            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d", 
                     pair->comp_id, pair->local.ip_addr, pair->local.port,
                     pair->peer.ip_addr, pair->peer.port);
+            if (pair->nominated == true)
+                app_log (LOG_SEV_INFO, "Nominated\n");
+            else
+                app_log (LOG_SEV_INFO, "NOT Nominated\n");
         }
     }
 
@@ -503,8 +520,29 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
 }
 
 
+
+void app_media_misc_event_handler(handle h_inst, 
+                    handle h_session, handle h_media, ice_misc_event_t event)
+{
+    switch (event)
+    {
+        case ICE_NEW_NOM_PAIR:
+
+            app_log (LOG_SEV_INFO, 
+                    "Nominated pair for a component of media has changed");
+            break;
+
+        default:
+            break;
+    }
+
+    return;
+}
+
+
+
 void app_media_state_change_handler(handle h_inst, 
-                                    handle h_session, handle h_media, ice_state_t state)
+                            handle h_session, handle h_media, ice_state_t state)
 {
     switch(state)
     {
@@ -629,6 +667,7 @@ void app_initialize_ice(void)
 
     event_hdlrs.session_state_cb = app_session_state_change_handler;
     event_hdlrs.media_state_cb = app_media_state_change_handler;
+    event_hdlrs.misc_event_cb = app_media_misc_event_handler;
 
     status = ice_instance_register_event_handlers(h_inst, &event_hdlrs);
     if (status != STUN_OK)
@@ -643,10 +682,6 @@ void app_initialize_ice(void)
 
 int ice_lite_sample_create_host_candidate(int port)
 {
-#ifdef ICE_IPV6
-    struct sockaddr_in6 from;
-    int len;
-#endif
     struct addrinfo req, *ans;
     int code, f;
     char service[16] = {0};
@@ -967,6 +1002,36 @@ int main (int argc, char *argv[])
     my_buf = (unsigned char *) platform_calloc (1, TRANSPORT_MTU_SIZE);
 
     ice_lite_input_remote_sdp(h_inst, h_session, h_audio);
+
+    /**
+     * Enable the following call to test scenarios where the peer is 
+     * also a ice lite implementation and has provided multiple host
+     * candidates (remember, IPv6 node can simultaneously have multiple
+     * IPv6 addresses with different scopes. In such a scenario, the ice
+     * stack will apply the rules as per rfc 3484 and nominate one of 
+     * valid pairs.
+     */
+#ifdef ICE_TEST_RFC3484
+    ice_lite_sample_print_valid_list(h_inst, h_session);
+
+    /** 
+     * if we are controlling agent, send out an offer with sdp attribute 
+     * 'remote-candidates' set to the nominated pair among the available 
+     * multiple valid pairs. Remember in this scenario, we have multiple
+     * host candidates available for a component. 
+     *
+     * And wait for answer from the peer ...
+     */
+
+    /**
+     * The answer from peer will hopefully contain a single candidate now
+     * for every component and which matches the one in default media 
+     * attribute. In which case, the ice session and media stream will
+     * move to COMPLETED state.
+     */
+    ice_lite_input_remote_sdp(h_inst, h_session, h_audio);
+#endif
+
     ic_msg_count = 0;
 
     while (g_cc_done == false) {
@@ -987,29 +1052,44 @@ int main (int argc, char *argv[])
             }
             else
             {
-                printf ("COUNT: %d\n", ++ic_msg_count);
+                u_char log_buf[500];
+                uint32_t log_buf_len = 500;
+
+                printf ("COUNT: %d BYTES %d\n", ++ic_msg_count, bytes);
                 status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
-                    app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
+                    app_log (LOG_SEV_ERROR, 
+                            "stun_msg_decode() returned error %d\n", status);
                     continue;
                 }
+
+                stun_msg_print (h_rcvdmsg, log_buf, log_buf_len);
+                app_log(LOG_SEV_INFO,
+                        ">>>>>>>>>>\nRx STUN message from %s:%d\n\n%s\n\n<<<<<<<<<<\n\n", 
+                        address, port, log_buf);
 
                 status = ice_instance_find_session_for_received_msg(
                             h_inst, h_rcvdmsg, (handle) fd_list[i], &h_target);
                 if (status == STUN_NOT_FOUND)
                 {
                     app_log(LOG_SEV_ERROR, 
-                            "No ICE session found for received message on transport fd %d", fd_list[i]);
+                            "No ICE session found for received message on "\
+                            "transport fd %d", fd_list[i]);
                     app_log(LOG_SEV_ERROR, 
-                            "Dropping the received message on transport fd %d", fd_list[i]);
+                            "Dropping the received message on transport fd %d",
+                            fd_list[i]);
                     stun_msg_destroy(h_rcvdmsg);
                 }
                 else if (status == STUN_OK)
                 {
                     pkt.h_msg = h_rcvdmsg;
                     pkt.transport_param = (handle) fd_list[i];
+#ifdef ICE_IPV6
+                    pkt.src.host_type = STUN_INET_ADDR_IPV6;
+#else
                     pkt.src.host_type = STUN_INET_ADDR_IPV4;
+#endif
                     strncpy((char *)pkt.src.ip_addr, (char *)address, 16);
                     pkt.src.port = port;
 

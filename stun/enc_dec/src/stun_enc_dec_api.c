@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -28,7 +28,7 @@ extern "C" {
 #include "stun_enc_dec_utils.h"
 
 
-extern stun_attr_tlv_ops_t stun_attr_ops[];
+extern stun_attr_ops_t stun_attr_ops[];
 
 
 int32_t stun_msg_encode(handle tlv, 
@@ -74,16 +74,16 @@ int32_t stun_msg_encode(handle tlv,
 
     /** msg class and method */
     val16 = htons(stun_tlv_utils_get_stun_msg_type(msg));
-    memcpy(packet, &val16, sizeof(uint16_t));
+    stun_memcpy(packet, &val16, sizeof(uint16_t));
     len += sizeof(uint16_t);
 
     /** magic cookie */
     val32 = htonl(msg->hdr.magic_cookie);
-    memcpy(packet+STUN_MSG_HDR_MAGIC_COOKIE_OFFSET, &val32, 4);
+    stun_memcpy(packet+STUN_MSG_HDR_MAGIC_COOKIE_OFFSET, &val32, 4);
     len += 4;
 
     /** transaction id */
-    memcpy(packet+STUN_MSG_HDR_TXN_ID_OFFSET, 
+    stun_memcpy(packet+STUN_MSG_HDR_TXN_ID_OFFSET, 
                         msg->hdr.trans_id, STUN_TXN_ID_BYTES);
     len += STUN_TXN_ID_BYTES;
 
@@ -132,7 +132,7 @@ int32_t stun_msg_encode(handle tlv,
     /** length field */
     len += sizeof(uint16_t);
     val16 = htons(len - 20);
-    memcpy(packet+2, &val16, sizeof(uint16_t));
+    stun_memcpy(packet+2, &val16, sizeof(uint16_t));
 
     /** 
      * store the encoded buffer in the message. This will 
@@ -167,7 +167,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
     handle h_msg;
     int32_t status;
 
-    if ((buf == NULL) OR (tlv == NULL) OR (len == 0))
+    if ((buf == NULL) OR (tlv == NULL) OR (len < STUN_MSG_HEADER_SIZE))
         return STUN_INVALID_PARAMS;
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
@@ -175,7 +175,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
 
     msg = (stun_msg_t *) h_msg;
 
-    memcpy(&val16, pkt, sizeof(uint16_t));
+    stun_memcpy(&val16, pkt, sizeof(uint16_t));
 
     switch(ntohs(val16) & STUN_MSG_CLASS_TYPE_BITMAP) {
         case 0x0000: msg->hdr.class_type = STUN_REQUEST; break;
@@ -206,11 +206,11 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
 
     pkt += 2;
 
-    memcpy(&val16, pkt, sizeof(uint16_t));
+    stun_memcpy(&val16, pkt, sizeof(uint16_t));
     attr_len = ntohs(val16);
 
     pkt += 2;
-    memcpy(&val32, pkt, sizeof(uint32_t));
+    stun_memcpy(&val32, pkt, sizeof(uint32_t));
 
     if (ntohl(val32) != STUN_MAGIC_COOKIE)
     {
@@ -220,7 +220,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
 
     pkt += 4; 
 
-    memcpy(msg->hdr.trans_id, pkt, STUN_TXN_ID_BYTES);
+    stun_memcpy(msg->hdr.trans_id, pkt, STUN_TXN_ID_BYTES);
     pkt += STUN_TXN_ID_BYTES;
 
     i = 0;
@@ -263,6 +263,35 @@ ERROR_EXIT:
 
     return status;
 }
+
+
+
+int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len)
+{
+    stun_msg_t *msg;
+    uint32_t len = buf_len;
+    int32_t status;
+
+    if ((stun_msg == NULL) OR (buf == NULL) OR (buf_len == 0))
+        return STUN_INVALID_PARAMS;
+
+    msg = (stun_msg_t *) stun_msg;
+
+    status = stun_enc_dec_utils_print_msg_header(msg, buf, &len);
+    buf += len;
+
+    if (msg->attr_count)
+    {
+        uint32_t temp = stun_snprintf((char *)buf, buf_len, "Attributes:\n");
+        buf += temp;
+
+        len = buf_len - len - temp;
+        status = stun_attr_print(msg, buf, &len);
+    }
+
+    return status;
+}
+
 
 
 /******************************************************************************/

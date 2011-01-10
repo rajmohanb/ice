@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -222,6 +222,11 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
     {
         /** update the peer ice implementation mode */
         session->peer_mode = session_params->ice_mode;
+    }
+
+    if (session->peer_mode == ICE_MODE_FULL)
+    {
+        session->role = ICE_AGENT_ROLE_CONTROLLED;
     }
 
     /**

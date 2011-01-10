@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -27,6 +27,7 @@ extern "C" {
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_session_fsm.h"
+#include "ice_media_fsm.h"
 #include "ice_utils.h"
 
 
@@ -63,72 +64,6 @@ int32_t ice_create_instance(handle *h_inst)
     *h_inst = (handle) instance;
 
     return status;
-}
-
-
-static void ice_cc_callback_fxn (handle h_cc_inst, 
-        handle h_cc_session, conn_check_session_state_t state, handle data)
-{
-    int32_t status;
-    handle h_session;
-    ice_session_t *session;
-    ice_session_event_t event = ICE_SES_EVENT_MAX;
-
-    if ((h_cc_inst == NULL) || (h_cc_session == NULL))
-    {
-        ICE_LOG (LOG_SEV_ERROR, "FIXME: parameters not valid\n");
-        return;
-    }
-
-    switch(state)
-    {
-        case CC_OG_IDLE:
-        case CC_OG_CHECKING:
-            break;
-
-        case CC_OG_TERMINATED:
-        {
-            ICE_LOG (LOG_SEV_DEBUG, 
-                    "Outgoing connectivity check terminated");
-
-            /** declare success now? TODO - check if it is success */
-            /** event = ICE_CONN_CHECKS_DONE; */
-        }
-        break;
-
-        case CC_IC_IDLE:
-            break;
-        case CC_IC_TERMINATED:
-        {
-            ICE_LOG (LOG_SEV_DEBUG, 
-                    "*******************************************************************\n\n");
-            ICE_LOG (LOG_SEV_DEBUG,
-                    "Incoming connectivity check terminated");
-            ICE_LOG (LOG_SEV_DEBUG, 
-                    "\n\n*******************************************************************\n\n");
-
-            /** feed this into the fsm */
-            /* event = ICE_IC_CONN_CHECK; */
-        }
-        break;
-
-        default:
-            event = ICE_SES_EVENT_MAX;
-            break;
-    }
-
-    if ((state == CC_OG_TERMINATED) || (state == CC_IC_TERMINATED))
-    {
-        /** get the ice session handle who owns this turn session */
-        status = conn_check_session_get_app_param(
-                                h_cc_inst, h_cc_session, &h_session);
-
-        session = (ice_session_t *) h_session;
-
-        status = ice_session_fsm_inject_msg(session, event, data, NULL);
-    }
-
-    return;
 }
 
 
@@ -234,6 +169,11 @@ static int32_t ice_format_and_send_message(handle h_msg,
 
     stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
 
+    stun_msg_print(h_msg, buf, buf_len);
+    ICE_LOG (LOG_SEV_INFO,
+            ">>>>>>>>>>\nTx STUN message to %s:%d\n\n%s\n\n<<<<<<<<<<\n\n", 
+            ip_addr, port, buf);
+
     status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
     if (status != STUN_OK)
     {
@@ -288,9 +228,6 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     cc_cbs.start_timer_cb = ice_cc_start_timer;
     cc_cbs.stop_timer_cb = ice_stop_timer;
 
-    /** set callback function for conn check session state */
-    cc_cbs.session_state_cb = ice_cc_callback_fxn;
-
     status = conn_check_instance_set_callbacks(instance->h_cc_inst, &cc_cbs);
     if (status != STUN_OK)
     {
@@ -314,6 +251,7 @@ int32_t ice_instance_register_event_handlers(handle h_inst,
 
     instance->session_state_event_cb = event_handlers->session_state_cb;
     instance->media_state_event_cb = event_handlers->media_state_cb;
+    instance->misc_event_cb = event_handlers->misc_event_cb;
     
     return STUN_OK;
 }
@@ -402,11 +340,7 @@ int32_t ice_create_session(handle h_inst,
     }
 
     session->local_mode = ICE_MODE_LITE;
-
-    if (ice_sess_type == ICE_SESSION_OUTGOING)
-        session->role = ICE_AGENT_ROLE_CONTROLLING;
-    else 
-        session->role = ICE_AGENT_ROLE_CONTROLLED;
+    session->role = ICE_AGENT_ROLE_CONTROLLING;
 
     session->state = ICE_SES_IDLE;
     session->peer_mode = ICE_INVALID_MODE;
@@ -623,6 +557,34 @@ int32_t ice_session_set_media_credentials(handle h_inst,
 }
 
 
+
+int32_t ice_session_get_media_peer_credentials(handle h_inst,
+            handle h_session, handle h_media, ice_media_credentials_t *cred)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_stream_t *media;
+    int32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL) ||
+        (h_media == NULL) || (cred == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    media = (ice_media_stream_t *) h_media;
+
+    stun_memcpy(cred->ice_ufrag, media->peer_ufrag, ICE_MAX_UFRAG_LEN);
+    stun_memcpy(cred->ice_pwd, media->peer_pwd, ICE_MAX_PWD_LEN);
+
+    return STUN_OK;
+}
+
+
+
 int32_t ice_session_set_peer_session_params(handle h_inst, 
                     handle h_session, ice_session_params_t *session_params)
 {
@@ -676,7 +638,10 @@ int32_t ice_session_set_peer_media_params(handle h_inst,
     }
 
     media = (ice_media_stream_t *) h_media;
-    status = ice_utils_set_peer_media_params(media, media_params);
+    status = ice_media_stream_fsm_inject_msg(media, 
+                                ICE_MEDIA_REMOTE_PARAMS, media_params);
+    if(status != STUN_OK)
+        ICE_LOG(LOG_SEV_ERROR, "Processing of remote media params failed");
 
     return status;
 }

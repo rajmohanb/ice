@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -46,6 +46,9 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv);
  */
 int32_t stun_msg_encode(handle tlv, 
             stun_auth_params_t *auth, u_char *buf, uint32_t *size);
+
+
+int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len);
 
 
 /******************************************************************************/

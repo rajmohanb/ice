@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -222,15 +222,16 @@ int32_t stun_attr_xor_mapped_addr_set_address(handle h_attr,
         return STUN_INVALID_PARAMS;
 
     attr->family = family;
+    stun_strncpy((char *)attr->address, (char *)address, len);
 
+    /** 
+     * length includes 2 bytes for port, 1 byte for 
+     * representing family and 1 dummy byte.
+     */
     if (family == STUN_ADDR_FAMILY_IPV4)
-    {
-        stun_strncpy((char *)attr->address, (char *)address, len);
-    }
+        attr->hdr.length = STUN_IPV4_FAMILY_SIZE+4;
     else
-    {
-        stun_strncpy((char *)attr->address, (char *)address, len);
-    }
+        attr->hdr.length = STUN_IPV6_FAMILY_SIZE+4;
 
     return STUN_OK;
 }

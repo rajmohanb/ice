@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -43,6 +43,30 @@ extern "C" {
 #define STUN_ALLOCATE_ERROR_RESP    0x0113
 
 
+
+static s_char *gs_stun_msg_types[] =
+{
+    "REQUEST",
+    "INDICATION",
+    "SUCCESS_RESP",
+    "ERROR_RESP"
+};
+
+
+static s_char *gs_stun_method_types[] =
+{
+    "",
+    "STUN BINDING",
+#ifdef MB_ENABLE_TURN
+    "STUN ALLOCATE",
+    "STUN REFRESH",
+    "STUN SEND",
+    "STUN DATA",
+    "STUN CREATE_PERMISSION",
+    "STUN CHANNEL_BIND",
+#endif
+    "",
+};
 
 #ifdef MB_ENABLE_TURN
 
@@ -176,6 +200,65 @@ uint16_t stun_tlv_utils_get_stun_msg_type(stun_msg_t *msg)
 
     return msg_type;
 }
+
+
+
+uint32_t stun_enc_dec_utils_print_binary_buffer(
+        u_char *dest, uint32_t dest_len, u_char *src, uint32_t src_len)
+{
+    uint32_t i, bytes = 0;
+
+    bytes += stun_snprintf((char *)dest, dest_len, "0x");
+
+    for (i = 0; ((i < src_len) && (bytes <= dest_len)); i++)
+        bytes += stun_snprintf((char *)dest+bytes, 
+                            (dest_len - bytes), "%2.2X", *(src+i));
+
+    return bytes;
+}
+
+
+
+int32_t stun_enc_dec_utils_print_msg_header(
+                        stun_msg_t *msg, u_char *buf, uint32_t *buf_len)
+{
+    uint32_t i, bytes = 0;
+
+    bytes += stun_snprintf((char *)buf, 
+                    (*buf_len - bytes), "STUN Message:\nHeader:\n");
+
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), 
+            "   Msg Type: [%s %s]\n", gs_stun_method_types[msg->hdr.method],
+            gs_stun_msg_types[msg->hdr.class_type]);
+
+    if (msg->stun_msg_len)
+    {
+        bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), 
+                                    "   Length: %d\n", msg->stun_msg_len);
+    }
+    else
+    {
+        bytes += stun_snprintf((char *)buf+bytes, 
+                (*buf_len - bytes), "   Length: computed while sending msg\n");
+    }
+
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), 
+            "   Cookie: 0x%8.8X\n", msg->hdr.magic_cookie);
+
+    bytes += stun_snprintf((char *)buf+bytes, 
+            (*buf_len - bytes), "   Txn ID: 0x");
+    for (i = 0; i < STUN_TXN_ID_BYTES; i++)
+        bytes += stun_snprintf((char *)buf+bytes, 
+                (*buf_len - bytes), "%2.2X", msg->hdr.trans_id[i]);
+
+    bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), "\n");
+
+    *buf_len = bytes;
+
+    return STUN_OK;
+}
+
+
 
 /*============================================================================*/
 

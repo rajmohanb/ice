@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -50,7 +50,7 @@ static ice_media_stream_fsm_handler
     /** ICE_MEDIA_CC_COMPLETED */
     {
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_process_rx_msg,
         ice_media_stream_restart,
         ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
@@ -76,8 +76,9 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
-    ICE_LOG(LOG_SEV_DEBUG, "Received message from %s and port %d", 
-                                stun_pkt->src.ip_addr, stun_pkt->src.port);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] Received message from %s and port %d", 
+            stun_pkt->src.ip_addr, stun_pkt->src.port);
 
     /** 
      * find out if the received stun packet belongs to 
@@ -94,7 +95,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         if (msg_class != STUN_REQUEST)
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "Discarding the stray stun response message");
+                    "[ICE MEDIA] Discarding the stray stun response message");
             return STUN_OK;
         }
 
@@ -103,8 +104,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         if (status != STUN_OK)
         {
             ICE_LOG (LOG_SEV_ERROR, 
-                "ice_utils_create_conn_check_session() returned error %d\n", 
-                status);
+                "[ICE MEDIA] ice_utils_create_conn_check_session() "\
+                "returned error %d\n", status);
             return STUN_INT_ERROR;
         }
 
@@ -112,58 +113,24 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
         if (status == STUN_TERMINATED)
         {
-            conn_check_result_t check_result;
+            conn_check_result_t check_result = {0};
 
-            status = conn_check_session_get_check_result(
-                            h_cc_inst, media->h_cc_svr_session, &check_result);
+            status = conn_check_session_get_check_result(h_cc_inst, 
+                                    media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
             /** if nominated, then add it to the list of valid pairs */
             if (check_result.nominated == true)
             {
-                int32_t i;
-                ice_cand_pair_t *valid_pair;
+                ice_utils_add_to_valid_pair_list(
+                                    media, stun_pkt, &check_result);
 
-                for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+                if (media->state == ICE_MEDIA_CC_RUNNING)
                 {
-                    valid_pair = &media->ah_valid_pairs[i];
-                    if (valid_pair->local == NULL)
-                        break;
-                }
-
-                ICE_LOG (LOG_SEV_INFO, 
-                    "USE-CANDIDATE is set for this connectivity check request");
-
-                if (i == ICE_MAX_CANDIDATE_PAIRS)
-                {
-                    ICE_LOG (LOG_SEV_WARNING, 
-                        "Exceeded the cofigured list of valid pair entries");
-                }
-                else
-                {
-                    valid_pair->local = 
-                        ice_utils_get_local_cand_for_transport_param(media, 
-                                stun_pkt->transport_param);
-                    valid_pair->remote = 
-                        ice_utils_get_peer_cand_for_pkt_src(media, 
-                                &(stun_pkt->src));
-
-                    if (valid_pair->remote == NULL)
+                    if(ice_media_utils_have_valid_list(media) == true)
                     {
-                        ICE_LOG (LOG_SEV_WARNING, 
-                            "Ignored binding request from unknown source");
+                        media->state = ICE_MEDIA_CC_COMPLETED;
                     }
-
-                    ICE_LOG (LOG_SEV_WARNING, 
-                        "Connectivity check succeeded for component ID %d "\
-                        "of media %p", valid_pair->local->comp_id, media);
-
-                    valid_pair->nominated = true;
-                }
-
-                if(ice_media_utils_have_valid_list(media) == true)
-                {
-                    media->state = ICE_MEDIA_CC_COMPLETED;
                 }
             }
 

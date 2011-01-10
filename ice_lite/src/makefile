@@ -1,6 +1,6 @@
 #*******************************************************************************
 # 
-#             Copyright (C) 2009-2010, MindBricks Technologies
+#             Copyright (C) 2009-2011, MindBricks Technologies
 #			         MindBricks Confidential Proprietary.
 #                             All Rights Reserved.
 #
@@ -20,7 +20,7 @@
 LIB := lib_ice_lite.a
 
 # ice agent source files
-SRC = ice_api.c ice_session_fsm.c ice_media_fsm.c ice_utils.c 
+SRC = ice_api.c ice_session_fsm.c ice_media_fsm.c ice_utils.c ice_addr_sel.c
 
 # Include header files
 INCLUDE := -I ../../ -I ../inc -I ../../conn_check/inc \

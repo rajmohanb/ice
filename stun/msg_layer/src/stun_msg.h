@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2010, MindBricks Technologies               *
+*               Copyright (C) 2009-2011, MindBricks Technologies               *
 *                   MindBricks Confidential Proprietary.                       *
 *                         All Rights Reserved.                                 *
 *                                                                              *
@@ -27,9 +27,7 @@ extern "C" {
 
 #define STUN_TXN_ID_BYTES           12
 
-#define MSG_INTEGRITY_HMAC_BYTES    20
 
-#define STUN_ATTR_FINGERPRINT_SIZE  4
 #define STUN_ATTR_LIFETIME_VAL_SIZE 4
 
 #define DEFAULT_MTU                 1500
@@ -42,6 +40,19 @@ extern "C" {
 #define MAX_REALM_VAL_BYTES         763
 #define MAX_ERROR_CODE_REASON_BYTES 763
 #define MAX_SOFTWARE_VAL_BYTES      763
+#define MAX_USERNAME_VAL_BYTES      513
+
+#define STUN_IPV4_FAMILY_SIZE       4
+#define STUN_IPV6_FAMILY_SIZE       16
+#define STUN_MSG_HEADER_SIZE        20
+
+/** stun attributes whose length is fixed */
+#define STUN_ATTR_MSG_INTEGRITY_LEN     20
+#define STUN_ATTR_FINGERPRINT_LEN       4
+#define STUN_ATTR_ICE_CONTROLLING_LEN   8
+#define STUN_ATTR_ICE_CONTROLLED_LEN    8
+#define STUN_ATTR_USE_CANDIDATE_LEN     0
+#define STUN_ATTR_PRIORITY_LEN          4
     
 
 
@@ -113,7 +124,7 @@ typedef struct {
     /**
      * HMAC
      */
-    u_char              hmac[MSG_INTEGRITY_HMAC_BYTES];
+    u_char              hmac[STUN_ATTR_MSG_INTEGRITY_LEN];
 
     /**
      * indicates the number of bytes after which the message 
