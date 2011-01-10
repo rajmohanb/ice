@@ -1463,7 +1463,6 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
     crc32 = platform_crc32(msg_start, (buf - msg_start - 8));
 
     crc32 ^= FINGERPRINT_CRC_XOR_VALUE;
-    ICE_LOG (LOG_SEV_INFO, "Calculated CRC after XOR %x\n", crc32);
 
     crc32 = htonl(crc32);
     stun_memcpy((buf-STUN_ATTR_FINGERPRINT_LEN), &crc32, sizeof(uint32_t));

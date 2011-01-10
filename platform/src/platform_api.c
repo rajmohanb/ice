@@ -333,6 +333,7 @@ bool platform_stop_timer(void *timer_id)
             struct_timer_node *temp = node;
 
             if (node->prev) node->prev->next = temp->next;
+            if (node->next) node->next->prev = temp->prev;
             node = temp->next;
 
             if (timer_head == temp) timer_head = temp->next;
@@ -373,7 +374,7 @@ unsigned int platform_socket_send(int sock_fd,
         unsigned char *buf, unsigned int len, int flags)
 {
     int bytes = send(sock_fd, buf, len, flags);
-    ICE_LOG(LOG_SEV_DEBUG, "Sent %d bytes", bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "[PLATFORM] Sent %d bytes", bytes);
 
     return bytes;
 }
@@ -414,7 +415,7 @@ unsigned int platform_socket_sendto(int sock_fd,
     {
         perror("sendto:");
     }
-    ICE_LOG(LOG_SEV_DEBUG, "sent %d bytes\n", bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "[PLATFORM] sent %d bytes\n", bytes);
 
     return bytes;
 }
