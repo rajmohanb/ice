@@ -533,6 +533,7 @@ ERROR_EXIT:
 }
 
 
+
 int32_t stun_attr_print_username(
                             stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
@@ -555,6 +556,8 @@ int32_t stun_attr_print_username(
 
 /*============================================================================*/
 
+#define STUN_MI_PRINT_BUF_LEN   43
+
 int32_t stun_attr_encode_message_integrity(handle h_msg, 
         stun_attr_hdr_t *attr, u_char *msg_start, u_char *buf, 
         uint32_t max_len, stun_auth_params_t *auth, uint32_t *len)
@@ -563,6 +566,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_method_type_t method;
     uint16_t val16, key_len;
     u_char md5_key[16], hmac[20];
+    u_char mi_print[STUN_MI_PRINT_BUF_LEN] = {0};
 
     integrity = (stun_msg_integrity_attr_t *) attr;
     integrity->hdr.length = STUN_ATTR_MSG_INTEGRITY_LEN;
@@ -599,7 +603,15 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     platform_hmac_sha((char *)md5_key, key_len, 
             (char *)msg_start, (buf-msg_start - 24), (char *)hmac, 20);
 
-    stun_memcpy((buf-STUN_ATTR_MSG_INTEGRITY_LEN), hmac, 20);
+    stun_memcpy((buf-STUN_ATTR_MSG_INTEGRITY_LEN), 
+                                hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
+
+    stun_enc_dec_utils_print_binary_buffer(
+                            mi_print, STUN_MI_PRINT_BUF_LEN, 
+                            hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
+    mi_print[STUN_MI_PRINT_BUF_LEN] = 0;
+    ICE_LOG(LOG_SEV_INFO,
+            "   MESSAGE-INTEGRITY: length=20, value=%s", mi_print);
 
     *len = integrity->hdr.length + 4;
     return STUN_OK;
@@ -672,7 +684,7 @@ int32_t stun_attr_print_message_integrity(
     else
     {
         bytes += stun_snprintf((char *)buf+bytes, 
-                (*len - bytes), "value=computed while sending msg\n");
+                (*len - bytes), "value=logged when Tx'ing msg\n");
     }
 
     *len = bytes;
@@ -1430,7 +1442,10 @@ int32_t stun_attr_print_alternate_server(
     return STUN_OK;
 }
 
+
 /*============================================================================*/
+
+#define STUN_FP_PRINT_BUF_LEN   11
 
 int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr, 
             u_char *msg_start, u_char *buf, uint32_t max_len, uint32_t *len)
@@ -1438,6 +1453,7 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
     stun_fingerprint_attr_t *fingerprint;
     uint16_t val16;
     uint32_t crc32;
+    u_char fp_print[STUN_FP_PRINT_BUF_LEN] = {0};
 
     fingerprint = (stun_fingerprint_attr_t *) attr;
     fingerprint->hdr.length = STUN_ATTR_FINGERPRINT_LEN;
@@ -1466,6 +1482,13 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
 
     crc32 = htonl(crc32);
     stun_memcpy((buf-STUN_ATTR_FINGERPRINT_LEN), &crc32, sizeof(uint32_t));
+
+    stun_enc_dec_utils_print_binary_buffer(
+                            fp_print, STUN_FP_PRINT_BUF_LEN, 
+                            (u_char *)&crc32, STUN_ATTR_FINGERPRINT_LEN);
+    fp_print[STUN_FP_PRINT_BUF_LEN] = 0;
+    ICE_LOG(LOG_SEV_INFO,
+            "   FINGERPRINT: length=4, value=%s", fp_print);
 
     *len = fingerprint->hdr.length + 4;
 
@@ -1536,7 +1559,7 @@ int32_t stun_attr_print_fingerprint(
     else
     {
         bytes += stun_snprintf((char *)buf+bytes, 
-                    (*len - bytes), "value=computed while sending msg\n");
+                    (*len - bytes), "value=logged when Tx'ing msg\n");
     }
 
     *len = bytes;
