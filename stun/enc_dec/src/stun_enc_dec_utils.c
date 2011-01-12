@@ -239,7 +239,7 @@ int32_t stun_enc_dec_utils_print_msg_header(
     else
     {
         bytes += stun_snprintf((char *)buf+bytes, 
-                (*buf_len - bytes), "   Length: computed while sending msg\n");
+                (*buf_len - bytes), "   Length: logged when Tx'ing msg\n");
     }
 
     bytes += stun_snprintf((char *)buf+bytes, (*buf_len - bytes), 

@@ -699,7 +699,6 @@ uint32_t platform_crc32(uint8_t *data, size_t len)
     u_int32_t crc = 0;
 
     crc = compute_crc32(data, len);
-    ICE_LOG (LOG_SEV_INFO, "platform_crc32 => CRC = %x \n", crc);
 
     return crc;
 }

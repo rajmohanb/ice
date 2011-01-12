@@ -1487,9 +1487,10 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
 {
     int32_t i, status;
     ice_cand_pair_t *cp, *free_vp , *cur_np;
-    ice_candidate_t *local = NULL;
+    ice_candidate_t *local, *remote;
 
     free_vp = cur_np = NULL;
+    local = remote = NULL;
 
     local = ice_utils_get_local_cand_for_transport_param(
                                     media, rx_pkt->transport_param);
@@ -1513,29 +1514,27 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
                 (cp->nominated == true))
             {
                 cur_np = cp;
-                /** break? */
+                if (free_vp) break;
             }
         }
     }
 
-    ICE_LOG (LOG_SEV_INFO, 
-        "USE-CANDIDATE is set for this connectivity check request");
-
     if (free_vp == NULL)
     {
         ICE_LOG (LOG_SEV_WARNING, 
-            "Exceeded the cofigured list of valid pair entries");
+            "[ICE] Exceeded the cofigured list of valid pair entries");
         return STUN_NO_RESOURCE;
     }
 
-    free_vp->remote = 
+    remote = 
         ice_utils_get_peer_cand_for_pkt_src(media, &(rx_pkt->src));
-    if (free_vp->remote == NULL)
+    if (remote == NULL)
     {
         ice_candidate_t *new_prflx_cand = NULL;
 
         ICE_LOG (LOG_SEV_INFO, 
-            "Binding request from unknown source. Probably a PEER REFLEXIVE candidate");
+            "[ICE] Binding request from unknown source. Probably a PEER "\
+            "REFLEXIVE candidate");
 
         /** add a new remote peer reflexive candidate */
         status = ice_utils_add_remote_peer_reflexive_candidate(media, 
@@ -1545,20 +1544,40 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
         if (status != STUN_OK)
         {
             ICE_LOG (LOG_SEV_INFO, 
-                "Error while adding the PEER REFLEXIVE CANDIDATE");
+                "[ICE] Error while adding the PEER REFLEXIVE CANDIDATE");
             return status;
         }
 
-        free_vp->remote = new_prflx_cand;
-        free_vp->remote->priority = check_result->prflx_priority;
+        remote = new_prflx_cand;
+        remote->priority = check_result->prflx_priority;
     }
     
+    /**
+     * The stun server transaction does not absorb re-transmissions.
+     * Hence incase of re-transmissions, make sure the same valid 
+     * pair is not added to the list again...
+     */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_valid_pairs[i];
+
+        if ((cp->local == local) && (cp->remote == remote))
+        {
+            ICE_LOG (LOG_SEV_WARNING, 
+                "[ICE] A valid pair already exists for this candidate pair."\
+                " Hence not adding this pair and ignoring.");
+            return STUN_OK;
+        }
+    }
+
+    /** if we are here, then there is no existing duplicate in valid list */
     free_vp->local = local;
+    free_vp->remote = remote;
 
     ice_media_utils_compute_candidate_pair_priority(media, free_vp);
 
     ICE_LOG (LOG_SEV_WARNING, 
-        "Connectivity check succeeded for component ID %d "\
+        "[ICE] Connectivity check succeeded for component ID %d "\
         "of media %p", free_vp->local->comp_id, media);
 
     if (cur_np == NULL)
