@@ -25,7 +25,8 @@ SRC = ice_api.c ice_session_fsm.c ice_media_fsm.c ice_cand_pair_fsm.c ice_utils.
 # Include header files
 INCLUDE := -I ../../ -I ../inc -I ../../conn_check/inc \
 	-I ../../stun/txn/inc -I ../../stun/msg_layer/inc \
-	-I ../../turn/inc -I ../../stun/enc_dec/inc -I $(ICE_APP_INCLUDE_PATH)
+	-I ../../turn/inc -I ../../stun/enc_dec/inc \
+	-I ../../binding/inc -I $(ICE_APP_INCLUDE_PATH)
 
 CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DMB_ENABLE_TURN \
 		  -DMB_ENABLE_ICE $(INCLUDE)

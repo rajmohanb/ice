@@ -30,6 +30,7 @@ typedef struct {
 
 typedef enum {
     ICE_TURN_TIMER = 0,     /** timer type for turn */
+    ICE_BIND_TIMER,         /** timer type for stun binding */
     ICE_CC_TIMER,           /** timer type for conn check module */
     ICE_CHECK_LIST_TIMER,   /** checklist timer */
     ICE_NOMINATION_TIMER,   /** nomination timer */
@@ -267,6 +268,7 @@ struct struct_ice_media_stream
     ice_ic_check_t ic_checks[ICE_MAX_CANDIDATE_PAIRS];
 
     handle h_turn_sessions[ICE_MAX_COMPONENTS];
+    handle h_bind_sessions[ICE_MAX_COMPONENTS];
     handle h_cc_svr_session;
 };
 
@@ -276,6 +278,9 @@ typedef struct
 {
     /** turn instance handle */
     handle h_turn_inst;
+
+    /** stun binding instance handle */
+    handle h_bind_inst;
 
     /** software client name and version */
     uint32_t client_name_len;
@@ -320,6 +325,8 @@ struct struct_ice_session
 
     uint32_t num_media_streams;
     ice_media_stream_t *aps_media_streams[ICE_MAX_MEDIA_STREAMS];
+
+    bool_t use_relay;
 
     /**
      * turn/relay server configuration

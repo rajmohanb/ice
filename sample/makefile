@@ -39,6 +39,7 @@ ICE_LITE_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_ice_lite.a \
 
 ICE_FULL_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_ice.a \
 	$(ICE_LIB_DEST_PATH)/lib_turn.a \
+	$(ICE_LIB_DEST_PATH)/lib_stun_binding.a \
 	$(ICE_LIB_DEST_PATH)/lib_ice_conncheck.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_encdec.a \

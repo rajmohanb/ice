@@ -103,6 +103,7 @@ void app_timer_expiry_cb (void *timer_id, void *arg)
     return;
 }
 
+
 int32_t app_nwk_send_msg (handle h_msg, 
         stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
         uint32_t port, handle transport_param, handle app_param)
@@ -331,14 +332,13 @@ int main (int argc, char *argv[])
         }
         else if (status == STUN_OK)
         {
-            u_char mapped_addr[46] = {0};
-            uint32_t port, len = 46;
+            stun_inet_addr_t mapped_addr;
 
             status = stun_binding_session_inject_received_msg(h_inst, h_target, h_rcvdmsg);
             if (status == STUN_TERMINATED)
             {
                 status = stun_binding_session_get_mapped_address(
-                                    h_inst, h_target, mapped_addr, &len, &port);
+                                            h_inst, h_target, &mapped_addr);
                 if (status != STUN_OK)
                 {
                     app_log(LOG_SEV_ERROR, 
@@ -350,7 +350,7 @@ int main (int argc, char *argv[])
                 {
                     app_log(LOG_SEV_ERROR, 
                             "\n\nMAPPED ADDRESS and POR : %s and %d\n\n", 
-                            mapped_addr, port);
+                            mapped_addr.ip_addr, mapped_addr.port);
                     sleep(1);
                 }
 

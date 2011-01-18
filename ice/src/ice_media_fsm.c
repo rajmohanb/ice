@@ -22,6 +22,7 @@ extern "C" {
 #include "stun_base.h"
 #include "msg_layer_api.h"
 #include "turn_api.h"
+#include "stun_binding_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "conn_check_api.h"
@@ -171,32 +172,26 @@ int32_t ice_media_stream_gather_cands(ice_media_stream_t *media, handle h_msg)
     uint32_t i;
     int32_t status;
     handle h_turn_inst = media->ice_session->instance->h_turn_inst;
+    handle h_bind_inst = media->ice_session->instance->h_bind_inst;
 
     for (i = 0; i < media->num_comp; i++)
     {
-        status = turn_create_session(h_turn_inst, &(media->h_turn_sessions[i]));
-        if (status != STUN_OK) goto ERROR_EXIT;
-
-        ICE_LOG(LOG_SEV_DEBUG, "[ICE MEDIA] TURN session created handle %p", 
-                                                    media->h_turn_sessions[i]);
-
-        status = turn_session_set_app_param(h_turn_inst, 
-                        media->h_turn_sessions[i], (handle) media);
-        if (status != STUN_OK) goto ERROR_EXIT;
-
-        status = turn_session_set_transport_param(h_turn_inst, 
-                                    media->h_turn_sessions[i], 
-                                    media->as_local_cands[i].transport_param);
-        if (status != STUN_OK) goto ERROR_EXIT;
-
-        status = turn_session_set_relay_server_cfg(h_turn_inst, 
-                        media->h_turn_sessions[i], 
-                        (turn_server_cfg_t *)&media->ice_session->turn_cfg);
-        if (status != STUN_OK) goto ERROR_EXIT;
-
-        status = turn_session_send_message(h_turn_inst, 
-                media->h_turn_sessions[i], STUN_METHOD_ALLOCATE, STUN_REQUEST);
-        if (status != STUN_OK) goto ERROR_EXIT;
+        if (media->ice_session->use_relay == true)
+        {
+            status = ice_media_utils_init_turn_gather_candidates(
+                                    media, h_turn_inst, 
+                                    media->as_local_cands[i].transport_param, 
+                                    &(media->h_turn_sessions[i]));
+            if (status != STUN_OK) goto ERROR_EXIT;
+        }
+        else
+        {
+            status = ice_media_utils_init_stun_gather_candidates(
+                                    media, h_bind_inst, 
+                                    media->as_local_cands[i].transport_param, 
+                                    &(media->h_bind_sessions[i]));
+            if (status != STUN_OK) goto ERROR_EXIT;
+        }
     }
 
     media->state = ICE_MEDIA_GATHERING;
@@ -207,8 +202,17 @@ ERROR_EXIT:
 
     for (i = 0; i < media->num_comp; i++)
     {
-        if (media->h_turn_sessions[i])
-            turn_destroy_session(h_turn_inst, media->h_turn_sessions[i]);
+        if (media->ice_session->use_relay == true)
+        {
+            if (media->h_turn_sessions[i])
+                turn_destroy_session(h_turn_inst, media->h_turn_sessions[i]);
+        }
+        else
+        {
+            if (media->h_bind_sessions[i])
+                stun_binding_destroy_session(
+                                h_bind_inst, media->h_bind_sessions[i]);
+        }
     }
 
     return status;
@@ -220,10 +224,12 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
 {
     int32_t status;
     handle h_turn_inst, h_turn_dialog;
+    handle h_bind_inst, h_bind_session;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) h_msg;
     stun_method_type_t method;
 
     h_turn_inst = media->ice_session->instance->h_turn_inst;
+    h_bind_inst = media->ice_session->instance->h_bind_inst;
 
     ICE_LOG(LOG_SEV_DEBUG, 
             "[ICE MEDIA] Received message from %s and port %d", 
@@ -241,6 +247,11 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
         h_turn_dialog = ice_utils_get_turn_session_for_transport_param(
                                             media, stun_pkt->transport_param);
         if (h_turn_dialog == NULL) status = STUN_INVALID_PARAMS;
+    }
+    else if (method == STUN_METHOD_BINDING)
+    {
+        status = stun_binding_instance_find_session_for_received_msg(
+                                h_bind_inst, stun_pkt->h_msg, &h_bind_session);
     }
     else
     {
@@ -260,12 +271,49 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
         return status;
     }
 
-    status = turn_session_inject_received_msg(h_turn_inst, 
+    if (media->ice_session->use_relay == true)
+    {
+        status = turn_session_inject_received_msg(h_turn_inst, 
                                             h_turn_dialog, stun_pkt->h_msg);
+    }
+    else
+    {
+        status = stun_binding_session_inject_received_msg(
+                                h_bind_inst, h_bind_session, stun_pkt->h_msg);
+        if (status == STUN_TERMINATED)
+        {
+            status = ice_utils_copy_stun_gathered_candidates(
+                            media, h_bind_inst, h_bind_session, stun_pkt);
+            if (status == STUN_OK)
+            {
+                media->num_comp_gathered++;
+
+                ICE_LOG(LOG_SEV_DEBUG, "[ICE MEDIA] Candidates gathered for "\
+                        "%d number of components", media->num_comp_gathered);
+
+                if (media->num_comp_gathered >= media->num_comp)
+                {
+                    media->state = ICE_MEDIA_GATHERED;
+
+                    /** 
+                     * 4.1.1.3 - Computing foundations
+                     * Now that all the candidates have been gathered for 
+                     * each of the components, the foundation id needs to 
+                     * be computed which is used for the frozen algorithm
+                     *
+                     * TODO - should the foundation id be computed 
+                     *        across all media streams?
+                     */
+                    ice_utils_compute_foundation_ids(media);
+                }
+            }
+        }
+    }
+
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_WARNING, 
-                "[ICE MEDIA] TURN session returned error %d ", status);
+                "[ICE MEDIA] BIND/TURN session returned error %d ", status);
         return status;
     }
 

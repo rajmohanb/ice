@@ -87,7 +87,11 @@ int32_t stun_binding_instance_find_session_for_received_msg(
                             handle h_inst, handle h_msg, handle *h_session);
 
 int32_t stun_binding_session_get_mapped_address(handle h_inst, 
-        handle h_session, u_char *mapped_addr, uint32_t *len, uint32_t *port);
+                        handle h_session, stun_inet_addr_t *mapped_addr);
+
+int32_t stun_binding_session_timer_get_session_handle (
+                    handle arg, handle *h_session, handle *h_instance);
+
 
 /******************************************************************************/
 

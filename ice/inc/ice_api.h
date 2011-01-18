@@ -313,7 +313,8 @@ int32_t ice_session_add_media_stream (handle h_inst, handle h_session,
 int32_t ice_session_remove_media_stream (handle h_inst,
                                 handle h_session, handle h_media);
 
-int32_t ice_session_gather_candidates(handle h_inst, handle h_session);
+int32_t ice_session_gather_candidates(handle h_inst, 
+                                        handle h_session, bool_t use_relay);
 
 int32_t ice_session_get_session_params(handle h_inst, 
                 handle h_session, ice_session_params_t *session_params);

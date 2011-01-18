@@ -25,6 +25,7 @@ extern "C" {
 #include "stun_enc_dec_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"
+#include "stun_binding_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_session_fsm.h"
@@ -75,10 +76,20 @@ int32_t ice_create_instance(handle *h_inst)
         return status;
     }
 
+    status = stun_binding_create_instance(&instance->h_bind_inst);
+    if (status != STUN_OK)
+    {
+        turn_destroy_instance(instance->h_turn_inst);
+        stun_free(instance);
+        return status;
+    }
+
     status = conn_check_create_instance(&instance->h_cc_inst);
     if (status != STUN_OK)
     {
-       stun_free(instance);
+        turn_destroy_instance(instance->h_turn_inst);
+        stun_binding_destroy_instance(instance->h_bind_inst);
+        stun_free(instance);
         return status;
     }
 
@@ -90,7 +101,7 @@ int32_t ice_create_instance(handle *h_inst)
 }
 
 
-void ice_turn_callback_fxn (handle h_turn_inst, 
+static void ice_turn_callback_fxn (handle h_turn_inst, 
         handle h_turn_session, turn_session_state_t turn_session_state)
 {
     int32_t status;
@@ -149,7 +160,8 @@ void ice_turn_callback_fxn (handle h_turn_inst,
 }
 
 
-void ice_cc_callback_fxn (handle h_cc_inst, 
+
+static void ice_cc_callback_fxn (handle h_cc_inst, 
         handle h_cc_session, conn_check_session_state_t state, handle data)
 {
     int32_t status;
@@ -216,7 +228,8 @@ void ice_cc_callback_fxn (handle h_cc_inst,
 }
 
 
-handle ice_turn_start_timer(uint32_t duration, handle arg)
+
+static handle ice_turn_start_timer(uint32_t duration, handle arg)
 {
     int32_t status;
     ice_timer_params_t *timer;
@@ -249,7 +262,44 @@ handle ice_turn_start_timer(uint32_t duration, handle arg)
 }
 
 
-handle ice_cc_start_timer(uint32_t duration, handle arg)
+
+static handle ice_stun_bind_start_timer(uint32_t duration, handle arg)
+{
+    int32_t status;
+    ice_timer_params_t *timer;
+    handle h_bind_session, h_bind_inst;
+    ice_media_stream_t *media;
+
+    timer = (ice_timer_params_t *) 
+        stun_calloc (1, sizeof(ice_timer_params_t));
+    if (timer == NULL) return 0;
+
+    status = turn_session_timer_get_session_handle(
+                                        arg, &h_bind_session, &h_bind_inst);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = stun_binding_session_get_app_param( 
+                            h_bind_inst, h_bind_session, (handle *)&media);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    timer->h_instance = media->ice_session->instance;
+    timer->h_session = media->ice_session;
+    timer->arg = arg;
+    timer->type = ICE_BIND_TIMER;
+
+    timer->timer_id = 
+        media->ice_session->instance->start_timer_cb(duration, timer);
+    if (timer->timer_id)
+        return timer;
+
+ERROR_EXIT_PT:
+    stun_free(timer);
+    return 0;
+}
+
+
+
+static handle ice_cc_start_timer(uint32_t duration, handle arg)
 {
     int32_t status;
     ice_timer_params_t *timer;
@@ -293,7 +343,7 @@ ERROR_EXIT:
 }
 
 
-int32_t ice_stop_timer(handle timer_id)
+static int32_t ice_stop_timer(handle timer_id)
 {
     ice_timer_params_t *timer = (ice_timer_params_t *) timer_id;
     ice_session_t *session;
@@ -423,9 +473,9 @@ static int32_t ice_encode_and_send_message(handle h_msg,
 
 
 
-static int32_t ice_encode_and_send_conn_check_message(handle h_msg, 
-                    stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
-                    uint32_t port, handle transport_param, handle app_param)
+static int32_t ice_encode_and_send_stun_binding_message(handle h_msg, 
+        stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, uint32_t port, 
+        handle transport_param, handle app_param, bool_t msg_intg_reqd)
 {
     u_char *buf;
     uint32_t sent_bytes, buf_len;
@@ -446,40 +496,48 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
 
     if (!app_param) return STUN_INT_ERROR;
 
-    /** connectivity check mesages - short term credential */
-    status = stun_msg_get_class(h_msg, &msg_class);
-    if (status != STUN_OK)
+    if (msg_intg_reqd == true)
     {
-        ICE_LOG (LOG_SEV_ERROR, 
-                "[ICE] Invalid message!! unable to retrieve STUN msg class");
-        return STUN_INVALID_PARAMS;
-    }
+        /** connectivity check mesages - short term credential */
+        status = stun_msg_get_class(h_msg, &msg_class);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "[ICE] Invalid message!! unable to retrieve STUN msg class");
+            return STUN_INVALID_PARAMS;
+        }
 
-    if (msg_class == STUN_REQUEST)
-    {
-        cp = (ice_cand_pair_t *) app_param;
-        media = cp->media;
-        ice_session = media->ice_session;
+        if (msg_class == STUN_REQUEST)
+        {
+            cp = (ice_cand_pair_t *) app_param;
+            media = cp->media;
+            ice_session = media->ice_session;
 
-        auth.len = stun_strlen(media->peer_pwd);
-        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-        stun_strncpy((char *)auth.password, media->peer_pwd, auth.len);
+            auth.len = stun_strlen(media->peer_pwd);
+            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.password, media->peer_pwd, auth.len);
+        }
+        else if ((msg_class == STUN_SUCCESS_RESP) || 
+                 (msg_class == STUN_ERROR_RESP))
+        {
+            media = (ice_media_stream_t *) app_param;
+            ice_session = media->ice_session;
+            cp = NULL;
+
+            auth.len = stun_strlen(media->local_pwd);
+            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+        }
+            
+        /** Indications are not authenticated */
     }
-    else if ((msg_class == STUN_SUCCESS_RESP) || 
-             (msg_class == STUN_ERROR_RESP))
+    else
     {
         media = (ice_media_stream_t *) app_param;
         ice_session = media->ice_session;
-        cp = NULL;
-
-        auth.len = stun_strlen(media->local_pwd);
-        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-        stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
     }
-        
-    /** Indications are not authenticated */
 
     buf = (u_char *) stun_calloc(1, TRANSPORT_MTU_SIZE);
     buf_len = TRANSPORT_MTU_SIZE;
@@ -505,7 +563,7 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
      * connectivity check messages that are sent using the relayed 
      * candidate must be encoded in a TURN DATA indication message
      */
-    if((msg_class == STUN_REQUEST) && 
+    if((msg_intg_reqd == true) && (msg_class == STUN_REQUEST) && 
        (cp->local->type == ICE_CAND_TYPE_RELAYED))
     {
         handle h_turn_session;
@@ -537,6 +595,27 @@ static int32_t ice_encode_and_send_conn_check_message(handle h_msg,
 
     return status;
 }
+
+
+
+static int32_t ice_encode_and_send_stun_bind_message (
+        handle h_msg, stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+        uint32_t port, handle transport_param, handle app_param)
+{
+    return ice_encode_and_send_stun_binding_message(h_msg, 
+            ip_addr_type, ip_addr, port, transport_param, app_param, false);
+}
+
+
+
+static int32_t ice_encode_and_send_conn_check_message(handle h_msg, 
+                    stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+                    uint32_t port, handle transport_param, handle app_param)
+{
+    return ice_encode_and_send_stun_binding_message(h_msg, 
+            ip_addr_type, ip_addr, port, transport_param, app_param, true);
+}
+
 
 
 void ice_handle_app_data(handle h_turn_inst, 
@@ -602,6 +681,7 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     ice_instance_t *instance;
     conn_check_instance_callbacks_t cc_cbs;
     turn_instance_callbacks_t turn_cbs;
+    stun_binding_instance_callbacks_t bind_cbs;
     int32_t status;
 
     if ((h_inst == NULL) || (cbs == NULL))
@@ -634,6 +714,22 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     {
         return status;
     }
+    
+    /** set callbacks to stun binding module */
+    bind_cbs.nwk_cb = ice_encode_and_send_stun_bind_message;
+    bind_cbs.start_timer_cb = ice_stun_bind_start_timer;
+    bind_cbs.stop_timer_cb = ice_stop_timer;
+
+    status = stun_binding_instance_set_callbacks(
+                                instance->h_bind_inst, &bind_cbs);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "stun_binding_instance_set_callbacks() returned error: %s\n", 
+                status);
+        return status;
+    }
+
     /** set callbacks to connectivity check module */
     cc_cbs.nwk_cb = ice_encode_and_send_conn_check_message;
     cc_cbs.start_timer_cb = ice_cc_start_timer;
@@ -956,7 +1052,8 @@ int32_t ice_session_remove_media_stream (handle h_inst,
 }
 
 
-int32_t ice_session_gather_candidates(handle h_inst, handle h_session)
+int32_t ice_session_gather_candidates(handle h_inst, 
+                                        handle h_session, bool_t use_relay)
 {
     ice_instance_t *instance;
     ice_session_t *session;
@@ -969,6 +1066,23 @@ int32_t ice_session_gather_candidates(handle h_inst, handle h_session)
     session = (ice_session_t *) h_session;
 
     ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    if ((use_relay == true) && (session->turn_cfg.server.port == 0))
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] TURN/Relay server configuration not done for "\
+                "the session.");
+        return STUN_INVALID_PARAMS;
+    }
+
+    if ((use_relay == false) && (session->stun_cfg.server.port == 0))
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] STUN server configuration not done for the session.");
+        return STUN_INVALID_PARAMS;
+    }
+
+    session->use_relay = use_relay;
 
     return ice_session_fsm_inject_msg(session, 
                                         ICE_INIT_GATHERING, NULL, NULL);
@@ -1189,6 +1303,7 @@ int32_t ice_session_set_peer_media_credentials(handle h_inst,
 }
 
 
+
 int32_t ice_session_set_peer_ice_mode(handle h_inst, 
                     handle h_session, ice_mode_type_t remote_ice_mode)
 {
@@ -1382,6 +1497,11 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_NOMINATION_TIMER_EXPIRY, arg, NULL);
+    }
+    else if (timer->type == ICE_BIND_TIMER)
+    {
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_BIND_TIMER");
+        status = stun_binding_session_inject_timer_event(timer_id, timer->arg);
     }
     else
     {

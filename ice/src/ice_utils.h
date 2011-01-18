@@ -148,6 +148,9 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
 int32_t ice_utils_copy_turn_gathered_candidates(
         ice_media_stream_t *media, ice_int_params_t *param, uint32_t comp_id);
 
+int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media, 
+        handle h_bind_inst, handle h_bind_session, ice_rx_stun_pkt_t *rx_pkt);
+
 int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media);
 
 int32_t ice_media_utils_start_nomination_timer(ice_media_stream_t *media);
@@ -221,6 +224,16 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media);
 ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
                                 ice_media_stream_t *media, uint32_t comp_id);
 
+int32_t ice_media_utils_init_turn_gather_candidates(
+                            ice_media_stream_t *media, handle h_turn_inst, 
+                            handle transport_param, handle *h_new_session);
+
+int32_t ice_media_utils_init_stun_gather_candidates(
+                            ice_media_stream_t *media, handle h_bind_inst, 
+                            handle transport_param, handle *h_new_session);
+
+ice_candidate_t *ice_media_utils_get_host_cand_for_transport_param(
+                        ice_media_stream_t *media, ice_rx_stun_pkt_t *rx_msg);
 
 
 /******************************************************************************/

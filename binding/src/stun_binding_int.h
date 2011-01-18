@@ -24,6 +24,26 @@ extern "C" {
 
 #define STUN_BINDING_TXN_TABLE_SIZE     10
 
+
+typedef enum
+{
+    /** timer started by turn transactions */
+    BIND_STUN_TXN_TIMER = 0,
+    
+    /** that's all we have as of now */
+} stun_bind_timer_type_t;
+
+
+typedef struct {
+
+    handle h_instance;
+    handle h_bind_session;
+    stun_bind_timer_type_t type;
+    handle timer_id;
+    handle arg;
+} stun_bind_timer_params_t;
+
+
 typedef struct 
 {
     /** transaction instance handle */

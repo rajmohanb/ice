@@ -642,7 +642,8 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
 
 int32_t turn_session_timer_get_session_handle (
                     handle arg, handle *h_session, handle *h_instance)
-{ turn_timer_params_t *timer;
+{
+    turn_timer_params_t *timer;
 
     if ((arg == NULL) || (h_session == NULL) || (h_instance == NULL))
         return STUN_INVALID_PARAMS;

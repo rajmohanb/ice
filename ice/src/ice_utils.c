@@ -24,6 +24,7 @@ extern "C" {
 #include "msg_layer_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"
+#include "stun_binding_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_cand_pair_fsm.h"
@@ -612,6 +613,7 @@ int32_t ice_media_utils_form_candidate_pairs(ice_media_stream_t *media)
 }
 
 
+
 int32_t ice_media_utils_sort_candidate_pairs(ice_media_stream_t *media)
 {
     int i, j;
@@ -725,6 +727,7 @@ int32_t ice_media_utils_prune_checklist(ice_media_stream_t *media)
 }
 
 
+
 int32_t ice_media_utils_compute_initial_states_for_pairs(
                                             ice_media_stream_t *media)
 {
@@ -753,6 +756,7 @@ int32_t ice_media_utils_compute_initial_states_for_pairs(
 
     return STUN_OK;
 }
+
 
 
 int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
@@ -828,6 +832,7 @@ int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
 
     return STUN_OK;
 }
+
 
 
 void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
@@ -917,6 +922,7 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
 
     return;
 }
+
 
 
 int32_t ice_media_utils_get_next_connectivity_check_pair(
@@ -1248,6 +1254,7 @@ ERROR_EXIT:
 }
 
 
+
 int32_t ice_utils_nominate_candidate_pair(
         ice_session_t *session, ice_cand_pair_t *pair)
 {
@@ -1316,6 +1323,7 @@ int32_t ice_utils_nominate_candidate_pair(
 }
 
 
+
 int32_t ice_utils_copy_media_host_candidates(
                 ice_api_media_stream_t *src, ice_media_stream_t *dest)
 {
@@ -1376,6 +1384,7 @@ int32_t ice_utils_copy_media_host_candidates(
 }
 
 
+
 int32_t ice_utils_find_media_for_transport_handle(
     ice_session_t *session, handle transport_param, int32_t *index)
 {
@@ -1406,6 +1415,7 @@ int32_t ice_utils_find_media_for_transport_handle(
             "No media stream found for transport param %p", transport_param);
     return STUN_NOT_FOUND;
 }
+
 
 
 int32_t ice_utils_find_session_for_transport_handle(
@@ -1445,6 +1455,7 @@ int32_t ice_utils_find_session_for_transport_handle(
     ICE_LOG(LOG_SEV_DEBUG, 
             "No session found for transport param %p", transport_param);
     return STUN_NOT_FOUND;
+
 }
 
 
@@ -1471,6 +1482,7 @@ ice_media_stream_t *
 
     return NULL;
 }
+
 
 
 void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
@@ -1528,6 +1540,7 @@ void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
 }
 
 
+
 handle ice_media_utils_get_base_cand_for_comp_id(
                             ice_media_stream_t *media, uint32_t comp_id)
 {
@@ -1546,6 +1559,7 @@ handle ice_media_utils_get_base_cand_for_comp_id(
 
     return base;
 }
+
 
 
 uint32_t ice_utils_get_conn_check_timer_duration(ice_media_stream_t *media)
@@ -1568,6 +1582,7 @@ uint32_t ice_utils_get_conn_check_timer_duration(ice_media_stream_t *media)
 
     return (num_active_checklists * TA_VAL_FOR_CHECKS);
 }
+
 
 
 ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
@@ -1716,6 +1731,7 @@ int32_t ice_media_utils_copy_selected_pair(ice_media_stream_t *media)
 }
 
 
+
 int32_t ice_utils_get_session_state_change_event(
                     ice_session_t *session, ice_state_t *event)
 {
@@ -1746,6 +1762,7 @@ int32_t ice_utils_get_session_state_change_event(
 
     return status;
 }
+
 
 
 int32_t ice_utils_get_media_state_change_event(
@@ -1781,6 +1798,7 @@ int32_t ice_utils_get_media_state_change_event(
 
     return status;
 }
+
 
 
 int32_t ice_media_utils_notify_state_change_event(
@@ -2092,6 +2110,7 @@ int32_t ice_utils_get_free_local_candidate(
 }
 
 
+
 int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand, 
                                 stun_inet_addr_t *alloc_addr, 
                                 ice_cand_type_t cand_type, uint32_t comp_id,
@@ -2113,6 +2132,7 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
 
     return STUN_OK;
 }
+
 
 
 int32_t ice_utils_copy_turn_gathered_candidates(
@@ -2155,6 +2175,46 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     ice_utils_copy_gathered_candidate_info(cand, 
                             &alloc_info.relay_addr, ICE_CAND_TYPE_RELAYED, 
                             comp_id, base_cand);
+
+    return STUN_OK;
+}
+
+
+
+
+int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media, 
+        handle h_bind_inst, handle h_bind_session, ice_rx_stun_pkt_t *rx_pkt)
+{
+    int32_t status;
+    stun_inet_addr_t mapped_addr;
+    ice_candidate_t *base_cand, *cand = NULL;
+
+    status = stun_binding_session_get_mapped_address(
+                        h_bind_inst, h_bind_session, &mapped_addr);
+    if (status != STUN_OK)
+    {
+        app_log(LOG_SEV_ERROR, 
+            "unable to get mapped address. Returned error: %s", status);
+        return STUN_NOT_FOUND;
+    }
+
+    /** get the base candidate for this component */
+    base_cand = 
+        ice_media_utils_get_host_cand_for_transport_param(media, rx_pkt);
+    if (base_cand == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Unable to find base candidate for"\
+               " received STUN BINDING response while gathering candidates");
+        return STUN_INT_ERROR;
+    }
+
+    status = ice_utils_get_free_local_candidate(media, &cand);
+    if (status == STUN_NO_RESOURCE) return status;
+
+    /** copy server reflexive candidate information */
+    ice_utils_copy_gathered_candidate_info(cand, 
+                            &mapped_addr, ICE_CAND_TYPE_SRFLX, 
+                            base_cand->comp_id, base_cand);
 
     return STUN_OK;
 }
@@ -3292,6 +3352,112 @@ ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
 
     return np;
 }
+
+
+
+int32_t ice_media_utils_init_turn_gather_candidates(
+                            ice_media_stream_t *media, handle h_turn_inst, 
+                            handle transport_param, handle *h_new_session)
+{
+    int32_t status;
+    handle h_turn_session;
+
+    status = turn_create_session(h_turn_inst, &h_turn_session);
+    if (status != STUN_OK) return status;
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] TURN session created handle %p", h_turn_session);
+
+    status = turn_session_set_app_param(h_turn_inst, 
+                                        h_turn_session, (handle) media);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = turn_session_set_transport_param(
+                        h_turn_inst, h_turn_session, transport_param);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = turn_session_set_relay_server_cfg(h_turn_inst, h_turn_session,
+                        (turn_server_cfg_t *)&media->ice_session->turn_cfg);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = turn_session_send_message(h_turn_inst, 
+                    h_turn_session, STUN_METHOD_ALLOCATE, STUN_REQUEST);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    *h_new_session = h_turn_session;
+    return status;
+
+ERROR_EXIT:
+    turn_destroy_session(h_turn_inst, h_turn_session);
+    return status;
+}
+
+
+
+int32_t ice_media_utils_init_stun_gather_candidates(
+                            ice_media_stream_t *media, handle h_bind_inst, 
+                            handle transport_param, handle *h_new_session)
+{
+    int32_t status;
+    handle h_bind_session;
+    ice_stun_server_cfg_t *stun_cfg;
+
+    status = stun_binding_create_session(h_bind_inst, 
+                            STUN_BIND_CLIENT_SESSION, &h_bind_session);
+    if (status != STUN_OK) return status;
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] STUN binding session created handle %p", 
+            h_bind_session);
+
+    status = stun_binding_session_set_app_param(h_bind_inst, 
+                                        h_bind_session, (handle) media);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = stun_binding_session_set_transport_param(
+                        h_bind_inst, h_bind_session, transport_param);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    stun_cfg = &media->ice_session->stun_cfg;
+    status = stun_binding_session_set_stun_server(h_bind_inst, 
+            h_bind_session, stun_cfg->server.host_type,
+            stun_cfg->server.ip_addr, stun_cfg->server.port);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = stun_binding_session_send_message(
+                    h_bind_inst, h_bind_session, STUN_REQUEST);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    *h_new_session = h_bind_session;
+    return status;
+
+ERROR_EXIT:
+    stun_binding_destroy_session(h_bind_inst, h_bind_session);
+    return status;
+}
+
+
+
+ice_candidate_t *ice_media_utils_get_host_cand_for_transport_param(
+                        ice_media_stream_t *media, ice_rx_stun_pkt_t *rx_msg)
+{
+    uint32_t i;
+    ice_candidate_t *base = NULL;
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        if ((media->as_local_cands[i].transport_param 
+                                    == rx_msg->transport_param) &&
+            (media->as_local_cands[i].type == ICE_CAND_TYPE_HOST))
+        {
+            base = &media->as_local_cands[i];
+            break;
+        }
+    }
+
+    return base;
+}
+
 
 
 /******************************************************************************/

@@ -69,7 +69,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        process_relay_server_msg,
+        process_gather_resp,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
@@ -296,7 +296,7 @@ EXIT_PT:
 
 
 
-int32_t process_relay_server_msg (ice_session_t *session, 
+int32_t process_gather_resp (ice_session_t *session, 
                                             handle h_msg, handle *h_param)
 {
     int32_t status, index;
@@ -309,10 +309,19 @@ int32_t process_relay_server_msg (ice_session_t *session,
     stun_msg_get_method(stun_pkt->h_msg, &method);
 
     /** 
-     * at this stage, we only entertain responses from relay server
-     * for turn alloc requests initiated by this session.
+     * at this stage, we only entertain responses either from relay server
+     * for turn alloc requests initiated by this session OR response from
+     * stun server for the binding requests.
      */
-    if (method != STUN_METHOD_ALLOCATE) return STUN_INVALID_PARAMS;
+    if (session->use_relay == true)
+    {
+        if (method != STUN_METHOD_ALLOCATE) return STUN_INVALID_PARAMS;
+    }
+    else
+    {
+        if (method != STUN_METHOD_BINDING) return STUN_INVALID_PARAMS;
+    }
+
     if ((msg_class != STUN_SUCCESS_RESP) && (msg_class != STUN_ERROR_RESP))
         return STUN_INVALID_PARAMS;
 
@@ -332,7 +341,8 @@ int32_t process_relay_server_msg (ice_session_t *session,
 
     media = session->aps_media_streams[index];
 
-    status = ice_media_stream_fsm_inject_msg(media, ICE_MEDIA_RELAY_MSG, h_msg);
+    status = ice_media_stream_fsm_inject_msg(
+                                media, ICE_MEDIA_RELAY_MSG, h_msg);
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
@@ -349,6 +359,8 @@ int32_t process_relay_server_msg (ice_session_t *session,
 
     return status;
 }
+
+
 
 int32_t ice_form_checklist(ice_session_t *session, 
                                             handle h_msg, handle *h_param)
@@ -411,6 +423,7 @@ int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
      
     return status;
 }
+
 
 
 int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)

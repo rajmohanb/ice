@@ -867,7 +867,7 @@ int main (int argc, char *argv[])
      * kick off the session. An ice full session will 
      * start off with gathering of local candidates. 
      */
-    ice_session_gather_candidates(h_inst, h_session);
+    ice_session_gather_candidates(h_inst, h_session, true);
 
     app_log (LOG_SEV_ERROR, "**************************************************************\n");
 

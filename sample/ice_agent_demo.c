@@ -737,6 +737,7 @@ void app_create_ice_session(void)
     ice_mode_type_t ses_mode;
     ice_session_type_t ses_type;
     ice_relay_server_cfg_t turn_cfg;
+    ice_stun_server_cfg_t stun_cfg;
 
     if (g_session != NULL)
     {
@@ -784,6 +785,19 @@ void app_create_ice_session(void)
     {
         app_log (LOG_SEV_ERROR, 
                 "ice_session_set_relay_server_cfg() returned error %d\n", status);
+        return;
+    }
+
+
+    stun_cfg.server.host_type = STUN_INET_ADDR_IPV4;
+    stun_strncpy((char *)&stun_cfg.server.ip_addr, STUN_SRV_IP, ICE_IP_ADDR_MAX_LEN - 1);
+    stun_cfg.server.port = STUN_SRV_PORT; 
+
+    status = ice_session_set_stun_server_cfg(g_inst, g_session, &stun_cfg);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "ice_session_set_stun_server_cfg() returned error %d\n", status);
         return;
     }
 
@@ -894,7 +908,7 @@ void app_add_media(void)
 
 void app_gather_ice_candidates(void)
 {
-    int32_t status = ice_session_gather_candidates(g_inst, g_session);
+    int32_t status = ice_session_gather_candidates(g_inst, g_session, false);
 
     if (status != STUN_OK)
     {
