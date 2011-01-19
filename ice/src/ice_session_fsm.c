@@ -23,6 +23,7 @@ extern "C" {
 #include "msg_layer_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"
+#include "stun_binding_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_utils.h"
@@ -765,23 +766,46 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     /** verify media handle */
     ICE_VALIDATE_MEDIA_HANDLE(media);
 
-#if 0
-    session->aps_media_streams[i] = NULL;
-#endif
+    if (session->use_relay == false)
+        session->aps_media_streams[i] = NULL;
 
-    /** clean up all turn sessions, if any */
-    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+     /** clean up all turn sessions, if any */
+    if (session->use_relay == true)
     {
-        if (media->h_turn_sessions[i] == NULL) continue;
-
-        status = turn_destroy_session(
-                session->instance->h_turn_inst, media->h_turn_sessions[i]);
-
-        if (status != STUN_OK)
+        for (i = 0; i < ICE_MAX_COMPONENTS; i++)
         {
-            ICE_LOG(LOG_SEV_ERROR, 
-                    "[ICE SESSION] Destroying of TURN session failed %d", 
-                    status);
+            if (media->h_turn_sessions[i] == NULL) continue;
+
+            status = turn_destroy_session(
+                    session->instance->h_turn_inst, media->h_turn_sessions[i]);
+
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "[ICE SESSION] Destroying of TURN session failed %d", 
+                        status);
+            }
+        }
+    }
+    else
+    {
+        for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+        {
+            if (media->h_bind_sessions[i] == NULL) continue;
+
+            status = stun_binding_destroy_session(
+                    session->instance->h_bind_inst, media->h_bind_sessions[i]);
+
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "[ICE SESSION] Destroying of STUN Binding session "\
+                        "failed %d", status);
+            }
+            else
+            {
+                media->h_bind_sessions[i] = 0;
+            }
         }
     }
 
@@ -791,13 +815,18 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 
     /** TODO stop running timers, if any */
 
-    /** free the memory for media context */
-#if 0
-    media->ice_session = NULL;
-    stun_free(media);
+    /** 
+     * free the memory for media context only if STUN server is used. Incase 
+     * the TURN server is used for the session, then the media will be 
+     * destroyed when turn refersh response is received after de-allocation
+     */
+    if (session->use_relay == false)
+    {
+        media->ice_session = NULL;
+        stun_free(media);
 
-    session->num_media_streams--;
-#endif
+        session->num_media_streams--;
+    }
 
     /** no change in session state */
     

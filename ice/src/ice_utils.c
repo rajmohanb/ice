@@ -2194,7 +2194,7 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
     if (status != STUN_OK)
     {
         app_log(LOG_SEV_ERROR, 
-            "unable to get mapped address. Returned error: %s", status);
+            "unable to get mapped address. Returned error: %d", status);
         return STUN_NOT_FOUND;
     }
 

@@ -467,17 +467,20 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     int32_t status;
     ice_cand_pair_t *pair;
 
-    /**
-     * Before the connectivity checks are initiated for this media,
-     * install permissions on the turn server in case the session
-     * is making use of turn relay.
-     */
-    status = ice_utils_install_turn_permissions(media);
-    if (status != STUN_OK)
+    if (media->ice_session->use_relay == true)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[ICE MEDIA] Installing of TURN permissions failed");
-        return status;
+        /**
+         * Before the connectivity checks are initiated for this media,
+         * install permissions on the turn server in case the session
+         * is making use of turn relay.
+         */
+        status = ice_utils_install_turn_permissions(media);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[ICE MEDIA] Installing of TURN permissions failed");
+            return status;
+        }
     }
 
     /** 
