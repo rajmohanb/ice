@@ -719,12 +719,23 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                     {
                         cp->valid_pair = true;
                         cp->nominated = check_result.nominated;
+
+                        ICE_LOG(LOG_SEV_ERROR,
+                                "[ICE] Added candidate pair to NOMINATED list. From %s %p ==> To %s %p", 
+                                cp->local->transport.ip_addr, cp->local->transport.port, 
+                                cp->remote->transport.ip_addr, cp->remote->transport.port);
                     }
                     else
                     {
                         prflx_pair->valid_pair = true;
                         prflx_pair->nominated = check_result.nominated;
+
+                        ICE_LOG(LOG_SEV_ERROR,
+                                "[ICE] Added candidate pair to NOMINATED list. From %s %p ==> To %s %p", 
+                                prflx_pair->local->transport.ip_addr, prflx_pair->local->transport.port, 
+                                prflx_pair->remote->transport.ip_addr, prflx_pair->remote->transport.port);
                     }
+
 
                     /**
                      * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
@@ -736,7 +747,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                     if (status != STUN_OK)
                     {
                         ICE_LOG(LOG_SEV_ERROR,
-                                "Updating the candidate pair states of "\
+                                "[ICE] Updating the candidate pair states of "\
                                 "the media failed - %d", status);
 
                         /** just fallthrough ... */

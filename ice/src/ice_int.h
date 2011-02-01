@@ -214,6 +214,14 @@ typedef enum
     ICE_MEDIA_STATE_MAX,
 } ice_media_stream_state_t;
 
+
+typedef struct ice_trigger_check_node
+{
+    ice_cand_pair_t *cp;
+    struct ice_trigger_check_node *next;
+} ice_trigger_check_node_t;
+
+
 /** forward declaration */
 typedef struct struct_ice_session ice_session_t;
 
@@ -257,8 +265,7 @@ struct struct_ice_media_stream
     ice_candidate_t as_remote_cands[ICE_CANDIDATES_MAX_SIZE];
 
     /** triggered FIFO check queue */
-    uint32_t triggered_count;
-    ice_cand_pair_t *triggered_checks[ICE_MAX_CANDIDATE_PAIRS];
+    ice_trigger_check_node_t *trig_check_list;
 
     /** 
      * list that stores incoming conn check pair details 

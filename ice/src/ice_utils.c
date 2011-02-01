@@ -861,11 +861,13 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
 
         if (pair->nominated == true)
             stun_strcpy(nom_status, "nominated");
+        else if (pair->check_nom_status == true)
+            stun_strcpy(nom_status, "nominating");
         else
             stun_strcpy(nom_status, "NOT nominated");
 
         count++;
-        ICE_LOG (LOG_SEV_DEBUG, 
+        ICE_LOG (LOG_SEV_INFO, 
                 "%d: [%d] %s:%d --> %s:%d %s [%s] [%s] [ %lld %s:%s ]\n", 
                 count, pair->local->comp_id, pair->local->transport.ip_addr, 
                 pair->local->transport.port, pair->remote->transport.ip_addr, 
@@ -938,22 +940,16 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
     /** section 5.8 - scheduling checks */
 
     /** first look into triggered check queue */
-    if (media->triggered_count > 0)
+    if (media->trig_check_list)
     {
-        for ( i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-            if (media->triggered_checks[i] != NULL) break;
+        ice_trigger_check_node_t *elem = media->trig_check_list;
+        media->trig_check_list = elem->next;
 
-        if(i < ICE_MAX_CANDIDATE_PAIRS)
-        {
-            ICE_LOG(LOG_SEV_INFO,
-                    "Found a triggered check for cand pair %d", i);
+        ICE_LOG(LOG_SEV_INFO, "[ICE] Found a triggered check for cand pair");
+        *pair = elem->cp;
 
-            *pair = media->triggered_checks[i];
-
-            media->triggered_count -= 1;
-            media->triggered_checks[i] = NULL;
-            return STUN_OK;
-        }
+        stun_free(elem);
+        return STUN_OK;
     }
 
     /** 
@@ -2507,11 +2503,12 @@ int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
 }
 
 
+
 int32_t ice_media_utils_update_cand_pair_states(
                             ice_media_stream_t *media, ice_cand_pair_t *cur_cp)
 {
-    int32_t i, status;
     ice_cand_pair_t *cp;
+    int32_t i, status = STUN_INT_ERROR;
 
     /**
      * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
@@ -2539,7 +2536,7 @@ int32_t ice_media_utils_update_cand_pair_states(
             if (status != STUN_OK)
             {
                 ICE_LOG(LOG_SEV_ERROR,
-                        "Unfreezing of the candidate pair failed");
+                        "[ICE] Unfreezing of the candidate pair failed");
                 return status;
             }
         }
@@ -2581,42 +2578,45 @@ ice_cand_pair_t *ice_utils_lookup_pair_in_checklist(
 int32_t ice_utils_add_to_triggered_check_queue(
                             ice_media_stream_t *media, ice_cand_pair_t *cp)
 {
-    int32_t i;
-
+    ice_trigger_check_node_t *elem, *iter, *lag;
+    
+    iter = media->trig_check_list;
+    lag = NULL;
     /** make sure this candidate pair is not already on the triggered list */
-    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-        if (media->triggered_checks[i] == cp)
+    while (iter != NULL)
+    {
+        if (iter->cp == cp)
         {
             ICE_LOG(LOG_SEV_INFO,
                     "[ICE MEDIA] Answer not yet received. Hence Queueing the "\
                     "incoming connectivity check in Triggered Q, but found "\
-                    "that this pair %p is already on the Triggered Q at "\
-                    "index %d. Hence not adding to Q now", cp, i);
+                    "that this pair %p is already on the Triggered Q. "\
+                    "Hence not adding to Q now", cp);
             
             return STUN_OK;
         }
 
-    /** find a free slot */
-    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-        if (media->triggered_checks[i] == NULL) break;
-
-    if (i == ICE_MAX_CANDIDATE_PAIRS)
-    { 
-        ICE_LOG(LOG_SEV_INFO,
-                "[ICE MEDIA] Answer not yet received. But Queueing of the "\
-                "incoming connectivity check failed since no more resource "\
-                "available for queueing");
-
-        return STUN_NO_RESOURCE;
+        lag = iter;
+        iter = iter->next;
     }
 
-    media->triggered_checks[i] = cp;
+    /** Always add the candidate pair at the end */
+    /** TODO - Better to make the triggered list as a queue so that adding and removing is O(1)? */
 
-    media->triggered_count++;
+    elem = (ice_trigger_check_node_t *) 
+                        stun_calloc(1, sizeof(ice_trigger_check_node_t));
+    if (elem == NULL) return STUN_MEM_ERROR;
+    elem->cp = cp;
+    elem->next = NULL;
+
+    if (lag)
+        lag->next = elem;
+    else
+        media->trig_check_list = elem;
 
     ICE_LOG(LOG_SEV_INFO,
             "[ICE MEDIA] Answer not yet received, hence Queued the candidate "\
-            "pair %p in the triggered Queue at index %d", cp, i);
+            "pair %p in the triggered Queue", cp);
 
     return STUN_OK;
 }
@@ -2775,7 +2775,7 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
         else
         {
             ICE_LOG(LOG_SEV_INFO, 
-                    "The pair is already on the check list ...");
+                    "[ICE] The pair is already on the check list ...");
 
             /** check the current state of the pair */
             if ((cp->state == ICE_CP_FROZEN) || (cp->state == ICE_CP_WAITING))
@@ -3205,6 +3205,7 @@ int32_t ice_utils_update_media_checklist_state(
 }
 
 
+
 uint32_t ice_utils_get_nominated_pairs_count(ice_media_stream_t *media)
 {
     uint32_t i, count;
@@ -3214,6 +3215,7 @@ uint32_t ice_utils_get_nominated_pairs_count(ice_media_stream_t *media)
 
     return count;
 }
+
 
 
 int32_t ice_media_utils_stop_checks_for_comp_id(
@@ -3267,15 +3269,43 @@ int32_t ice_media_utils_stop_checks_for_comp_id(
 void ice_utils_remove_from_triggered_check_queue(
                         ice_media_stream_t *media, ice_cand_pair_t *cp)
 {
-    uint32_t i;
+    ice_trigger_check_node_t *iter, *lag;
 
-    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-        if (media->triggered_checks[i] == cp)
+    if (media->trig_check_list == NULL) return;
+
+    iter = media->trig_check_list;
+    lag = NULL;
+    while (iter != NULL)
+    {
+        if (iter->cp == cp)
         {
-            media->triggered_checks[i] = NULL;
-            media->triggered_count -= 1;
+            if (lag)
+            {
+                lag->next = iter->next;
+            }
+            else
+            {
+                media->trig_check_list = iter->next;
+            }
+
+            ICE_LOG(LOG_SEV_DEBUG, 
+                    "[ICE MEDIA] Removed specified node from triggered check "\
+                    "list for media %p", media);
+            stun_free(iter);
+            return;
         }
+
+        lag = iter;
+        iter = iter->next;
+    }
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE MEDIA] Could not find specified node in triggered check "\
+            "list for media %p. Hence not removed node from triggered check "\
+            "list", media);
+    return;
 }
+
 
 
 bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
@@ -3331,6 +3361,7 @@ bool_t ice_media_utils_have_valid_list(ice_media_stream_t *media)
 }
 
 
+
 ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
                                 ice_media_stream_t *media, uint32_t comp_id)
 {
@@ -3341,6 +3372,7 @@ ice_cand_pair_t *ice_utils_select_nominated_cand_pair(
     {
         cp = &media->ah_cand_pairs[i];
         if (cp->local == NULL) continue;
+        if (cp->valid_pair == false) continue;
 
         if (cp->local->comp_id != comp_id) continue;
 
@@ -3457,6 +3489,9 @@ ice_candidate_t *ice_media_utils_get_host_cand_for_transport_param(
 
     return base;
 }
+
+
+
 
 
 

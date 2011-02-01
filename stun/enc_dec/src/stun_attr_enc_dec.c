@@ -272,6 +272,15 @@ int32_t stun_attr_print(stun_msg_t *msg, u_char *buf, uint32_t *buf_len)
                 break;
             }
         }
+
+        /** unknown attribute */
+        if (j == max_attr_elems)
+        {
+            len = *buf_len;
+            status = stun_attr_print_extended_attr(msg->pas_attr[i], buf, &len);
+            buf += len;
+            *buf_len -= len;
+        }
     }
 
     return status;
@@ -426,7 +435,7 @@ int32_t stun_attr_print_mapped_address(
 {
     uint32_t bytes = 0;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "   MADDED ADDRESS: \n");
+    bytes += stun_snprintf((char *)buf, (*len - bytes), "   MAPPED ADDRESS: \n");
     *len = bytes;
 
     return STUN_OK;
@@ -2614,7 +2623,6 @@ int32_t stun_attr_decode_ice_controlling(u_char *buf_head,
 int32_t stun_attr_print_ice_controlling(
                     stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
-
     uint32_t bytes = 0;
     uint32_t val32[2];
     stun_ice_controlling_attr_t *cntrlng = (stun_ice_controlling_attr_t *) attr;
@@ -2683,6 +2691,30 @@ int32_t stun_attr_decode_extended_attr(uint16_t attr_type,
 
     *attr = (stun_attr_hdr_t *)ext_attr;
     *buf = pkt;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_print_extended_attr(
+                stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
+{
+    uint32_t bytes = 0;
+    stun_extended_attr_t *ext_attr = (stun_extended_attr_t *)attr;
+
+    bytes += stun_snprintf((char *)buf, (*len - bytes), 
+                "   EXTENDED ATTR: Type=%d length=%d value=", 
+                ext_attr->attr_type_value, ext_attr->hdr.length);
+
+    if (ext_attr->hdr.length)
+    {
+        bytes += stun_enc_dec_utils_print_binary_buffer(buf+bytes, 
+                    (*len - bytes), ext_attr->value, ext_attr->hdr.length);
+    }
+
+    bytes += stun_snprintf((char *)buf+bytes, (*len - bytes), "\n");
+
+    *len = bytes;
 
     return STUN_OK;
 }

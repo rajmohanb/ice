@@ -281,6 +281,9 @@ int32_t stun_attr_decode_extended_attr(uint16_t attr_type,
                                 u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr);
 
+int32_t stun_attr_print_extended_attr(
+                stun_attr_hdr_t *attr, u_char *buf, uint32_t *len);
+
 /******************************************************************************/
 
 #ifdef __cplusplus

@@ -15,8 +15,9 @@
 
 /*******************************************************************************
 *                                                                              *
-* This sample application shows how the ICE stack can be used to develop an    *
-* ice-lite agent application.                                                  *
+* This sample application shows how the ICE stack can be used to develop a     *
+* ice agent application. The ice agent application shows the creation,         *
+* deletion of ICE sessions in an interactive manner.                           *
 *                                                                              *
 *******************************************************************************/
 
@@ -40,7 +41,7 @@
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
 #else
-#define STUN_SRV_IP "192.168.1.2"
+#define STUN_SRV_IP "216.146.46.59"
 #define TURN_SRV_IP "192.168.1.2"
 #endif
 
@@ -1271,6 +1272,11 @@ int main (int argc, char *argv[])
                             "stun_msg_decode() returned error %d\n", status);
                     continue;
                 }
+
+                stun_msg_print (h_rcvdmsg, demo_buf, TRANSPORT_MTU_SIZE);
+                app_log(LOG_SEV_INFO,
+                        ">>>>>>>>>>\nRx STUN message from %s:%d\n\n%s\n\n<<<<<<<<<<\n\n", 
+                        address, port, demo_buf);
 
                 status = ice_instance_find_session_for_received_msg(
                             g_inst, h_rcvdmsg, (handle) fd_list[i], &h_target);
