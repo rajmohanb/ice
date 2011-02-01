@@ -815,6 +815,8 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 
     /** TODO stop running timers, if any */
 
+    /** TODO cleanup triggered checklist queue */
+
     /** 
      * free the memory for media context only if STUN server is used. Incase 
      * the TURN server is used for the session, then the media will be 

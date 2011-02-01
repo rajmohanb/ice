@@ -36,7 +36,7 @@ extern "C" {
        n += bc;							\
     }								\
     txn_log_buf[(STUN_TXN_ID_BYTES * 2)] = '\0';		\
-    ICE_LOG(LOG_SEV_INFO, msg_str":STUN txn ID[%s]", txn_log_buf);\
+    ICE_LOG(LOG_SEV_DEBUG, msg_str":STUN txn ID[%s]", txn_log_buf);\
 } while(0)
 #endif
 
@@ -125,7 +125,7 @@ int32_t stun_txn_table_find_txn(handle h_table, handle h_msg, handle *h_txn)
     {
 #ifdef DEBUG
 	    LOG_STUN_TRXN_ID_STR("Table Entry", node->trans_id);
-    	ICE_LOG (LOG_SEV_INFO, "node->h_txn-----> %p\n", node->h_txn);
+    	ICE_LOG (LOG_SEV_DEBUG, "node->h_txn-----> %p\n", node->h_txn);
 #endif
 
         if (stun_memcmp(txn_id, node->trans_id, STUN_TXN_ID_BYTES) == 0)
@@ -163,7 +163,7 @@ int32_t stun_txn_table_add_txn(handle h_table, handle h_txn)
 
 #ifdef DEBUG
 	        LOG_STUN_TRXN_ID_STR("Added Transaction ID to table", node->trans_id);
-            ICE_LOG (LOG_SEV_INFO, "node->h_txn -----> %p\n", node->h_txn);
+            ICE_LOG (LOG_SEV_DEBUG, "node->h_txn -----> %p\n", node->h_txn);
 #endif
             return STUN_OK;
         }
@@ -188,7 +188,7 @@ int32_t stun_txn_table_remove_txn(handle h_table, handle h_txn)
     {
 #ifdef DEBUG
 	    LOG_STUN_TRXN_ID_STR("[STUN TXN] Table entry", node->trans_id);
-        ICE_LOG (LOG_SEV_INFO, 
+        ICE_LOG (LOG_SEV_DEBUG, 
                 "[STUN TXN] node->h_txn -----> %p", node->h_txn);
 #endif
         if (node->h_txn == txn_ctxt)
@@ -196,7 +196,7 @@ int32_t stun_txn_table_remove_txn(handle h_table, handle h_txn)
 #ifdef DEBUG
 	        LOG_STUN_TRXN_ID_STR("[STUN TXN] Removed Transaction ID from table",
                     node->trans_id);
-            ICE_LOG (LOG_SEV_INFO, "[STUN TXN] node->h_txn -----> %p", 
+            ICE_LOG (LOG_SEV_DEBUG, "[STUN TXN] node->h_txn -----> %p", 
                     node->h_txn);
 #endif
 

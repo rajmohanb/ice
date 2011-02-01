@@ -53,6 +53,11 @@ extern "C" {
 #define STUN_ATTR_ICE_CONTROLLED_LEN    8
 #define STUN_ATTR_USE_CANDIDATE_LEN     0
 #define STUN_ATTR_PRIORITY_LEN          4
+
+#ifdef MB_ENABLE_TURN
+#define STUN_ATTR_CHANNEL_NUM_LEN       4
+#define STUN_ATTR_LIFETIME_LEN          4
+#endif
     
 
 
