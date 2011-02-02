@@ -2225,6 +2225,30 @@ int32_t stun_attr_print_xor_relayed_address(
 int32_t stun_attr_encode_even_port(stun_attr_hdr_t *attr, 
                 u_char *buf_head, u_char *buf, uint32_t max_len, uint32_t *len)
 {
+    stun_even_port_attr_t *evenport;
+    uint16_t val16;
+
+    evenport = (stun_even_port_attr_t *) attr;
+
+    /** attribute type */
+    val16 = htons(STUN_ATTR_EVEN_PORT);
+    stun_memcpy(buf, &val16, sizeof(uint16_t));
+    buf += sizeof(uint16_t);
+
+    val16 = htons(evenport->hdr.length);
+    stun_memcpy(buf, &val16, sizeof(uint16_t));
+    buf += sizeof(uint16_t);
+
+    /** copy application data */
+    if (evenport->flag == true)
+        *buf = (1<<7);
+    buf += 1;
+
+    /** padding */
+    buf += 3;
+
+    *len = evenport->hdr.length + 3 + 4;
+
     return STUN_OK;
 }
 
@@ -2232,17 +2256,61 @@ int32_t stun_attr_encode_even_port(stun_attr_hdr_t *attr,
 int32_t stun_attr_decode_even_port(u_char *buf_head, u_char **buf, 
                                 u_char *buf_end, stun_attr_hdr_t **attr)
 {
+    stun_even_port_attr_t *evenport;
+    uint16_t val16;
+    u_char *pkt = *buf;
+
+    evenport = (stun_even_port_attr_t *) 
+                stun_calloc (1, sizeof(stun_even_port_attr_t));
+    if (evenport == NULL) return STUN_MEM_ERROR;
+
+    evenport->hdr.type = STUN_ATTR_EVEN_PORT;
+
+    stun_memcpy(&val16, pkt, sizeof(uint16_t));
+    evenport->hdr.length = ntohs(val16);
+    pkt += 2;
+
+    /** handle malformed/incomplete/corrupted messages */
+    if ((evenport->hdr.length != STUN_ATTR_EVEN_PORT_LEN) ||
+        ((buf_end - pkt) < (evenport->hdr.length + 3)))
+    {
+        stun_free(evenport);
+        return STUN_DECODE_FAILED;
+    }
+
+    if ((*pkt>>7) == 1)
+        evenport->flag = true;
+    else
+        evenport->flag = false;
+
+    /** move past padded bytes (1+3) */
+    pkt += 4;
+
+    *attr = (stun_attr_hdr_t *) evenport;
+    *buf = pkt;
+
     return STUN_OK;
 }
+
 
 int32_t stun_attr_print_even_port(
                     stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
 {
     uint32_t bytes = 0;
+    stun_even_port_attr_t *evenport = (stun_even_port_attr_t *) attr;
 
-    bytes += stun_snprintf((char *)buf, (*len - bytes), "   EVEN PORT: \n");
+    if (evenport->flag == true)
+    {
+        bytes += stun_snprintf((char *)buf, (*len - bytes), 
+                                            "   EVEN PORT: true\n");
+    }
+    else
+    {
+        bytes += stun_snprintf((char *)buf, (*len - bytes), 
+                                            "   EVEN PORT: false\n");
+    }
+
     *len = bytes;
-
     return STUN_OK;
 }
 

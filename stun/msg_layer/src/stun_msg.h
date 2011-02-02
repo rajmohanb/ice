@@ -57,6 +57,7 @@ extern "C" {
 #ifdef MB_ENABLE_TURN
 #define STUN_ATTR_CHANNEL_NUM_LEN       4
 #define STUN_ATTR_LIFETIME_LEN          4
+#define STUN_ATTR_EVEN_PORT_LEN         1
 #endif
     
 

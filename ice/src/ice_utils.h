@@ -235,6 +235,8 @@ int32_t ice_media_utils_init_stun_gather_candidates(
 ice_candidate_t *ice_media_utils_get_host_cand_for_transport_param(
                         ice_media_stream_t *media, ice_rx_stun_pkt_t *rx_msg);
 
+void ice_media_utils_cleanup_triggered_check_queue(ice_media_stream_t *media);
+
 
 /******************************************************************************/
 

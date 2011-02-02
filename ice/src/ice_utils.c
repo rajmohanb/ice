@@ -3492,6 +3492,21 @@ ice_candidate_t *ice_media_utils_get_host_cand_for_transport_param(
 
 
 
+void ice_media_utils_cleanup_triggered_check_queue(ice_media_stream_t *media)
+{
+    ice_trigger_check_node_t *iter, *head;
+
+    head = iter = media->trig_check_list;
+    while(iter)
+    {
+        iter = head->next;
+        stun_free(head);
+        head = iter;
+    }
+
+    media->trig_check_list = NULL;
+    return;
+}
 
 
 

@@ -815,7 +815,13 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 
     /** TODO stop running timers, if any */
 
-    /** TODO cleanup triggered checklist queue */
+    /** cleanup triggered checklist queue */
+    ice_media_utils_cleanup_triggered_check_queue(media);
+
+    /** cleanup the checklist timer for this media, if allocated */
+    if (media->checklist_timer) stun_free(media->checklist_timer);
+    /** cleanup the nomination timer for this media, if allocated */
+    if (media->nomination_timer) stun_free(media->nomination_timer);
 
     /** 
      * free the memory for media context only if STUN server is used. Incase 
