@@ -38,6 +38,7 @@ s_char *cand_pair_states[] =
     "ICE_CP_INPROGRESS",
     "ICE_CP_SUCCEEDED",
     "ICE_CP_FAILED",
+    "ICE_CP_STATE_MAX",
 };
 
 
@@ -2264,6 +2265,22 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
 
 
 
+int32_t ice_media_utils_stop_check_list_timer(ice_media_stream_t *media)
+{
+    int32_t status = STUN_OK;
+
+    if (media->checklist_timer == NULL) return status;
+    if (media->checklist_timer->timer_id == NULL) return status;
+
+    status = media->ice_session->instance->stop_timer_cb(
+                                        media->checklist_timer->timer_id);
+    if (status == STUN_OK) media->checklist_timer->timer_id = NULL;
+
+    return status;
+}
+
+
+
 int32_t ice_media_utils_start_nomination_timer(ice_media_stream_t *media)
 {
     int32_t status;
@@ -2299,6 +2316,22 @@ int32_t ice_media_utils_start_nomination_timer(ice_media_stream_t *media)
                 "failed", ICE_CC_NOMINATION_TIMER_VALUE, media);
         status = STUN_INT_ERROR;
     }
+
+    return status;
+}
+
+
+
+int32_t ice_media_utils_stop_nomination_timer(ice_media_stream_t *media)
+{
+    int32_t status = STUN_OK;
+
+    if (media->nomination_timer == NULL) return status;
+    if (media->nomination_timer->timer_id == NULL) return status;
+
+    status = media->ice_session->instance->stop_timer_cb(
+                                        media->nomination_timer->timer_id);
+    if (status == STUN_OK) media->nomination_timer->timer_id = NULL;
 
     return status;
 }
@@ -3021,6 +3054,12 @@ int32_t ice_utils_process_incoming_check(
          */
         status = ice_media_utils_add_new_candidate_pair(
                             media, local_cand, remote_cand, &cp);
+        if (cp == NULL)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[ICE] Unable to add new candidate pair");
+            return status;
+        }
 
         /** set the state of this candidate pair to WAITING */
         status = ice_cand_pair_fsm_inject_msg(

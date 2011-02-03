@@ -117,6 +117,8 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
                     STUN_SERVER_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
     if (status != STUN_OK) return status;
 
+    session->h_txn = h_txn;
+
     status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
     if (status != STUN_OK) return status;
 
@@ -127,7 +129,6 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
     if (status != STUN_OK) return status;
 
     session->h_req = h_msg;
-    session->h_txn = h_txn;
 
     /** 
      * make sure the received request message has the USERNAME

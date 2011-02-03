@@ -1203,6 +1203,8 @@ void ice_agent_handle_timer_event(ice_demo_timer_event_t *event, uint32_t bytes)
 {
     int32_t status;
 
+    if (g_inst == NULL) return;
+
     /** inject timer message */
     status = ice_session_inject_timer_event(event->timer_id, event->arg);
     if (status == STUN_TERMINATED)
@@ -1306,7 +1308,7 @@ int main (int argc, char *argv[])
                                 "ice_session_inject_received_msg() "\
                                 "returned error %d\n", status);
                         if (status == STUN_INVALID_PARAMS) 
-                                    stun_msg_destroy(h_rcvdmsg);
+                            stun_msg_destroy(h_rcvdmsg);
                     }
                 }
             }

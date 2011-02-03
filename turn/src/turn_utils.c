@@ -551,6 +551,22 @@ int32_t turn_utils_start_alloc_refresh_timer(
 }
 
 
+
+int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session)
+{
+    int32_t status = STUN_OK;
+
+    if (session->alloc_refresh_timer_params == NULL) return status;
+    if (session->alloc_refresh_timer_params->timer_id == NULL) return status;
+
+    status = session->instance->stop_timer_cb(
+                    session->alloc_refresh_timer_params->timer_id);
+    if (status == STUN_OK) session->alloc_refresh_timer_params->timer_id = NULL;
+
+    return status;
+}
+
+
 int32_t turn_utils_create_permission_req_msg(
                             turn_session_t *session, handle *h_newmsg)
 {
@@ -720,6 +736,7 @@ ERROR_EXIT_PT:
 }
 
 
+
 int32_t turn_utils_process_data_indication(
                                 turn_session_t *session, handle h_msg)
 {
@@ -758,6 +775,11 @@ int32_t turn_utils_process_data_indication(
     status = stun_attr_xor_peer_addr_get_address(
                         h_xor_peer_addr, &addr_family, src.ip_addr, &len);
     if (status != STUN_OK) return status;
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        src.host_type = STUN_INET_ADDR_IPV4;
+    else
+        src.host_type = STUN_INET_ADDR_IPV6;
 
     status = stun_attr_xor_peer_addr_get_port(h_xor_peer_addr, &src.port);
     if (status != STUN_OK) return status;

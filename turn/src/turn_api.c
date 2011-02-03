@@ -95,14 +95,13 @@ handle turn_start_txn_timer(uint32_t duration, handle arg)
     timer = (turn_timer_params_t *) 
         stun_calloc (1, sizeof(turn_timer_params_t));
 
-    if (timer == NULL)
-        return 0;
+    if (timer == NULL) return 0;
 
     status = stun_txn_timer_get_txn_handle(arg, &h_txn, &h_txn_inst);
-    if (status != STUN_OK) return 0;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
     status = stun_txn_get_app_param(h_txn_inst, h_txn, (handle *)&session);
-    if (status != STUN_OK) return 0;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
     timer->h_instance = session->instance;
     timer->h_turn_session = session;
@@ -116,6 +115,10 @@ handle turn_start_txn_timer(uint32_t duration, handle arg)
             "handle is %p", duration, timer);
 
     return timer;
+
+ERROR_EXIT_PT:
+    stun_free(timer);
+    return 0;
 }
 
 
@@ -383,6 +386,45 @@ int32_t turn_destroy_session(handle h_inst, handle h_session)
 
 
 
+int32_t turn_clear_session(handle h_inst, handle h_session)
+{
+    int32_t i, status;
+    turn_instance_t *instance;
+    turn_session_t *session;
+
+    /** 
+     * This api just frees up the memory occupied by the 
+     * session ir-respective of the state the session is in.
+     */
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (turn_instance_t *) h_inst;
+    session = (turn_session_t *) h_session;
+
+    /** make sure session exists by looking up the table */
+    TURN_VALIDATE_SESSION_HANDLE(h_session);
+
+    /** cleanup transactions if any */
+    if (session->h_txn)
+        stun_destroy_txn(instance->h_txn_inst, session->h_txn, false, false);
+
+    /** stop timers if any and free memory for the same */
+    status = turn_utils_stop_alloc_refresh_timer(session);
+    if (status == STUN_OK)
+        if (session->alloc_refresh_timer_params)
+            stun_free(session->alloc_refresh_timer_params);
+
+    if (session->nonce) stun_free(session->nonce);
+    if (session->realm) stun_free(session->realm);
+
+    stun_free(session);
+    instance->ah_session[i] = NULL;
+
+    return STUN_OK;
+}
+
+
 int32_t turn_session_send_message(handle h_inst, 
                 handle h_session, stun_method_type_t method, 
                 stun_msg_type_t msg_type)
@@ -456,8 +498,9 @@ int32_t turn_session_inject_received_msg(
 
     if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
     {
-        ICE_LOG(LOG_SEV_ERROR, "Invalid parameters provided "\
-                    "while injecting received message for turn");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] Invalid parameters provided while injecting "\
+                "received message for turn");
         return STUN_INVALID_PARAMS;
     }
 

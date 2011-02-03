@@ -769,7 +769,7 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     if (session->use_relay == false)
         session->aps_media_streams[i] = NULL;
 
-     /** clean up all turn sessions, if any */
+    /** clean up all turn sessions, if any */
     if (session->use_relay == true)
     {
         for (i = 0; i < ICE_MAX_COMPONENTS; i++)
@@ -789,6 +789,7 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     }
     else
     {
+        /** clean up all STUN binding sessions, if any */
         for (i = 0; i < ICE_MAX_COMPONENTS; i++)
         {
             if (media->h_bind_sessions[i] == NULL) continue;
@@ -809,19 +810,49 @@ int32_t ice_remove_media_stream (ice_session_t *session,
         }
     }
 
-    /** TODO clean up all STUN binding sessions, if any */
 
-    /** TODO clean up all connectivity check sessions, if any */
+    /** clean up all connectivity check sessions, if any */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        ice_cand_pair_t *cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+        if (cp->h_cc_session == NULL) continue;
 
-    /** TODO stop running timers, if any */
+        status = conn_check_destroy_session(
+                    session->instance->h_cc_inst, cp->h_cc_session);
+
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[ICE SESSION] Destroying of Connectivity Check session "\
+                    "failed %d", status);
+        }
+        else
+        {
+            cp->h_cc_session = NULL;
+        }
+    }
 
     /** cleanup triggered checklist queue */
     ice_media_utils_cleanup_triggered_check_queue(media);
 
-    /** cleanup the checklist timer for this media, if allocated */
-    if (media->checklist_timer) stun_free(media->checklist_timer);
-    /** cleanup the nomination timer for this media, if allocated */
-    if (media->nomination_timer) stun_free(media->nomination_timer);
+    /** 
+     * stop checklist timer, if running. Cleanup memory 
+     * only if the timer was stopped successfully.
+     */
+    status = ice_media_utils_stop_check_list_timer(media);
+    if (status == STUN_OK)
+        if (media->checklist_timer) 
+            stun_free(media->checklist_timer);
+
+    /** 
+     * stop nomination timer, if running. Cleanup memory 
+     * only if the timer was stopped successfully.
+     */
+    status = ice_media_utils_stop_nomination_timer(media);
+    if (status == STUN_OK)
+        if (media->nomination_timer)
+            stun_free(media->nomination_timer);
 
     /** 
      * free the memory for media context only if STUN server is used. Incase 

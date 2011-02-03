@@ -129,6 +129,17 @@ static void ice_turn_callback_fxn (handle h_turn_inst,
             event = ICE_GATHER_FAILED;
             break;
 
+        case TURN_IDLE:
+        {
+            /** TODO -
+             * This needs to be injected into ice session fsm? 
+             * For now, clear the turn session here itself...
+             */
+            turn_clear_session(h_turn_inst, h_turn_session);
+            event = ICE_SES_EVENT_MAX;
+        }
+        break;
+
         /** we are not interested in other states */
         case TURN_OG_ALLOCATING:
         case TURN_OG_CREATING_PERM:
@@ -846,6 +857,7 @@ int32_t ice_destroy_instance(handle h_inst)
 
     conn_check_destroy_instance(instance->h_cc_inst);
     turn_destroy_instance(instance->h_turn_inst);
+    stun_binding_destroy_instance(instance->h_bind_inst);
 
     stun_free(instance->client_name);
 

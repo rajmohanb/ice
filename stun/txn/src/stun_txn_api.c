@@ -352,6 +352,7 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         stun_txn_utils_generate_txn_id(txn_id, STUN_TXN_ID_BYTES);
 
         stun_msg_set_txn_id(h_msg, txn->txn_id);
+        txn->h_req = h_msg;
 
         /** send message to remote */
         status = instance->nwk_send_cb(h_msg, txn->app_transport_param);

@@ -199,12 +199,21 @@ int32_t stun_utils_destroy_attr(handle stun_attr)
         case STUN_ATTR_XOR_MAPPED_ADDR:
         case STUN_ATTR_ALTERNATE_SERVER:
         case STUN_ATTR_FINGERPRINT:
+            stun_free(attr);
+            break;
 
 #ifdef MB_ENABLE_TURN
+        case STUN_ATTR_DATA:
+        {
+            stun_data_attr_t *data = (stun_data_attr_t *) stun_attr;
+            stun_free(data->data);
+            stun_free(data);
+        }
+        break;
+
         case STUN_ATTR_CHANNEL_NUMBER:
         case STUN_ATTR_LIFETIME:
         case STUN_ATTR_XOR_PEER_ADDR:
-        case STUN_ATTR_DATA:
         case STUN_ATTR_XOR_RELAYED_ADDR:
         case STUN_ATTR_EVEN_PORT:
         case STUN_ATTR_REQUESTED_TRANSPORT:

@@ -85,7 +85,7 @@ int32_t stun_msg_create(stun_msg_type_t msg_type,
     if (method_type >= STUN_METHOD_MAX)
         return STUN_INVALID_PARAMS;
 
-    msg = (stun_msg_t *) stun_malloc (sizeof(stun_msg_t));
+    msg = (stun_msg_t *) stun_calloc (1, sizeof(stun_msg_t));
     if (msg == NULL)
         return STUN_MEM_ERROR;
 

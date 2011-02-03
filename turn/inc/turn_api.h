@@ -171,6 +171,8 @@ int32_t turn_session_set_transport_param(handle h_inst,
 
 int32_t turn_destroy_session(handle h_inst, handle h_session);
 
+int32_t turn_clear_session(handle h_inst, handle h_session);
+
 int32_t turn_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg);
 

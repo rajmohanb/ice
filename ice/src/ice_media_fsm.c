@@ -134,7 +134,7 @@ static ice_media_stream_fsm_handler
     /** ICE_MEDIA_CC_COMPLETED */
     {
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_process_relay_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -641,6 +641,9 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 "[ICE MEDIA] conn_check_session_inject_received_msg() "\
                 "returned error %d. Incoming conn check req discarded\n", 
                 status);
+
+            conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
+            media->h_cc_svr_session = NULL;
             return STUN_INT_ERROR;
         }
     }
@@ -1164,7 +1167,7 @@ int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media,
     ice_media_stream_state_t cur_state;
     ice_media_stream_fsm_handler handler;
 
-    ICE_LOG(LOG_SEV_DEBUG, 
+    ICE_LOG(LOG_SEV_INFO, 
             "[ICE MEDIA] Processing event %d in %d state", event, media->state);
 
     cur_state = media->state;

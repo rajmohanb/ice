@@ -62,6 +62,8 @@ int32_t turn_session_utils_notify_state_change_event(turn_session_t *session);
 int32_t turn_utils_start_alloc_refresh_timer(
                                 turn_session_t *session, uint32_t duration);
 
+int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session);
+
 
 /******************************************************************************/
 

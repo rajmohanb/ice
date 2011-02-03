@@ -414,12 +414,19 @@ int32_t process_perm_resp (turn_session_t *session, handle h_rcvdmsg)
 }
 
 
+
 int32_t turn_init_dealloc (turn_session_t *session, handle h_msg)
 {
     int32_t status;
     handle h_txn, h_txn_inst;
     
     h_txn_inst = session->instance->h_txn_inst;
+
+    /** stop timers, if running and dealloc memory */
+    status = turn_utils_stop_alloc_refresh_timer(session);
+    if (status == STUN_OK)
+        if (session->alloc_refresh_timer_params)
+            stun_free(session->alloc_refresh_timer_params);
 
     /** delete an existing transaction, if any */
     stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
@@ -697,9 +704,9 @@ int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg)
         {
             if (session->lifetime == 0)
             {
-                session->state = TURN_OG_FAILED; /** TODO */
+                session->state = TURN_IDLE; /** TODO */
             
-                ICE_LOG (LOG_SEV_ERROR, "TURN session de-allocated");
+                ICE_LOG (LOG_SEV_INFO, "TURN session de-allocated");
             }
         }
 
@@ -783,24 +790,31 @@ int32_t turn_send_ind(turn_session_t *session, handle h_msg)
 
     status = stun_create_txn(h_txn_inst,
                     STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
-    if (status != STUN_OK) return status;
-
+    if (status != STUN_OK)
+    {
+        stun_msg_destroy(h_ind);
+        return status;
+    }
 
     status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
     status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
     status = stun_txn_send_stun_message(h_txn_inst, h_txn, h_ind);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
-    session->h_txn = h_txn;
+    /** once the indication is sent, destroy the transaction */
+    stun_destroy_txn(h_txn_inst, h_txn, false, false);
 
     /** no change in state */
 
     return status;
 
+ERROR_EXIT_PT:
+    stun_destroy_txn(h_txn_inst, h_txn, false, false);
+    return status;
 }
 
 

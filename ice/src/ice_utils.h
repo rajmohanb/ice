@@ -153,7 +153,11 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
 
 int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media);
 
+int32_t ice_media_utils_stop_check_list_timer(ice_media_stream_t *media);
+
 int32_t ice_media_utils_start_nomination_timer(ice_media_stream_t *media);
+
+int32_t ice_media_utils_stop_nomination_timer(ice_media_stream_t *media);
 
 int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair);
 

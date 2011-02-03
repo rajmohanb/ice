@@ -1013,7 +1013,11 @@ int32_t stun_attr_print_realm(stun_attr_hdr_t *attr, u_char *buf, uint32_t *len)
     stun_realm_attr_t *realm = (stun_realm_attr_t *) attr;
 
     bytes += stun_snprintf((char *)buf, (*len - bytes), 
-            "   REALM: length=%u value=%s\n", realm->hdr.length, realm->realm);
+            "   REALM: length=%u value=", realm->hdr.length);
+    stun_memcpy(buf+bytes, realm->realm, realm->hdr.length);
+    bytes += realm->hdr.length;
+
+    bytes += stun_snprintf((char *)buf+bytes, (*len - bytes), "\n");
 
     *len = bytes;
     return STUN_OK;
@@ -1190,7 +1194,7 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
         stun_memcpy(buf, &val32, sizeof(uint32_t));
         buf += sizeof(uint32_t);
     }
-    else
+    else if (addr->family == STUN_ADDR_FAMILY_IPV6)
     {
         u_char xor_addr[16];
         uint32_t i;
@@ -1198,7 +1202,7 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
         if (inet_pton(AF_INET6, (char *)addr->address, xor_addr) <= 0)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Invalid IPv6 XOR MAPPED ADDESS. Encoding of XOR MAPPED "\
+                    "Invalid IPv6 XOR MAPPED ADDESS %s. Encoding of XOR MAPPED "\
                     "ADDRESS failed", addr->address); 
             return STUN_INVALID_PARAMS;
         }
@@ -1209,6 +1213,12 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
 
         stun_memcpy(buf, xor_addr, 16);
         buf += 16;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Unsupported STUN ADDRESS FAMILY %d", addr->family); 
+        return STUN_INVALID_PARAMS;
     }
 
     /** length */
