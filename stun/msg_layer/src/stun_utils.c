@@ -196,6 +196,8 @@ int32_t stun_utils_destroy_attr(handle stun_attr)
         case STUN_ATTR_ICE_CONTROLLED:
         case STUN_ATTR_ICE_CONTROLLING:
 #endif
+        case STUN_ATTR_UNKNOWN_COMP_OPTIONAL:
+        case STUN_ATTR_UNKNOWN_COMP_REQUIRED:
             stun_free(attr);
             break;
 
