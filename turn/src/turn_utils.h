@@ -69,6 +69,12 @@ int32_t turn_utils_start_perm_refresh_timer(
 
 int32_t turn_utils_stop_perm_refresh_timer(turn_session_t *session);
 
+int32_t turn_utils_start_keep_alive_timer(
+                                turn_session_t *session, uint32_t duration);
+
+int32_t turn_utils_stop_keep_alive_timer(turn_session_t *session);
+
+int32_t turn_table_validate_session_handle(handle h_inst, handle h_session);
 
 
 /******************************************************************************/

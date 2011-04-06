@@ -47,6 +47,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATING */
     {
@@ -59,6 +60,7 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_allocation_timeout,
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -79,6 +81,7 @@ static turn_session_fsm_handler
         turn_refresh_allocation,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_refresh_nat_binding,
     },
     /** TURN_OG_CREATING_PERM */
     {
@@ -95,6 +98,7 @@ static turn_session_fsm_handler
         turn_refresh_allocation,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_refresh_nat_binding,
     },
     /** TURN_OG_ACTIVE */
     {
@@ -111,6 +115,7 @@ static turn_session_fsm_handler
         turn_refresh_allocation,
         turn_refresh_permission,
         turn_refresh_channel_binding,
+        turn_refresh_nat_binding,
     },
     /** TURN_OG_DEALLOCATING */
     {
@@ -126,9 +131,11 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_FAILED */
     {
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -312,6 +319,21 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                             status);
                     session->state = TURN_OG_FAILED;
                 }
+
+                /** 
+                 * start the keep-alive timer, so as to keep the 
+                 * binding(s) at NAT(s) for the device-TURN server 
+                 * connection to be kept alive.
+                 */
+                status = turn_utils_start_keep_alive_timer(session, 
+                                            (TURN_KEEP_ALIVE_DURATION * 1000));
+                if (status != STUN_OK)
+                {
+                    ICE_LOG (LOG_SEV_ERROR, 
+                            "Starting of TURN Keep-Alive timer failed %d",
+                            status);
+                    session->state = TURN_OG_FAILED;
+                }
             }
         }
 
@@ -463,6 +485,8 @@ int32_t turn_init_dealloc (turn_session_t *session, handle h_msg)
     if (status == STUN_OK)
         if (session->alloc_refresh_timer_params)
             stun_free(session->alloc_refresh_timer_params);
+
+    /** TODO - stop permission timer, channel binding & keep-alive timer */
 
     /** delete an existing transaction, if any */
     stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
@@ -909,6 +933,58 @@ int32_t turn_refresh_channel_binding (turn_session_t *session, handle h_msg)
     return STUN_OK;
 }
 
+
+
+int32_t turn_refresh_nat_binding (turn_session_t *session, handle h_msg)
+{
+    int32_t status;
+    handle h_txn, h_ind, h_txn_inst;
+    
+    h_txn_inst = session->instance->h_txn_inst;
+
+    /** The transaction and the send ind msg handle need not be stored */
+
+    status = turn_utils_create_send_ind_msg(session, NULL, &h_ind);
+    if (status != STUN_OK) return status;
+
+    status = stun_create_txn(h_txn_inst,
+                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
+    if (status != STUN_OK)
+    {
+        stun_msg_destroy(h_ind);
+        return status;
+    }
+
+    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, h_ind);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    /** once the indication is sent, destroy the transaction */
+    stun_destroy_txn(h_txn_inst, h_txn, false, false);
+
+    /** no change in state */
+
+    /** restart the keep alive timer */
+    status = turn_utils_start_keep_alive_timer(session, 
+                                (TURN_KEEP_ALIVE_DURATION * 1000));
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Re-starting of TURN Keep-Alive timer failed %d", status);
+        session->state = TURN_OG_FAILED;
+    }
+
+    return status;
+
+ERROR_EXIT_PT:
+    stun_destroy_txn(h_txn_inst, h_txn, false, false);
+    return status;
+}
 
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg)

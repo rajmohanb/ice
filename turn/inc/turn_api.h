@@ -30,6 +30,7 @@ extern "C" {
 #define TURN_MAX_PERMISSIONS            3
 
 #define TURN_PERM_REFRESH_DURATION      300 /** seconds */
+#define TURN_KEEP_ALIVE_DURATION        15  /** seconds */
 
 /******************************************************************************/
 

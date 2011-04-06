@@ -622,6 +622,17 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
     timer = (turn_timer_params_t *) h_timer_arg;
     session = (turn_session_t *)timer->h_turn_session;
 
+    /** make sure we have the session alive before injecting the event */
+    status = turn_table_validate_session_handle(
+                        timer->h_instance, timer->h_turn_session);
+    if (status == STUN_NOT_FOUND)
+    {
+        ICE_LOG (LOG_SEV_INFO, 
+            "[TURN] Some stray TURN timer. Ignoring for now");
+        stun_free(timer);
+        return STUN_OK;
+    }
+
     switch (timer->type)
     {
         case TURN_STUN_TXN_TIMER:
@@ -647,6 +658,13 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
             break;
 
         case TURN_CHNL_REFRESH_TIMER:
+            status= turn_session_fsm_inject_msg(
+                                        session, TURN_CHNL_REFRESH_EXPIRY, NULL);
+            break;
+
+        case TURN_KEEP_ALIVE_TIMER:
+            status= turn_session_fsm_inject_msg(
+                                        session, TURN_KEEP_ALIVE_EXPIRY, NULL);
             break;
 
         default:

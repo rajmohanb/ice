@@ -41,6 +41,7 @@ typedef enum
     TURN_ALLOC_REFRESH_TIMER,
     TURN_PERM_REFRESH_TIMER,
     TURN_CHNL_REFRESH_TIMER,
+    TURN_KEEP_ALIVE_TIMER,
 
     /** that's all we have as of now */
 } turn_timer_type_t;
@@ -70,6 +71,7 @@ typedef enum
     TURN_ALLOC_REFRESH_EXPIRY,
     TURN_PERM_REFRESH_EXPIRY,
     TURN_CHNL_REFRESH_EXPIRY,
+    TURN_KEEP_ALIVE_EXPIRY,
     TURN_EVENT_MAX,
 } turn_event_t;
 
@@ -161,6 +163,10 @@ typedef struct
     handle h_perm_txn;
     handle h_perm_req;
     handle h_perm_resp;
+
+    /** Keep-Alive timer and related stuff */
+    handle   h_keep_alive;
+    turn_timer_params_t *keep_alive_timer_params;
 
 } turn_session_t;
 
