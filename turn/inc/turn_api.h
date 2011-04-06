@@ -29,6 +29,8 @@ extern "C" {
 #define TURN_MAX_CONCURRENT_SESSIONS    10
 #define TURN_MAX_PERMISSIONS            3
 
+#define TURN_PERM_REFRESH_DURATION      300 /** seconds */
+
 /******************************************************************************/
 
 
@@ -176,9 +178,12 @@ int32_t turn_clear_session(handle h_inst, handle h_session);
 int32_t turn_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg);
 
-int32_t turn_session_send_message(handle h_inst, 
-                            handle h_session, stun_method_type_t method, 
-                            stun_msg_type_t msg_type);
+int32_t turn_session_allocate(handle h_inst, handle h_session);
+
+int32_t turn_session_create_permissions(handle h_inst, handle h_session);
+
+int32_t turn_session_bind_channel(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *peer);
 
 int32_t turn_instance_find_session_for_received_msg(handle h_inst, 
                                         handle h_msg, handle *h_session);

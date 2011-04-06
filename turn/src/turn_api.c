@@ -258,6 +258,10 @@ int32_t turn_create_session(handle h_inst, handle *h_session)
     session->h_txn = NULL;
     session->state = TURN_IDLE;
 
+    session->realm = session->nonce = NULL;
+    session->alloc_refresh_timer_params = 
+                session->perm_refresh_timer_params = NULL;
+
     for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++)
     {
         if (instance->ah_session[i] == NULL)
@@ -425,65 +429,32 @@ int32_t turn_clear_session(handle h_inst, handle h_session)
 }
 
 
-int32_t turn_session_send_message(handle h_inst, 
-                handle h_session, stun_method_type_t method, 
-                stun_msg_type_t msg_type)
+int32_t turn_session_allocate(handle h_inst, handle h_session)
 {
-    turn_instance_t *instance;
-    turn_session_t *session;
-    turn_event_t event;
-    int32_t status = STUN_OK;
+    turn_session_t *session = (turn_session_t *) h_session;
 
-    if ((h_inst == NULL) || (h_session == NULL))
-        return STUN_INVALID_PARAMS;
+    /** make sure that the session is vaild */
 
-    if (msg_type >= STUN_MSG_TYPE_MAX)
-        return STUN_INVALID_PARAMS;
-
-    instance = (turn_instance_t *) h_inst;
-    session = (turn_session_t *) h_session;
-
-    switch(method)
-    {
-        case STUN_METHOD_ALLOCATE:
-        {
-            if (msg_type == STUN_REQUEST)
-                event = TURN_ALLOC_REQ;
-            else if ((msg_type == STUN_SUCCESS_RESP) ||
-                     (msg_type == STUN_ERROR_RESP))
-                event = TURN_ALLOC_RESP;
-            else
-                status = STUN_INVALID_PARAMS;
-            break;
-        }
-        
-        case STUN_METHOD_CREATE_PERMISSION:
-        {
-            if (msg_type == STUN_REQUEST)
-                event = TURN_CREATE_PERM_REQ;
-            else if ((msg_type == STUN_SUCCESS_RESP) ||
-                     (msg_type == STUN_ERROR_RESP))
-                event = TURN_CREATE_PERM_RESP;
-            else
-                status = STUN_INVALID_PARAMS;
-            break;
-        }
-
-        /** TODO */
-        case STUN_METHOD_REFRESH:
-        case STUN_METHOD_SEND:
-        case STUN_METHOD_DATA:
-        case STUN_METHOD_CHANNEL_BIND:
-        default:
-            status = STUN_INVALID_PARAMS;
-            break;
-    }
-
-    if (status != STUN_OK) return status;
-    
-    return turn_session_fsm_inject_msg(session, event, NULL);
+    return turn_session_fsm_inject_msg(session, TURN_ALLOC_REQ, NULL);
 }
 
+
+int32_t turn_session_create_permissions(handle h_inst, handle h_session)
+{
+    turn_session_t *session = (turn_session_t *) h_session;
+
+    /** make sure that the session is vaild */
+
+    return turn_session_fsm_inject_msg(session, TURN_CREATE_PERM_REQ, NULL);
+}
+
+
+int32_t turn_session_bind_channel(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *peer)
+{
+    /** make sure that the session is vaild */
+    return STUN_OK;
+}
 
 
 int32_t turn_session_inject_received_msg(
@@ -670,7 +641,12 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
                                         session, TURN_ALLOC_REFRESH_EXPIRY, NULL);
             break;
 
-        case TURN_BIND_REFRESH_TIMER:
+        case TURN_PERM_REFRESH_TIMER:
+            status= turn_session_fsm_inject_msg(
+                                        session, TURN_PERM_REFRESH_EXPIRY, NULL);
+            break;
+
+        case TURN_CHNL_REFRESH_TIMER:
             break;
 
         default:
@@ -732,6 +708,7 @@ int32_t turn_session_add_peer_address(handle h_inst,
     int32_t i;
     turn_instance_t *instance;
     turn_session_t *session;
+    turn_permission_t *perm;
 
     if ((h_inst == NULL) || (h_session == NULL) || (addr == NULL))
         return STUN_INVALID_PARAMS;
@@ -741,11 +718,23 @@ int32_t turn_session_add_peer_address(handle h_inst,
 
     for (i = 0; i< TURN_MAX_PERMISSIONS; i++)
     {
-        if(session->peer_addr[i].port == 0)
-        {
-            stun_memcpy(&session->peer_addr[i], addr, sizeof(stun_inet_addr_t));
-            return STUN_OK;
-        }
+        if (session->aps_perms[i] != NULL) continue;
+
+        perm = (turn_permission_t *) stun_calloc(1, sizeof(turn_permission_t));
+        if (perm == NULL) return STUN_MEM_ERROR;
+
+        stun_memcpy(&perm->peer_addr, addr, sizeof(stun_inet_addr_t));
+
+        /** By default, always use data/send indication? */
+        perm->use_channel = false;
+
+        perm->h_perm_chnl_refresh = NULL;
+        perm->perm_chnl_refresh_timer_params = NULL;
+        perm->h_chnl_txn = perm->h_chnl_req = perm->h_chnl_resp = NULL;
+
+        session->aps_perms[i] = perm;
+
+        return STUN_OK;
     }
 
     return STUN_NO_RESOURCE;

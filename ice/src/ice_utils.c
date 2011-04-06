@@ -2480,7 +2480,6 @@ int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp,
 
 
 
-
 int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
 {
     int32_t i, status;
@@ -2525,11 +2524,13 @@ int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
     {
         if (media->h_turn_sessions[i] == NULL) continue;
 
-        status = turn_session_send_message(h_turn_inst, 
-                                           media->h_turn_sessions[i], 
-                                           STUN_METHOD_CREATE_PERMISSION, 
-                                           STUN_REQUEST);
-        if (status != STUN_OK) break;
+        status = turn_session_create_permissions(h_turn_inst, media->h_turn_sessions[i]);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "TURN API for Creation of permission failed");
+            break;
+        }
     }
 
     return status;
@@ -3451,8 +3452,7 @@ int32_t ice_media_utils_init_turn_gather_candidates(
                         (turn_server_cfg_t *)&media->ice_session->turn_cfg);
     if (status != STUN_OK) goto ERROR_EXIT;
 
-    status = turn_session_send_message(h_turn_inst, 
-                    h_turn_session, STUN_METHOD_ALLOCATE, STUN_REQUEST);
+    status = turn_session_allocate(h_turn_inst, h_turn_session);
     if (status != STUN_OK) goto ERROR_EXIT;
 
     *h_new_session = h_turn_session;

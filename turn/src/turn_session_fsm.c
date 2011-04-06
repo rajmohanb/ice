@@ -45,6 +45,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_ALLOCATING */
     {
@@ -57,6 +59,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_allocation_timeout,
+        turn_ignore_msg,
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
     },
@@ -73,6 +77,8 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
+        turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_CREATING_PERM */
     {
@@ -87,20 +93,24 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
+        turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_ACTIVE */
     {
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        process_perm_resp,
         turn_ignore_msg,
-        turn_ignore_msg,
-        turn_ignore_msg,
+        turn_refresh_resp,
         turn_send_ind,
         turn_data_ind,
         turn_ignore_msg,
         turn_init_dealloc,
         turn_refresh_allocation,
+        turn_refresh_permission,
+        turn_refresh_channel_binding,
     },
     /** TURN_OG_DEALLOCATING */
     {
@@ -114,9 +124,13 @@ static turn_session_fsm_handler
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
+        turn_ignore_msg,
+        turn_ignore_msg,
     },
     /** TURN_OG_FAILED */
     {
+        turn_ignore_msg,
+        turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
         turn_ignore_msg,
@@ -274,7 +288,7 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
     {
 
         ICE_LOG (LOG_SEV_INFO, 
-                "[TURN] Received ALLOCATE success response with error code");
+                "[TURN] Received ALLOCATE success response");
 
         status = turn_utils_extract_data_from_alloc_resp(session, h_rcvdmsg);
 
@@ -289,8 +303,8 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                 session->state = TURN_OG_ALLOCATED;
 
                 /** start allocation refresh timer */
-                status = turn_utils_start_alloc_refresh_timer(
-                                        session, (session->lifetime * 1000/2));
+                status = turn_utils_start_alloc_refresh_timer(session, 
+                                            ((session->lifetime - 60) * 1000));
                 if (status != STUN_OK)
                 {
                     ICE_LOG (LOG_SEV_ERROR, 
@@ -346,9 +360,10 @@ int32_t send_perm_req (turn_session_t *session, handle h_msg)
     h_txn_inst = session->instance->h_txn_inst;
 
     /** delete an existing transaction, if any */
-    stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
+    stun_destroy_txn(h_txn_inst, session->h_perm_txn, false, false);
+    session->h_perm_txn = session->h_perm_req = session->h_perm_resp = NULL;
 
-    status = turn_utils_create_permission_req_msg(session, &session->h_req);
+    status = turn_utils_create_permission_req_msg(session, &session->h_perm_req);
     if (status != STUN_OK)
         return status;
 
@@ -363,10 +378,10 @@ int32_t send_perm_req (turn_session_t *session, handle h_msg)
     status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
     if (status != STUN_OK) return status;
 
-    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_req);
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_perm_req);
     if (status != STUN_OK) return status;
 
-    session->h_txn = h_txn;
+    session->h_perm_txn = h_txn;
 
     session->state = TURN_OG_CREATING_PERM;
 
@@ -391,10 +406,31 @@ int32_t process_perm_resp (turn_session_t *session, handle h_rcvdmsg)
         return status;
     }
 
+    if (h_txn != session->h_perm_txn)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "STUN Transaction found, BUT it is not same as permission "\
+                "transaction handle of this session. Hence ignoring");
+
+        return STUN_INT_ERROR;
+    }
+
     status = stun_txn_inject_received_msg(h_txn_inst, h_txn, h_rcvdmsg);
     if (status == STUN_TERMINATED)
-    { 
+    {
         txn_terminated = true;
+
+        /** need to start permission refresh timer */
+        status = turn_utils_start_perm_refresh_timer(
+                                session, (TURN_PERM_REFRESH_DURATION * 1000));
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "Starting of TURN permission refresh timer failed %d",
+                    status);
+            session->state = TURN_OG_FAILED;
+            return status;
+        }
     }
     else if (status != STUN_OK)
     {
@@ -406,7 +442,7 @@ int32_t process_perm_resp (turn_session_t *session, handle h_rcvdmsg)
     if (txn_terminated == true)
         stun_destroy_txn(h_txn_inst, h_txn, false, false);
 
-    session->h_txn = session->h_req = session->h_resp = 0;
+    session->h_perm_txn = session->h_perm_req = session->h_perm_resp = NULL;
 
     session->state = TURN_OG_ACTIVE;
 
@@ -568,7 +604,7 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
             {
                 /** (re)start allocation refresh timer */
                 status = turn_utils_start_alloc_refresh_timer(
-                                        session, (session->lifetime * 1000/2));
+                                session, ((session->lifetime - 60) * 1000));
                 if (status != STUN_OK)
                 {
                     ICE_LOG (LOG_SEV_ERROR, 
@@ -742,6 +778,7 @@ int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg)
      */
     /** delete an existing transaction, if any */
     stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
+    session->h_txn = session->h_req = session->h_resp = NULL;
 
     status = turn_utils_create_refresh_req_msg(session, &session->h_req);
     if (status != STUN_OK)
@@ -826,6 +863,52 @@ int32_t turn_data_ind(turn_session_t *session, handle h_msg)
 
     return status;
 }
+
+
+
+int32_t turn_refresh_permission (turn_session_t *session, handle h_msg)
+{
+    int32_t status;
+    handle h_txn, h_txn_inst;
+    
+    h_txn_inst = session->instance->h_txn_inst;
+
+    /** delete an existing transaction, if any */
+    stun_destroy_txn(h_txn_inst, session->h_perm_txn, false, false);
+    session->h_perm_txn = session->h_perm_req = session->h_perm_resp = NULL;
+
+    status = turn_utils_create_permission_req_msg(session, &session->h_perm_req);
+    if (status != STUN_OK)
+        return status;
+
+    status = stun_create_txn(h_txn_inst,
+                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
+    if (status != STUN_OK) return status;
+
+
+    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
+    if (status != STUN_OK) return status;
+
+    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_perm_req);
+    if (status != STUN_OK) return status;
+
+    session->h_perm_txn = h_txn;
+
+    /** no change in state */
+
+    return status;
+}
+
+
+
+int32_t turn_refresh_channel_binding (turn_session_t *session, handle h_msg)
+{
+    return STUN_OK;
+}
+
 
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg)

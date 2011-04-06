@@ -44,6 +44,10 @@ int32_t turn_send_ind(turn_session_t *session, handle h_msg);
 
 int32_t turn_data_ind(turn_session_t *session, handle h_msg);
 
+int32_t turn_refresh_permission (turn_session_t *session, handle h_msg);
+
+int32_t turn_refresh_channel_binding (turn_session_t *session, handle h_msg);
+
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
 
 int32_t turn_session_fsm_inject_msg(turn_session_t *session, 

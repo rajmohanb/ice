@@ -909,7 +909,7 @@ void app_add_media(void)
 
 void app_gather_ice_candidates(void)
 {
-    int32_t status = ice_session_gather_candidates(g_inst, g_session, false);
+    int32_t status = ice_session_gather_candidates(g_inst, g_session, true);
 
     if (status != STUN_OK)
     {

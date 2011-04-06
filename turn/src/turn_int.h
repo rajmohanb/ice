@@ -39,7 +39,8 @@ typedef enum
     
     /** timers internal to turn */
     TURN_ALLOC_REFRESH_TIMER,
-    TURN_BIND_REFRESH_TIMER,
+    TURN_PERM_REFRESH_TIMER,
+    TURN_CHNL_REFRESH_TIMER,
 
     /** that's all we have as of now */
 } turn_timer_type_t;
@@ -67,8 +68,28 @@ typedef enum
     TURN_TXN_TIMEOUT,
     TURN_DEALLOC_REQ,
     TURN_ALLOC_REFRESH_EXPIRY,
+    TURN_PERM_REFRESH_EXPIRY,
+    TURN_CHNL_REFRESH_EXPIRY,
     TURN_EVENT_MAX,
 } turn_event_t;
+
+
+typedef struct
+{
+    stun_inet_addr_t peer_addr;
+
+    /** use data/send indications or channels for media data */
+    bool_t use_channel;
+
+    /** handle to refresh permission by using channel bind */
+    handle   h_perm_chnl_refresh;
+    turn_timer_params_t *perm_chnl_refresh_timer_params;
+
+    handle h_chnl_txn;
+    handle h_chnl_req;
+    handle h_chnl_resp;
+
+} turn_permission_t;
 
 
 typedef struct 
@@ -122,16 +143,24 @@ typedef struct
 
     /** server reflexive mapped address */
     stun_inet_addr_t mapped_addr;
-    
-    /** allocation expiry time in seconds */
+
+   /** allocation expiry time in seconds */
     uint32_t lifetime;
 
     /** handle to allocation refresh timer */
     handle   h_alloc_refresh;
     turn_timer_params_t *alloc_refresh_timer_params;
 
-    /** peer addresses for permission */
-    stun_inet_addr_t peer_addr[TURN_MAX_PERMISSIONS];
+    /** list of permissions */
+    turn_permission_t *aps_perms[TURN_MAX_PERMISSIONS];
+
+    /** permission refresh timer */
+    handle   h_perm_refresh;
+    turn_timer_params_t *perm_refresh_timer_params;
+
+    handle h_perm_txn;
+    handle h_perm_req;
+    handle h_perm_resp;
 
 } turn_session_t;
 

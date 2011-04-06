@@ -445,7 +445,8 @@ int32_t turn_utils_create_refresh_req_msg(
     attr_count++;
 
     /** put in default refresh duration */
-    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 2000);
+    status = stun_attr_lifetime_set_duration(
+                        ah_attr[attr_count - 1], session->lifetime);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
@@ -567,12 +568,72 @@ int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session)
 }
 
 
+
+int32_t turn_utils_start_perm_refresh_timer(
+                                turn_session_t *session, uint32_t duration)
+{
+    turn_timer_params_t *timer;
+
+    if(session->perm_refresh_timer_params == NULL)
+    {
+        session->perm_refresh_timer_params = (turn_timer_params_t *) 
+                                stun_calloc (1, sizeof(turn_timer_params_t));
+
+        if (session->perm_refresh_timer_params == NULL)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Memory allocation failed for TURN Permission refresh timer");
+            return STUN_MEM_ERROR;
+        }
+    }
+
+    timer = session->perm_refresh_timer_params;
+
+    timer->h_instance = session->instance;
+    timer->h_turn_session = session;
+    timer->arg = NULL;
+    timer->type = TURN_PERM_REFRESH_TIMER;
+
+    timer->timer_id = session->instance->start_timer_cb(duration, timer);
+
+    if(!timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Starting of timer failed");
+        return STUN_NO_RESOURCE;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Started TURN session %p permission "\
+            "refresh timer for duration %d seconds timer %p ", 
+            session, duration/1000, timer->timer_id);
+
+    return STUN_OK;
+}
+
+
+
+int32_t turn_utils_stop_perm_refresh_timer(turn_session_t *session)
+{
+    int32_t status = STUN_OK;
+
+    if (session->perm_refresh_timer_params == NULL) return status;
+    if (session->perm_refresh_timer_params->timer_id == NULL) return status;
+
+    status = session->instance->stop_timer_cb(
+                    session->perm_refresh_timer_params->timer_id);
+    if (status == STUN_OK) session->perm_refresh_timer_params->timer_id = NULL;
+
+    return status;
+}
+
+
+
 int32_t turn_utils_create_permission_req_msg(
                             turn_session_t *session, handle *h_newmsg)
 {
     int32_t status, i, attr_count = 0;
     stun_addr_family_type_t addr_family;
     handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
+    turn_permission_t *perm;
 
 
     status = turn_utils_create_request_msg(session, 
@@ -582,28 +643,30 @@ int32_t turn_utils_create_permission_req_msg(
     /** Multiple xor XOR-PEER-ADDRESS attributes ca be added */
     for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
     {
-        if (session->peer_addr[i].port == 0) break;
+        if (session->aps_perms[i] == NULL) break; // continue?
+
+        perm = session->aps_perms[i];
 
         status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, 
                                                 &(ah_attr[attr_count]));
         if (status != STUN_OK) goto ERROR_EXIT_PT;
         attr_count++;
 
-        if (session->peer_addr[i].host_type == STUN_INET_ADDR_IPV4)
+        if (perm->peer_addr.host_type == STUN_INET_ADDR_IPV4)
             addr_family = STUN_ADDR_FAMILY_IPV4;
-        else if (session->peer_addr[i].host_type == STUN_INET_ADDR_IPV6)
+        else if (perm->peer_addr.host_type == STUN_INET_ADDR_IPV6)
             addr_family = STUN_ADDR_FAMILY_IPV6;
         else
             goto ERROR_EXIT_PT;
 
 
         status = stun_attr_xor_peer_addr_set_address(
-                ah_attr[attr_count - 1], session->peer_addr[i].ip_addr,
-                strlen((char *)session->peer_addr[i].ip_addr), addr_family);
+                ah_attr[attr_count - 1], perm->peer_addr.ip_addr,
+                strlen((char *)perm->peer_addr.ip_addr), addr_family);
         if (status != STUN_OK) goto ERROR_EXIT_PT;
 
         status = stun_attr_xor_peer_addr_set_port(
-                        ah_attr[attr_count - 1], session->peer_addr[i].port);
+                        ah_attr[attr_count - 1], perm->peer_addr.port);
         if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
 

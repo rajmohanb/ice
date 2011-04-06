@@ -64,6 +64,12 @@ int32_t turn_utils_start_alloc_refresh_timer(
 
 int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session);
 
+int32_t turn_utils_start_perm_refresh_timer(
+                                turn_session_t *session, uint32_t duration);
+
+int32_t turn_utils_stop_perm_refresh_timer(turn_session_t *session);
+
+
 
 /******************************************************************************/
 
