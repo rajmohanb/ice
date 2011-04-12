@@ -1515,6 +1515,15 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_BIND_TIMER");
         status = stun_binding_session_inject_timer_event(timer_id, timer->arg);
     }
+    else if (timer->type == ICE_KEEP_ALIVE_TIMER)
+    {
+        ice_session_t *session = (ice_session_t *) timer->h_session;
+
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_KEEP_ALIVE_TIMER");
+        
+        status = ice_session_fsm_inject_msg(session, 
+                                        ICE_KEEP_ALIVE_EXPIRY, arg, NULL);
+    }
     else
     {
         ICE_LOG (LOG_SEV_ERROR, "[ICE]: INVALID timer type");

@@ -78,6 +78,7 @@ extern "C" {
 #define RTO_VAL_FOR_GATHERING   100
 
 #define ICE_CC_NOMINATION_TIMER_VALUE  4000
+#define ICE_KEEP_ALIVE_TIMER_VALUE    15000   /** milli-seconds */
 
 /** Ta and RTO values for connectivity checks */
 #define TA_VAL_FOR_CHECKS       20

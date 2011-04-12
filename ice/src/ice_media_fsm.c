@@ -50,6 +50,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_GATHERING */
     {
@@ -57,6 +58,7 @@ static ice_media_stream_fsm_handler
         ice_media_process_relay_msg,
         ice_media_stream_check_gather_resp,
         ice_media_stream_gather_failed,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -82,6 +84,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_FROZEN */
     {
@@ -93,6 +96,7 @@ static ice_media_stream_fsm_handler
         ice_media_unfreeze,
         ice_media_stream_ignore_msg,
         ice_media_process_rx_msg,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -114,6 +118,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_dual_ice_lite,
         ice_media_conn_check_timer_expiry,
         ice_media_stream_evaluate_valid_pairs,
+        ice_media_stream_keep_alive_timer_expiry,
     },
     /** ICE_MEDIA_NOMINATING */
     {
@@ -130,6 +135,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_dual_ice_lite,
         ice_media_conn_check_timer_expiry,
         ice_media_stream_ignore_msg,
+        ice_media_stream_keep_alive_timer_expiry,
     },
     /** ICE_MEDIA_CC_COMPLETED */
     {
@@ -146,9 +152,11 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_conn_check_timer_expiry,
         ice_media_stream_ignore_msg,
+        ice_media_stream_keep_alive_timer_expiry,
     },
     /** ICE_CC_MEDIA_FAILED */
     {
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -664,8 +672,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              * corresponding cand pair fsm. Then destroy the 
              * connectivity check session if no longer required.
              */
-            ICE_LOG (LOG_SEV_ERROR, 
-                    "[ICE MEDIA] CHECK! CHECK! One connectivity check done");
+            ICE_LOG (LOG_SEV_INFO, 
+                    "[ICE MEDIA] Connectivity check succeeded");
 
             status = ice_utils_find_cand_pair_for_conn_check_session(
                                                     media, h_cc_dialog, &cp);
@@ -724,9 +732,28 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         cp->nominated = check_result.nominated;
 
                         ICE_LOG(LOG_SEV_ERROR,
-                                "[ICE] Added candidate pair to NOMINATED list. From %s %p ==> To %s %p", 
-                                cp->local->transport.ip_addr, cp->local->transport.port, 
-                                cp->remote->transport.ip_addr, cp->remote->transport.port);
+                                "[ICE] Added candidate pair to NOMINATED list."\
+                                " From %s %p ==> To %s %p", 
+                                cp->local->transport.ip_addr, 
+                                cp->local->transport.port, 
+                                cp->remote->transport.ip_addr, 
+                                cp->remote->transport.port);
+
+                        /** 
+                         * RFC 5245 10. KeepAlives
+                         * An agent must MUST begin the keepalive processing 
+                         * once ICE has selected candidates for usage with 
+                         * media, or media begins to flow, whichever happens 
+                         * first.
+                         */
+                        if (check_result.nominated == true)
+                        {
+                            ice_media_utils_update_nominated_pair_for_comp(
+                                                                    media, cp);
+
+                            status = ice_utils_start_keep_alive_timer_for_comp(
+                                                     media, cp->local->comp_id);
+                        }
                     }
                     else
                     {
@@ -737,6 +764,22 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                 "[ICE] Added candidate pair to NOMINATED list. From %s %p ==> To %s %p", 
                                 prflx_pair->local->transport.ip_addr, prflx_pair->local->transport.port, 
                                 prflx_pair->remote->transport.ip_addr, prflx_pair->remote->transport.port);
+
+                        /** 
+                         * RFC 5245 10. KeepAlives
+                         * An agent must MUST begin the keepalive processing 
+                         * once ICE has selected candidates for usage with 
+                         * media, or media begins to flow, whichever happens 
+                         * first.
+                         */
+                        if (check_result.nominated == true)
+                        {
+                            ice_media_utils_update_nominated_pair_for_comp(
+                                                            media, prflx_pair);
+
+                            status = ice_utils_start_keep_alive_timer_for_comp(
+                                             media, prflx_pair->local->comp_id);
+                        }
                     }
 
 
@@ -1023,6 +1066,7 @@ int32_t ice_media_stream_restart(ice_media_stream_t *media, handle arg)
 }
 
 
+
 int32_t ice_media_stream_remote_params(ice_media_stream_t *media, handle h_msg)
 {
     int32_t status;
@@ -1085,12 +1129,6 @@ int32_t ice_media_stream_dual_ice_lite(ice_media_stream_t *media, handle h_msg)
     return status;
 }
 
-
-int32_t ice_media_stream_ignore_msg(ice_media_stream_t *media, handle h_msg)
-{
-    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Event ignored");
-    return STUN_OK;
-}
 
 
 int32_t ice_media_conn_check_timer_expiry(
@@ -1158,6 +1196,66 @@ int32_t ice_media_conn_check_timer_expiry(
 
     return status;
 }
+
+
+
+int32_t ice_media_stream_keep_alive_timer_expiry(
+                                ice_media_stream_t *media, handle arg)
+{
+    int32_t i, status = STUN_OK;
+    ice_timer_params_t *timer = (ice_timer_params_t *) arg;
+    ice_cand_pair_t *np = NULL;
+
+    /** find the nominated pair for the component */
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].comp_id == (uint32_t) timer->arg)
+        {
+            np = media->media_comps[i].np;
+            break;
+        }
+    }
+
+    if (np == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE MEDIA] Keep Alive timer expired. Unable to find the "\
+                "nominated pair for the component ID %d", (uint32_t)timer->arg);
+        return STUN_INT_ERROR;
+    }
+
+
+    /** 
+     * if the nominated pair is a relayed candidate pair, then the
+     * ICE layer need not keep the NAT binding alive. The TURN layer
+     * anyway refreshes the NAT bindings for the communication path
+     * between the endpoint and the relay/turn server by sending empty
+     * SEND indications. Sending a BINDING indication will unnecessarily
+     * increase the bandwidth.
+     */
+
+    if (np->local->type != ICE_CAND_TYPE_RELAYED)
+    {
+        /** send binding indication to the nominated pair */
+        status = ice_media_utils_send_keepalive_msg(media, np);
+    }
+
+    /** no change in state */
+
+    /** (re)start the keep alive timer for the component */
+    status = ice_utils_start_keep_alive_timer_for_comp(
+                                        media, np->local->comp_id);
+
+    return status;
+}
+
+
+int32_t ice_media_stream_ignore_msg(ice_media_stream_t *media, handle h_msg)
+{
+    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Event ignored");
+    return STUN_OK;
+}
+
 
 
 int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media, 

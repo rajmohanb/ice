@@ -61,6 +61,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
+        ice_ignore_msg,
     },
     /** ICE_SES_GATHERING */
     {
@@ -76,6 +77,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
     },
@@ -95,6 +97,7 @@ static ice_session_fsm_handler
         ice_remove_media_stream,
         ice_ignore_msg,
         ice_ignore_msg,
+        ice_ignore_msg,
     },
     /** ICE_SES_CC_RUNNING */
     {
@@ -112,6 +115,7 @@ static ice_session_fsm_handler
         ice_remove_media_stream,
         ice_conn_check_timer_event,
         ice_nomination_timer_expired,
+        ice_keep_alive_timer_expired,
     },
     /** ICE_SES_CC_COMPLETED */
     {
@@ -129,6 +133,7 @@ static ice_session_fsm_handler
         ice_remove_media_stream,
         ice_conn_check_timer_event,
         ice_ignore_msg,
+        ice_keep_alive_timer_expired,
     },
     /** ICE_SES_CC_FAILED */
     {
@@ -144,6 +149,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
     },
@@ -163,6 +169,7 @@ static ice_session_fsm_handler
         ice_remove_media_stream,
         ice_conn_check_timer_event,
         ice_ignore_msg,
+        ice_keep_alive_timer_expired,
     },
     /** ICE_SES_ACTIVE */
     {
@@ -180,6 +187,7 @@ static ice_session_fsm_handler
         ice_remove_media_stream,
         ice_conn_check_timer_event,
         ice_ignore_msg,
+        ice_keep_alive_timer_expired,
     }
 };
 
@@ -558,6 +566,7 @@ int32_t ice_handle_checklist_timer_expiry(ice_session_t *session,
 }
 
 
+
 int32_t ice_nomination_timer_expired(
             ice_session_t *session, handle arg, handle *h_param)
 {
@@ -574,6 +583,31 @@ int32_t ice_nomination_timer_expired(
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "[ICE SESSION] Procesing of the nomination timer expiry "\
+                "event failed for media %p", media);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
+
+
+int32_t ice_keep_alive_timer_expired(
+            ice_session_t *session, handle arg, handle *h_param)
+{
+    int32_t status;
+    ice_timer_params_t *timer = (ice_timer_params_t *) arg;
+    ice_media_stream_t *media;
+
+    media = (ice_media_stream_t *)timer->h_media;
+
+    /** TODO - need a check for media handle? */
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_KEEP_ALIVE_TIMER, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Procesing of the Keep Alive timer expiry "\
                 "event failed for media %p", media);
         return STUN_INT_ERROR;
     }

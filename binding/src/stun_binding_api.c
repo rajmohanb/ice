@@ -406,11 +406,12 @@ int32_t stun_binding_session_send_message(handle h_inst,
     session = (stun_binding_session_t *) h_session;
 
     /** build the binding request message */
-    status = stun_binding_utils_create_request_msg(&(session->h_req));
+    status = stun_binding_utils_create_msg(msg_type, &(session->h_req));
+
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Error while creating the stun binding request message");
+                "Error while creating the stun binding message");
         return status;
     }
 
@@ -432,6 +433,8 @@ int32_t stun_binding_session_send_message(handle h_inst,
 
     return status;
 }
+
+
 
 int32_t stun_binding_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg)

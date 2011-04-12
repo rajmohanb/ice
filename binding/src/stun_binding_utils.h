@@ -22,7 +22,7 @@ extern "C" {
 /******************************************************************************/
 
 
-int32_t stun_binding_utils_create_request_msg(handle *h_req);
+int32_t stun_binding_utils_create_msg(stun_msg_type_t msg_type, handle *h_req);
 
 
 /******************************************************************************/

@@ -1377,6 +1377,14 @@ int32_t ice_utils_copy_media_host_candidates(
     stun_memcpy(dest->local_ufrag, src->ice_ufrag, ICE_MAX_UFRAG_LEN);
     stun_memcpy(dest->local_pwd, src->ice_pwd, ICE_MAX_UFRAG_LEN);
 
+    /** initialize the component list */
+    for (i = 0; i < src->num_comp; i++)
+    {
+        dest->media_comps[i].comp_id = src->host_cands[i].comp_id;
+        dest->media_comps[i].keepalive_timer = NULL;
+        dest->media_comps[i].np = NULL;
+    }
+
     return STUN_OK;
 }
 
@@ -2338,6 +2346,113 @@ int32_t ice_media_utils_stop_nomination_timer(ice_media_stream_t *media)
 
 
 
+int32_t ice_utils_start_keep_alive_timer_for_comp(
+                        ice_media_stream_t *media, uint32_t comp_id)
+{
+    int32_t status, i;
+    ice_component_t *comp = NULL;
+    ice_timer_params_t *timer = NULL;
+
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].comp_id == comp_id)
+        {
+            comp = &media->media_comps[i];
+            break;
+        }
+    }
+
+    if (comp == NULL)
+    {
+        /** this is sad */
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE] Unknown media component ID. So not starting "\
+                "the keepalive timer");
+        return STUN_INVALID_PARAMS;
+    }
+
+    if(comp->keepalive_timer == NULL)
+    {
+        comp->keepalive_timer = (ice_timer_params_t *) 
+                            stun_calloc (1, sizeof(ice_timer_params_t));
+        if (comp->keepalive_timer == NULL)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "[ICE MEDIA] Memory allocation failed for ICE "\
+                    "component keep alive timer");
+            return STUN_NO_RESOURCE;
+        }
+    }
+
+    timer = comp->keepalive_timer;
+
+    timer->h_instance = media->ice_session->instance;
+    timer->h_session = media->ice_session;
+    timer->h_media = media;
+    timer->arg = (handle) comp_id;
+    timer->type = ICE_KEEP_ALIVE_TIMER;
+
+    timer->timer_id = media->ice_session->instance->start_timer_cb(
+                        ICE_KEEP_ALIVE_TIMER_VALUE, comp->keepalive_timer);
+    if (timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[ICE] Started ICE Keep Alive timer for %d msec for media %p"\
+                " and comp id %d. timer id is %p", 
+                ICE_CC_NOMINATION_TIMER_VALUE, media, comp_id, timer->timer_id);
+        status =  STUN_OK;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "[ICE] Starting of ICE Keep Alive timer for %d msec for media "\
+                "%p and comp id %d failed", ICE_CC_NOMINATION_TIMER_VALUE, 
+                media, comp_id);
+        status = STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
+
+
+int32_t ice_utils_stop_keep_alive_timer_for_comp(
+                            ice_media_stream_t *media, uint32_t comp_id)
+{
+    int32_t i, status = STUN_OK;
+    ice_component_t *comp = NULL;
+
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].comp_id == comp_id)
+        {
+            comp = &media->media_comps[i];
+            break;
+        }
+    }
+
+    if (comp == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE] Unknown media component ID. Unable to stop the "\
+                "keepalive timer for the given comp id %d", comp_id);
+        return STUN_NOT_FOUND;
+    }
+
+
+    if (comp->keepalive_timer == NULL) return status;
+    if (comp->keepalive_timer->timer_id == NULL) return status;
+
+    status = media->ice_session->instance->stop_timer_cb(
+                                        comp->keepalive_timer->timer_id);
+    if (status == STUN_OK) comp->keepalive_timer->timer_id = NULL;
+
+    return status;
+}
+
+
+
+
 int32_t ice_utils_find_cand_pair_for_conn_check_session(
         ice_media_stream_t *media, handle h_conn_check, ice_cand_pair_t **cp)
 {
@@ -3051,7 +3166,7 @@ int32_t ice_utils_process_incoming_check(
 
         /** 
          * add a new candidate pair and insert 
-         * into the checklist based on  priority 
+         * into the checklist based on priority 
          */
         status = ice_media_utils_add_new_candidate_pair(
                             media, local_cand, remote_cand, &cp);
@@ -3545,6 +3660,73 @@ void ice_media_utils_cleanup_triggered_check_queue(ice_media_stream_t *media)
 
     media->trig_check_list = NULL;
     return;
+}
+
+
+
+int32_t ice_media_utils_send_keepalive_msg(
+                        ice_media_stream_t *media, ice_cand_pair_t *np)
+{
+    int32_t status;
+    handle h_bind_inst, h_bind_session;
+
+    h_bind_inst = media->ice_session->instance->h_bind_inst;
+
+    status = stun_binding_create_session(h_bind_inst, 
+                            STUN_BIND_CLIENT_SESSION, &h_bind_session);
+    if (status != STUN_OK) return status;
+
+    status = stun_binding_session_set_app_param(h_bind_inst, 
+                                        h_bind_session, (handle) media);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = stun_binding_session_set_transport_param(
+                h_bind_inst, h_bind_session, np->local->transport_param);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = stun_binding_session_set_stun_server(h_bind_inst, 
+            h_bind_session, np->remote->transport.type,
+            np->remote->transport.ip_addr, np->remote->transport.port);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+    status = stun_binding_session_send_message(
+                    h_bind_inst, h_bind_session, STUN_INDICATION);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
+ERROR_EXIT:
+    stun_binding_destroy_session(h_bind_inst, h_bind_session);
+    return status;
+
+}
+
+
+
+int32_t ice_media_utils_update_nominated_pair_for_comp(
+                        ice_media_stream_t *media, ice_cand_pair_t *cp)
+{
+    int32_t i, status = STUN_OK;
+
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].comp_id == cp->local->comp_id)
+            break;
+    }
+
+    if (i == ICE_MAX_COMPONENTS) return STUN_INT_ERROR;
+
+    if (media->media_comps[i].np == NULL)
+    {
+        media->media_comps[i].np = cp;
+    }
+    else
+    {
+        ice_cand_pair_t *cur_np = media->media_comps[i].np;
+
+        if (cp->priority > cur_np->priority)
+            media->media_comps[i].np = cp;
+    }
+
+    return status;
 }
 
 

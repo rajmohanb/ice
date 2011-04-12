@@ -66,14 +66,22 @@ int32_t ice_media_stream_dual_ice_lite(ice_media_stream_t *media, handle h_msg);
 int32_t ice_media_conn_check_timer_expiry(
                             ice_media_stream_t *media, handle h_msg);
 
+
 int32_t ice_media_stream_evaluate_valid_pairs(
                                     ice_media_stream_t *media, handle arg);
+
+
+int32_t ice_media_stream_keep_alive_timer_expiry(
+                                ice_media_stream_t *media, handle arg);
+
 
 int32_t ice_media_stream_ignore_msg(
                                 ice_media_stream_t *media, handle h_msg);
 
+
 int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media, 
                                ice_media_stream_event_t event, handle h_msg);
+
 
 
 /******************************************************************************/

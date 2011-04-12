@@ -27,12 +27,12 @@ extern "C" {
 #include "stun_binding_utils.h"
 
 
-int32_t stun_binding_utils_create_request_msg(handle *h_req)
+int32_t stun_binding_utils_create_msg(stun_msg_type_t msg_type, handle *h_req)
 {
     handle h_msg;
     int32_t status;
 
-    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
+    status = stun_msg_create(msg_type, STUN_METHOD_BINDING, &h_msg);
     if (status != STUN_OK) return status;
 
     *h_req = h_msg;

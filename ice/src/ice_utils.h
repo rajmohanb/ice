@@ -241,6 +241,18 @@ ice_candidate_t *ice_media_utils_get_host_cand_for_transport_param(
 
 void ice_media_utils_cleanup_triggered_check_queue(ice_media_stream_t *media);
 
+int32_t ice_utils_start_keep_alive_timer_for_comp(
+                        ice_media_stream_t *media, uint32_t comp_id);
+
+int32_t ice_utils_stop_keep_alive_timer_for_comp(
+                            ice_media_stream_t *media, uint32_t comp_id);
+
+int32_t ice_media_utils_send_keepalive_msg(
+                        ice_media_stream_t *media, ice_cand_pair_t *np);
+
+int32_t ice_media_utils_update_nominated_pair_for_comp(
+                        ice_media_stream_t *media, ice_cand_pair_t *cp);
+
 
 /******************************************************************************/
 

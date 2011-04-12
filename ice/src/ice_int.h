@@ -34,6 +34,7 @@ typedef enum {
     ICE_CC_TIMER,           /** timer type for conn check module */
     ICE_CHECK_LIST_TIMER,   /** checklist timer */
     ICE_NOMINATION_TIMER,   /** nomination timer */
+    ICE_KEEP_ALIVE_TIMER,   /** keep alive timer for refreshing nat bindings */
     
     /** that's all we have as of now ... */
 } ice_timer_type_t;
@@ -165,6 +166,7 @@ typedef enum
     ICE_REMOVE_MEDIA,
     ICE_CONN_CHECK_TIMER,
     ICE_NOMINATION_TIMER_EXPIRY,
+    ICE_KEEP_ALIVE_EXPIRY,
     ICE_SES_EVENT_MAX,
 } ice_session_event_t;
 
@@ -198,6 +200,7 @@ typedef enum
     ICE_MEDIA_BOTH_LITE,
     ICE_MEDIA_CC_TIMER,
     ICE_MEDIA_NOMINATION_TIMER,
+    ICE_MEDIA_KEEP_ALIVE_TIMER,
     ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 
@@ -220,6 +223,19 @@ typedef struct ice_trigger_check_node
     ice_cand_pair_t *cp;
     struct ice_trigger_check_node *next;
 } ice_trigger_check_node_t;
+
+
+typedef struct ice_component
+{
+    uint32_t comp_id;
+
+    /** keep alive timer */
+    ice_timer_params_t *keepalive_timer;
+
+    /** handle to the nominated pair */
+    ice_cand_pair_t *np;
+
+} ice_component_t;
 
 
 /** forward declaration */
@@ -277,6 +293,8 @@ struct struct_ice_media_stream
     handle h_turn_sessions[ICE_MAX_COMPONENTS];
     handle h_bind_sessions[ICE_MAX_COMPONENTS];
     handle h_cc_svr_session;
+ 
+    ice_component_t media_comps[ICE_MAX_COMPONENTS];
 };
 
 
