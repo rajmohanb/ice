@@ -888,6 +888,10 @@ int32_t ice_remove_media_stream (ice_session_t *session,
         if (media->nomination_timer)
             stun_free(media->nomination_timer);
 
+    /**
+     * TODO - stop the media keep alive timers for all the components
+     */
+
     /** 
      * free the memory for media context only if STUN server is used. Incase 
      * the TURN server is used for the session, then the media will be 

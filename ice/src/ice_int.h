@@ -136,6 +136,7 @@ typedef struct
 
     /** pair priority */
     uint64_t priority;
+
     /** whether the check is to be nominated or not */
     bool_t check_nom_status;
 
