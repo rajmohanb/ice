@@ -1096,7 +1096,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
         goto ERROR_EXIT_PT2;
     }
 
-    /** TODO following is TEMPORARY = set local credentials */
+    /** set local credentials */
     stun_memset(&cred, 0, sizeof(conn_check_credentials_t));
     stun_memcpy(cred.username, media->local_ufrag, STUN_MAX_USERNAME_LEN);
     stun_memcpy(cred.password, media->local_pwd, STUN_MAX_PASSWORD_LEN);
@@ -1110,7 +1110,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
         goto ERROR_EXIT_PT2;
     }
 
-    /** TODO following is TEMPORARY = set peer credentials */
+    /** set peer credentials */
     stun_memset(&cred, 0, sizeof(conn_check_credentials_t));
     stun_memcpy(cred.username, media->peer_ufrag, STUN_MAX_USERNAME_LEN);
     stun_memcpy(cred.password, media->peer_pwd, STUN_MAX_PASSWORD_LEN);
@@ -1124,7 +1124,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
         goto ERROR_EXIT_PT2;
     }
 
-    /** TODO following is TEMPORARY = set session behavioral parameters  */
+    /** set session behavioral parameters  */
     if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
         cc_params.controlling_role = true;
     else
