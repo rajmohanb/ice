@@ -119,6 +119,10 @@ static void ice_turn_callback_fxn (handle h_turn_inst,
     ICE_LOG(LOG_SEV_DEBUG, "[ICE] TURN session state changed to %s for "\
             "turn session %p", turn_states[turn_session_state], h_turn_session);
 
+    /** get the ice session handle who owns this turn session */
+    status = turn_session_get_app_param(
+                        h_turn_inst, h_turn_session, (handle *)&media);
+
     switch(turn_session_state)
     {
         case TURN_OG_ALLOCATED:
@@ -135,7 +139,8 @@ static void ice_turn_callback_fxn (handle h_turn_inst,
              * This needs to be injected into ice session fsm? 
              * For now, clear the turn session here itself...
              */
-            turn_clear_session(h_turn_inst, h_turn_session);
+            ice_media_utils_clear_turn_session(media, 
+                                        h_turn_inst, h_turn_session);
             event = ICE_SES_EVENT_MAX;
         }
         break;
@@ -160,9 +165,6 @@ static void ice_turn_callback_fxn (handle h_turn_inst,
     event_params.h_inst = h_turn_inst;
     event_params.h_session = h_turn_session;
 
-    /** get the ice session handle who owns this turn session */
-    status = turn_session_get_app_param(
-                        h_turn_inst, h_turn_session, (handle *)&media);
 
     status = ice_session_fsm_inject_msg(
                     media->ice_session, event, &event_params, NULL);

@@ -889,8 +889,33 @@ int32_t ice_remove_media_stream (ice_session_t *session,
             stun_free(media->nomination_timer);
 
     /**
-     * TODO - stop the media keep alive timers for all the components
+     * stop the media keep alive timers for all the components
      */
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].keepalive_timer)
+        {
+            ice_component_t *comp = &media->media_comps[i];
+            status = STUN_OK;
+
+            if (comp->keepalive_timer->timer_id)
+            {
+                status = media->ice_session->instance->stop_timer_cb(
+                                            comp->keepalive_timer->timer_id);
+                if (status == STUN_OK) comp->keepalive_timer->timer_id = NULL;
+            }
+            
+            /** 
+             * if the timer was not successfully stopped, then do not free 
+             * the memory. The memory will be freed when the timer fires and 
+             * is injected into ICE stack by the application.
+             */
+            if (status == STUN_OK)
+                stun_free(comp->keepalive_timer);
+
+            comp->keepalive_timer = NULL;
+        }
+    }
 
     /** 
      * free the memory for media context only if STUN server is used. Incase 
@@ -909,6 +934,7 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     
     return STUN_OK;
 }
+
 
 
 int32_t ice_conn_check_timer_event (ice_session_t *session, 

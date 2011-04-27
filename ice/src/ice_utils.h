@@ -253,6 +253,9 @@ int32_t ice_media_utils_send_keepalive_msg(
 int32_t ice_media_utils_update_nominated_pair_for_comp(
                         ice_media_stream_t *media, ice_cand_pair_t *cp);
 
+int32_t ice_media_utils_clear_turn_session(ice_media_stream_t *media, 
+                                    handle h_turn_inst, handle h_turn_session);
+
 
 /******************************************************************************/
 
