@@ -141,6 +141,14 @@ void app_timer_expiry_cb (void *timer_id, void *arg)
                 (u_char *)&timer_event, sizeof(timer_event), 0, 
                 AF_INET, DEMO_AGENT_TIMER_PORT, LOCAL_IP);
 #if 0
+
+    /** 
+     * The following should be enabled only when the system timer 
+     * callback calls the ICE timer API directly in the signal 
+     * callback function. This is not advised as the signal 
+     * handler must not take too much time and must return immediately.
+     */
+
     /** inject timer message */
     status = ice_session_inject_timer_event(timer_id, arg);
     if (status == STUN_TERMINATED)
