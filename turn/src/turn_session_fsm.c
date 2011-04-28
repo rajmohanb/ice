@@ -480,13 +480,8 @@ int32_t turn_init_dealloc (turn_session_t *session, handle h_msg)
     
     h_txn_inst = session->instance->h_txn_inst;
 
-    /** stop timers, if running and dealloc memory */
-    status = turn_utils_stop_alloc_refresh_timer(session);
-    if (status == STUN_OK)
-        if (session->alloc_refresh_timer_params)
-            stun_free(session->alloc_refresh_timer_params);
-
-    /** TODO - stop permission timer, channel binding & keep-alive timer */
+    /** stop permission timer, channel binding & keep-alive timer */
+    turn_utils_free_all_session_timers(session);
 
     /** delete an existing transaction, if any */
     stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
@@ -767,6 +762,8 @@ int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg)
                 session->state = TURN_IDLE; /** TODO */
             
                 ICE_LOG (LOG_SEV_INFO, "TURN session de-allocated");
+
+                /** TODO - Free the aps_perms[] array */
             }
         }
 

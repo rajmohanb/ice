@@ -1482,6 +1482,8 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     {
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_TURN_TIMER");
         status = turn_session_inject_timer_message(timer_id, timer->arg);
+
+        stun_free(timer);
     }
     else if (timer->type == ICE_CC_TIMER)
     {
@@ -1492,7 +1494,6 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         /** conn check timer event has to be fed thru the resp media fsm */
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_CONN_CHECK_TIMER, arg, NULL);
-
     }
     else if (timer->type == ICE_CHECK_LIST_TIMER)
     {

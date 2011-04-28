@@ -990,6 +990,41 @@ int32_t turn_table_validate_session_handle(handle h_inst, handle h_session)
 
 
 
+void turn_utils_free_all_session_timers(turn_session_t *session)
+{
+    int32_t status;
+
+    /** stop and free allocation refresh timer */
+    status = turn_utils_stop_alloc_refresh_timer(session);
+    if (status == STUN_OK)
+        if (session->alloc_refresh_timer_params)
+            stun_free(session->alloc_refresh_timer_params);
+
+    session->alloc_refresh_timer_params = NULL;
+
+    /** stop and free permission refresh timer */
+    status = turn_utils_stop_perm_refresh_timer(session);
+    if (status == STUN_OK)
+        if (session->perm_refresh_timer_params)
+            stun_free(session->perm_refresh_timer_params);
+
+    session->perm_refresh_timer_params = NULL;
+
+    /** stop and free keep-alive timer */
+    status = turn_utils_stop_keep_alive_timer(session);
+    if (status == STUN_OK)
+        if (session->keep_alive_timer_params)
+            stun_free(session->keep_alive_timer_params);
+
+    session->keep_alive_timer_params = NULL;
+
+
+    /** TODO free the channel binding refresh timer for each of the channels */
+
+    return;
+}
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

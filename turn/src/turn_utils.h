@@ -76,6 +76,8 @@ int32_t turn_utils_stop_keep_alive_timer(turn_session_t *session);
 
 int32_t turn_table_validate_session_handle(handle h_inst, handle h_session);
 
+void turn_utils_free_all_session_timers(turn_session_t *session);
+
 
 /******************************************************************************/
 
