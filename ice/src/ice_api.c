@@ -199,7 +199,7 @@ static void ice_cc_callback_fxn (handle h_cc_inst,
             ICE_LOG (LOG_SEV_DEBUG, 
                     "[ICE] Outgoing connectivity check terminated");
 
-            /** declare success now? TODO - check if it is success */
+            /** declare success now? check if it is success */
             event = ICE_CONN_CHECKS_DONE;
         }
         break;
