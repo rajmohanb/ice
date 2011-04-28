@@ -135,7 +135,7 @@ static void ice_turn_callback_fxn (handle h_turn_inst,
 
         case TURN_IDLE:
         {
-            /** TODO -
+            /**
              * This needs to be injected into ice session fsm? 
              * For now, clear the turn session here itself...
              */
@@ -1624,14 +1624,14 @@ int32_t ice_session_get_media_valid_pairs(handle h_inst, handle h_session,
 
 
 int32_t ice_session_get_nominated_pairs(handle h_inst, 
-            handle h_session, ice_session_valid_pairs_t *valid_pairs)
+            handle h_session, ice_session_valid_pairs_t *nom_pairs)
 {
     ice_instance_t *instance;
     ice_session_t *session;
     ice_media_stream_t *media;
     int32_t i, j, status;
 
-    if ((h_inst == NULL) || (h_session == NULL) || (valid_pairs == NULL))
+    if ((h_inst == NULL) || (h_session == NULL) || (nom_pairs == NULL))
         return STUN_INVALID_PARAMS;
 
     instance = (ice_instance_t *) h_inst;
@@ -1639,7 +1639,7 @@ int32_t ice_session_get_nominated_pairs(handle h_inst,
 
     ICE_VALIDATE_SESSION_HANDLE(h_session);
 
-    stun_memset(valid_pairs, 0, sizeof(ice_session_valid_pairs_t));
+    stun_memset(nom_pairs, 0, sizeof(ice_session_valid_pairs_t));
 
     for (i = 0, j = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
     {
@@ -1649,12 +1649,12 @@ int32_t ice_session_get_nominated_pairs(handle h_inst,
         if (j >= ICE_MAX_MEDIA_STREAMS) break;
 
         status = ice_media_utils_get_nominated_list(media, 
-                                            &valid_pairs->media_list[j]);
+                                            &nom_pairs->media_list[j]);
         if (status != STUN_OK) break;
         j += 1;
     }
 
-    valid_pairs->num_media = j;
+    nom_pairs->num_media = j;
 
     return status;
 }

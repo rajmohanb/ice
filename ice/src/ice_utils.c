@@ -1889,43 +1889,45 @@ int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media,
 
 
 int32_t ice_media_utils_get_nominated_list(ice_media_stream_t *media, 
-                                    ice_media_valid_pairs_t *valid_pairs)
+                                            ice_media_valid_pairs_t *nom_pairs)
 {
     int32_t i, j;
-    ice_cand_pair_t *cand_pair;
-    ice_valid_pair_t *valid_pair;
+    ice_cand_pair_t *comp_np;
+    ice_component_t *comp;
+    ice_valid_pair_t *vp;
 
-    for (i = 0, j = 0 ; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    for (i = 0, j = 0 ; i < ICE_MAX_COMPONENTS; i++)
     {
-        cand_pair = &media->ah_cand_pairs[i];
-        if (cand_pair->local == NULL) continue;
-        if (cand_pair->nominated == false) continue;
+        comp = &media->media_comps[i];
+        if (comp->np == NULL) continue;
+
+        comp_np = comp->np;
 
         if (j >= ICE_MAX_VALID_LIST_PAIRS) break;
-        valid_pair = &valid_pairs->pairs[j];
+        vp = &nom_pairs->pairs[j];
 
-        valid_pair->nominated = cand_pair->nominated;
+        vp->nominated = comp_np->nominated;
 
-        valid_pair->comp_id = cand_pair->local->comp_id;
+        vp->comp_id = comp_np->local->comp_id;
 
         
-        valid_pair->local.host_type = cand_pair->local->transport.type;
-        stun_strncpy((char *)valid_pair->local.ip_addr, 
-                    (char *)cand_pair->local->transport.ip_addr, 
+        vp->local.host_type = comp_np->local->transport.type;
+        stun_strncpy((char *)vp->local.ip_addr, 
+                    (char *)comp_np->local->transport.ip_addr, 
                     ICE_IP_ADDR_MAX_LEN - 1);
-        valid_pair->local.port = cand_pair->local->transport.port;
+        vp->local.port = comp_np->local->transport.port;
 
 
-        valid_pair->peer.host_type = cand_pair->remote->transport.type;
-        stun_strncpy((char *)valid_pair->peer.ip_addr, 
-                        (char *)cand_pair->remote->transport.ip_addr,
+        vp->peer.host_type = comp_np->remote->transport.type;
+        stun_strncpy((char *)vp->peer.ip_addr, 
+                        (char *)comp_np->remote->transport.ip_addr,
                         ICE_IP_ADDR_MAX_LEN - 1);
-        valid_pair->peer.port = cand_pair->remote->transport.port;
+        vp->peer.port = comp_np->remote->transport.port;
 
         j += 1;
     }
 
-    valid_pairs->num_valid = j;
+    nom_pairs->num_valid = j;
 
     return STUN_OK;
 }
