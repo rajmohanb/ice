@@ -483,6 +483,9 @@ int32_t turn_init_dealloc (turn_session_t *session, handle h_msg)
     /** stop permission timer, channel binding & keep-alive timer */
     turn_utils_free_all_session_timers(session);
 
+    /** delete existing permissions if any */
+    turn_utils_delete_all_permissions(session);
+
     /** delete an existing transaction, if any */
     stun_destroy_txn(h_txn_inst, session->h_txn, false, false);
 
@@ -762,8 +765,6 @@ int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg)
                 session->state = TURN_IDLE; /** TODO */
             
                 ICE_LOG (LOG_SEV_INFO, "TURN session de-allocated");
-
-                /** TODO - Free the aps_perms[] array */
             }
         }
 
@@ -879,6 +880,9 @@ ERROR_EXIT_PT:
 int32_t turn_data_ind(turn_session_t *session, handle h_msg)
 {
     int32_t status = turn_utils_process_data_indication(session, h_msg);
+
+    /** now that we are done with it, destroy the indication message */
+    stun_msg_destroy(h_msg);
 
     /** no change in state */
 

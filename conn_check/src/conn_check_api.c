@@ -572,6 +572,8 @@ int32_t conn_check_instance_inject_timer_event(
                                         session, CONN_CHECK_TIMER, h_txn);
             }
             *h_session = (handle) session;
+            stun_free(timer);
+
             break;
         }
 

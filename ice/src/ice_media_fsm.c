@@ -583,7 +583,10 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
         if (msg_class != STUN_REQUEST)
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "[ICE MEDIA] Discarding the stray stun response message");
+                    "[ICE MEDIA] Discarding the stray stun "\
+                    "response/indication message");
+
+            stun_msg_destroy(stun_pkt->h_msg);
             return STUN_OK;
         }
 

@@ -644,6 +644,8 @@ int32_t turn_session_inject_timer_message(handle h_timerid, handle h_timer_arg)
                 status = turn_session_fsm_inject_msg(
                                         session, TURN_TXN_TIMEOUT, h_txn);
             }
+
+            stun_free(timer);
             break;
         }
 

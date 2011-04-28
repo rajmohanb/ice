@@ -21,6 +21,7 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#include "stun_txn_api.h"
 #include "turn_api.h"
 #include "turn_int.h"
 
@@ -1023,6 +1024,33 @@ void turn_utils_free_all_session_timers(turn_session_t *session)
 
     return;
 }
+
+
+
+void turn_utils_delete_all_permissions(turn_session_t *session)
+{
+    int32_t i;
+    turn_permission_t *perm;
+
+    for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
+    {
+        perm = session->aps_perms[i];
+        if (perm == NULL) continue;
+
+        /** TODO - stop and free the channel bind refresh timer */
+
+        /** delete the channel bind transaction */
+        stun_destroy_txn(session->instance->h_txn_inst, 
+                                    perm->h_chnl_txn, false, false);
+
+        /** free the memory for permission */
+        stun_free(perm);
+        session->aps_perms[i] = NULL;
+    }
+
+    return;
+}
+
 
 
 /******************************************************************************/

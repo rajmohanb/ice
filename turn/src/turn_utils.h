@@ -78,6 +78,8 @@ int32_t turn_table_validate_session_handle(handle h_inst, handle h_session);
 
 void turn_utils_free_all_session_timers(turn_session_t *session);
 
+void turn_utils_delete_all_permissions(turn_session_t *session);
+
 
 /******************************************************************************/
 
