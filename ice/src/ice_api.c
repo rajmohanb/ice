@@ -1688,6 +1688,32 @@ int32_t ice_session_restart_media_stream (handle h_inst,
 
 
 
+int32_t ice_session_send_media_data (handle h_inst, 
+            handle h_session, handle h_media, u_char *data, uint32_t len)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_data_t media_data;
+    int32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (h_media == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    media_data.data = data;
+    media_data.len = len;
+
+    /** inject the event into the session fsm */
+    return ice_session_fsm_inject_msg(session, 
+                            ICE_SEND_MEDIA_DATA, h_media, &media_data);
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

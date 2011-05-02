@@ -62,6 +62,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
+        ice_ignore_msg,
     },
     /** ICE_SES_GATHERING */
     {
@@ -77,6 +78,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
@@ -98,6 +100,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
+        ice_ignore_msg,
     },
     /** ICE_SES_CC_RUNNING */
     {
@@ -116,6 +119,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_nomination_timer_expired,
         ice_keep_alive_timer_expired,
+        ice_ignore_msg,
     },
     /** ICE_SES_CC_COMPLETED */
     {
@@ -134,6 +138,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_keep_alive_timer_expired,
+        ice_ignore_msg,
     },
     /** ICE_SES_CC_FAILED */
     {
@@ -149,6 +154,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
@@ -170,6 +176,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_keep_alive_timer_expired,
+        ice_ignore_msg,
     },
     /** ICE_SES_ACTIVE */
     {
@@ -188,6 +195,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_keep_alive_timer_expired,
+        ice_ignore_msg,
     }
 };
 
@@ -879,6 +887,8 @@ int32_t ice_remove_media_stream (ice_session_t *session,
         if (media->checklist_timer) 
             stun_free(media->checklist_timer);
 
+    media->checklist_timer = NULL;
+
     /** 
      * stop nomination timer, if running. Cleanup memory 
      * only if the timer was stopped successfully.
@@ -887,6 +897,8 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     if (status == STUN_OK)
         if (media->nomination_timer)
             stun_free(media->nomination_timer);
+
+    media->nomination_timer = NULL;
 
     /**
      * stop the media keep alive timers for all the components

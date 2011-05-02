@@ -75,8 +75,6 @@ static handle g_session = NULL;
 static handle g_audio = NULL;
 
 bool g_demo_exit = false;
-bool g_gather_done = false;
-bool g_session_destroyed = false;
 bool g_cc_done = false;
 
 static int demo_sockfds[6] = {0};
@@ -597,7 +595,6 @@ void app_session_state_change_handler(handle h_inst,
     switch(state)
     {
         case ICE_GATHERED:
-            g_gather_done = true;
         
             app_log (LOG_SEV_INFO, 
                     "ICE candidates gathering completed successfully");

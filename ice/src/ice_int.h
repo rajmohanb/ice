@@ -28,6 +28,12 @@ typedef struct {
 } ice_int_params_t;
 
 
+typedef struct {
+    u_char *data;
+    uint32_t len;
+} ice_media_data_t;
+
+
 typedef enum {
     ICE_TURN_TIMER = 0,     /** timer type for turn */
     ICE_BIND_TIMER,         /** timer type for stun binding */
@@ -168,6 +174,7 @@ typedef enum
     ICE_CONN_CHECK_TIMER,
     ICE_NOMINATION_TIMER_EXPIRY,
     ICE_KEEP_ALIVE_EXPIRY,
+    ICE_SEND_MEDIA_DATA,
     ICE_SES_EVENT_MAX,
 } ice_session_event_t;
 
