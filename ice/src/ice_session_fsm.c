@@ -62,7 +62,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_GATHERING */
     {
@@ -81,7 +81,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_GATHERED */
     {
@@ -100,7 +100,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_CC_RUNNING */
     {
@@ -119,7 +119,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_nomination_timer_expired,
         ice_keep_alive_timer_expired,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_CC_COMPLETED */
     {
@@ -138,7 +138,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_keep_alive_timer_expired,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_CC_FAILED */
     {
@@ -157,7 +157,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_NOMINATING */
     {
@@ -176,7 +176,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_keep_alive_timer_expired,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_ACTIVE */
     {
@@ -195,7 +195,7 @@ static ice_session_fsm_handler
         ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_keep_alive_timer_expired,
-        ice_ignore_msg,
+        ice_send_media_data,
     }
 };
 
@@ -970,6 +970,29 @@ int32_t ice_conn_check_timer_event (ice_session_t *session,
 
     return status;
 }
+
+
+
+int32_t ice_send_media_data (ice_session_t *session, 
+                                            handle arg, handle *h_param)
+{
+    int32_t status;
+    ice_media_data_t *data = (ice_media_data_t *) arg;
+    ice_media_stream_t *media = (ice_media_stream_t *) data->h_media;
+
+    /** TODO - validate media handle? */
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_SEND_DATA, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE SESSION] Sending of media data failed %d.", status);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
 
 
 int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param)

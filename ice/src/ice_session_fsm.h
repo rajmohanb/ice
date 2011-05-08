@@ -74,6 +74,9 @@ int32_t ice_session_fsm_inject_msg(ice_session_t *session,
 int32_t ice_keep_alive_timer_expired(
             ice_session_t *session, handle arg, handle *h_param);
 
+int32_t ice_send_media_data (ice_session_t *session, 
+                                            handle arg, handle *h_param);
+
 
 /******************************************************************************/
 

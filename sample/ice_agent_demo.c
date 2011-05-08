@@ -513,7 +513,7 @@ on_error:
 }
 
 
-void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
+void ice_sample_print_valid_list(handle h_inst, handle h_session)
 {
     int32_t status, i, j;
     ice_valid_pair_t *pair;
@@ -611,7 +611,7 @@ void app_session_state_change_handler(handle h_inst,
                 app_log (LOG_SEV_INFO, "\n\n\nICE negotiation completed, alert the local user\n");
                 app_log (LOG_SEV_CRITICAL, " ----------------------------- SIP 180 RINGING -------------------------->\n");
 
-                ice_lite_sample_print_valid_list(h_inst, h_session);
+                ice_sample_print_valid_list(h_inst, h_session);
 
                 encode_session(h_inst, h_session);
             }
@@ -970,7 +970,52 @@ void app_start_connectivity_checks(void)
 
 void app_print_nominated_pair(void)
 {
-    ice_lite_sample_print_valid_list(g_inst, g_session);
+    ice_sample_print_valid_list(g_inst, g_session);
+}
+
+
+void app_send_rtp_data(void)
+{
+    int32_t status;
+    char data[80];
+
+    if (stdout) fflush(stdout);
+    if (stdin) fflush(stdin);
+
+    fgets(data, sizeof(data), stdin);
+    
+    status = ice_session_send_media_data(g_inst, g_session, 
+            g_audio, RTP_COMPONENT_ID, (u_char *)data, strlen(data));
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "Sending of RTP media data failed with status %d\n", status);
+    }
+
+    return;
+}
+
+
+
+void app_send_rtcp_data(void)
+{
+    int32_t status;
+    char data[80];
+
+    if (stdout) fflush(stdout);
+    if (stdin) fflush(stdin);
+
+    fgets(data, sizeof(data), stdin);
+    
+    status = ice_session_send_media_data(g_inst, g_session, 
+                g_audio, RTCP_COMPONENT_ID, (u_char *)data, strlen(data));
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "Sending of RTCP media data failed with status %d\n", status);
+    }
+
+    return;
 }
 
 
@@ -1097,9 +1142,11 @@ void ice_agent_demo_menu(void)
     puts("|  6 | set remote ICE information                                |");
     puts("|  7 | begin ICE negotiation                                     |");
     puts("|  8 | get nominated pair                                        |");
-    puts("|  9 | remove media                                              |");
-    puts("| 10 | destroy ICE session                                       |");
-    puts("| 11 | destroy ICE instance                                      |");
+    puts("|  9 | Send RTP media                                            |");
+    puts("| 10 | Send RTCP media                                           |");
+    puts("| 11 | remove media                                              |");
+    puts("| 12 | destroy ICE session                                       |");
+    puts("| 13 | destroy ICE instance                                      |");
     puts("+----------------------------------------------------------------+");
     puts("| 0 | quit                                                       |");
     puts("+----------------------------------------------------------------+");
@@ -1189,13 +1236,21 @@ void ice_agent_handle_user_choice(char *choice)
     }
     else if (ch == 9)
     {
+        app_send_rtp_data();
+    }
+    else if (ch == 9)
+    {
+        app_send_rtcp_data();
+    }
+    else if (ch == 11)
+    {
         app_remove_media();
     }
-    else if (ch == 10)
+    else if (ch == 12)
     {
         app_destroy_ice_session();
     }
-    else if (ch == 11)
+    else if (ch == 13)
     {
         app_destroy_ice_instance();
     }

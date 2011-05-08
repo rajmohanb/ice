@@ -762,6 +762,10 @@ int32_t turn_session_add_peer_address(handle h_inst,
 
 
 
+/** 
+ * TODO This api must take the transport type also in addition to 
+ * stun_inet_addr_t. Better to re-use ice_transport_t?
+ */
 int32_t turn_session_send_application_data(handle h_inst, 
                             handle h_session, stun_inet_addr_t *peer_dest,
                             u_char *data, uint32_t len)

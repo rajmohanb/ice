@@ -29,8 +29,10 @@ typedef struct {
 
 
 typedef struct {
-    u_char *data;
+    handle h_media;
+    uint32_t comp_id;
     uint32_t len;
+    u_char *data;
 } ice_media_data_t;
 
 
@@ -209,6 +211,7 @@ typedef enum
     ICE_MEDIA_CC_TIMER,
     ICE_MEDIA_NOMINATION_TIMER,
     ICE_MEDIA_KEEP_ALIVE_TIMER,
+    ICE_MEDIA_SEND_DATA,
     ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 

@@ -51,6 +51,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_GATHERING */
     {
@@ -58,6 +59,7 @@ static ice_media_stream_fsm_handler
         ice_media_process_relay_msg,
         ice_media_stream_check_gather_resp,
         ice_media_stream_gather_failed,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -85,6 +87,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_FROZEN */
     {
@@ -96,6 +99,7 @@ static ice_media_stream_fsm_handler
         ice_media_unfreeze,
         ice_media_stream_ignore_msg,
         ice_media_process_rx_msg,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -119,6 +123,7 @@ static ice_media_stream_fsm_handler
         ice_media_conn_check_timer_expiry,
         ice_media_stream_evaluate_valid_pairs,
         ice_media_stream_keep_alive_timer_expiry,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_NOMINATING */
     {
@@ -136,6 +141,7 @@ static ice_media_stream_fsm_handler
         ice_media_conn_check_timer_expiry,
         ice_media_stream_ignore_msg,
         ice_media_stream_keep_alive_timer_expiry,
+        ice_media_stream_ignore_msg,
     },
     /** ICE_MEDIA_CC_COMPLETED */
     {
@@ -153,9 +159,11 @@ static ice_media_stream_fsm_handler
         ice_media_conn_check_timer_expiry,
         ice_media_stream_ignore_msg,
         ice_media_stream_keep_alive_timer_expiry,
+        ice_media_stream_send_data,
     },
     /** ICE_CC_MEDIA_FAILED */
     {
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -1251,6 +1259,74 @@ int32_t ice_media_stream_keep_alive_timer_expiry(
 
     return status;
 }
+
+
+
+int32_t ice_media_stream_send_data(ice_media_stream_t *media, handle arg)
+{
+    int32_t i, status = STUN_OK;
+    ice_media_data_t *data_params = (ice_media_data_t *) arg;
+    ice_cand_pair_t *np = NULL;
+
+    /** find the nominated pair for the component */
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].comp_id == data_params->comp_id)
+        {
+            np = media->media_comps[i].np;
+            break;
+        }
+    }
+
+    if (np == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE MEDIA] Nominated pair not found for component id %d.", 
+                data_params->comp_id);
+        return STUN_INVALID_PARAMS;
+    }
+
+
+    /** 
+     * if the nominated pair is a relayed candidate pair, then pass on the 
+     * data to the TURN module. Else send the data directly via the callback.
+     */
+
+    if (np->local->type == ICE_CAND_TYPE_RELAYED)
+    {
+        stun_inet_addr_t dest;
+
+        /** 
+         * Currently transport type is not being made use of and 
+         * passed on to the TURN module. It's better if TURN layer 
+         * makes use of the transport type as it would help support 
+         * of TCP and any other protocols in future. That would avoid
+         * the data conversion between data structures as below  - TODO.
+         */
+        dest.host_type = np->remote->transport.type;
+        stun_strncpy((char *)dest.ip_addr, 
+                (char *)np->remote->transport.ip_addr, ICE_IP_ADDR_MAX_LEN);
+        dest.port = np->remote->transport.port;
+
+        /** finding the turn session handle this way is not clean! */
+        status = turn_session_send_application_data(
+                media->ice_session->instance->h_turn_inst, 
+                media->h_turn_sessions[data_params->comp_id], 
+                &dest, data_params->data, data_params->len);
+    }
+    else
+    {
+        status = media->ice_session->instance->nwk_send_cb(
+                    data_params->data, data_params->len, 
+                    np->remote->transport.type, np->remote->transport.ip_addr, 
+                    np->remote->transport.port, np->local->transport_param);
+    }
+
+    /** no change in state */
+
+    return status;
+}
+
 
 
 int32_t ice_media_stream_ignore_msg(ice_media_stream_t *media, handle h_msg)
