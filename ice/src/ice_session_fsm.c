@@ -130,7 +130,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         handle_peer_msg,
-        ice_ignore_msg,
+        ice_handle_checklist_timer_expiry,
         ice_restart,
         ice_remote_params,
         ice_ignore_msg,
@@ -553,13 +553,14 @@ int32_t ice_completed(ice_session_t *session, handle h_msg, handle *h_param)
 int32_t ice_handle_checklist_timer_expiry(ice_session_t *session, 
                                                     handle arg, handle *h_param)
 {
-    int32_t status;
+    int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
     ice_media_stream_t *media;
 
     media = (ice_media_stream_t *)timer->h_media;
 
-    /** TODO - need a check for media handle? */
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+
     status = ice_media_stream_fsm_inject_msg(
                         media, ICE_MEDIA_CHECKLIST_TIMER, arg);
     if(status != STUN_OK)
@@ -578,13 +579,14 @@ int32_t ice_handle_checklist_timer_expiry(ice_session_t *session,
 int32_t ice_nomination_timer_expired(
             ice_session_t *session, handle arg, handle *h_param)
 {
-    int32_t status;
+    int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
     ice_media_stream_t *media;
 
     media = (ice_media_stream_t *)timer->h_media;
 
-    /** TODO - need a check for media handle? */
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+
     status = ice_media_stream_fsm_inject_msg(
                         media, ICE_MEDIA_NOMINATION_TIMER, arg);
     if(status != STUN_OK)
@@ -603,13 +605,14 @@ int32_t ice_nomination_timer_expired(
 int32_t ice_keep_alive_timer_expired(
             ice_session_t *session, handle arg, handle *h_param)
 {
-    int32_t status;
+    int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
     ice_media_stream_t *media;
 
     media = (ice_media_stream_t *)timer->h_media;
 
-    /** TODO - need a check for media handle? */
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+    
     status = ice_media_stream_fsm_inject_msg(
                         media, ICE_MEDIA_KEEP_ALIVE_TIMER, arg);
     if(status != STUN_OK)
@@ -753,8 +756,9 @@ int32_t ice_add_media_stream (ice_session_t *session,
 
     /** copy the media stream parameters */
     status = ice_utils_copy_media_host_candidates(add_media, media_stream);
-
     if (status != STUN_OK) goto EXIT_PT;
+
+    media_stream->o_removed = false;
 
     /**
      * if this is an ice-lite session, then the media needs to be 
@@ -847,7 +851,7 @@ int32_t ice_remove_media_stream (ice_session_t *session,
             }
             else
             {
-                media->h_bind_sessions[i] = 0;
+                media->h_bind_sessions[i] = NULL;
             }
         }
     }
@@ -930,9 +934,10 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     }
 
     /** 
-     * free the memory for media context only if STUN server is used. Incase 
-     * the TURN server is used for the session, then the media will be 
-     * destroyed when turn refersh response is received after de-allocation
+     * free the memory for media context. Incase the TURN server is used 
+     * for the session, then the TURN session will be destroyed when the 
+     * de-allocation response is received. Hence the media context will
+     * be freed at the same time.
      */
     if (session->use_relay == false)
     {
@@ -940,6 +945,10 @@ int32_t ice_remove_media_stream (ice_session_t *session,
         stun_free(media);
 
         session->num_media_streams--;
+    }
+    else
+    {
+        media->o_removed = true;
     }
 
     /** no change in session state */

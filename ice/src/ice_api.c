@@ -141,6 +141,7 @@ static void ice_turn_callback_fxn (handle h_turn_inst,
              */
             ice_media_utils_clear_turn_session(media, 
                                         h_turn_inst, h_turn_session);
+
             event = ICE_SES_EVENT_MAX;
         }
         break;
@@ -927,6 +928,7 @@ int32_t ice_create_session(handle h_inst,
 
     session->state = ICE_SES_IDLE;
     session->peer_mode = ICE_INVALID_MODE;
+    session->o_destroyed = false;
 
     *h_session = session;
 
@@ -991,7 +993,7 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
 {
     ice_instance_t *instance;
     ice_session_t *session;
-    uint32_t i, j;
+    uint32_t i, j, count = 0;
 
     if ((h_inst == NULL) || (h_session == NULL))
         return STUN_INVALID_PARAMS;
@@ -1001,6 +1003,8 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
 
     ICE_VALIDATE_SESSION_HANDLE(h_session);
 
+    session->o_destroyed = true;
+
     /** clean up media */
     for (j = 0; j < ICE_MAX_MEDIA_STREAMS; j++)
     {
@@ -1008,13 +1012,23 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
         {
             ice_session_remove_media_stream(h_inst, 
                             h_session, session->aps_media_streams[j]);
+            count++;
         }
     }
 
-#if 0
-    instance->aps_sessions[i] = NULL;
-    stun_free(session);
-#endif
+    if (session->use_relay == false)
+    {
+        instance->aps_sessions[i] = NULL;
+        stun_free(session);
+    }
+    else
+    {
+        if (count == 0)
+        {
+            instance->aps_sessions[i] = NULL;
+            stun_free(session);
+        }
+    }
 
     return STUN_OK;
 }
@@ -1505,6 +1519,7 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_CHECK_LIST_TIMER_EXPIRY, arg, NULL);
+        if (status == STUN_INVALID_PARAMS) stun_free(timer);
     }
     else if (timer->type == ICE_NOMINATION_TIMER)
     {
@@ -1514,6 +1529,7 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_NOMINATION_TIMER_EXPIRY, arg, NULL);
+        if (status == STUN_INVALID_PARAMS) stun_free(timer);
     }
     else if (timer->type == ICE_BIND_TIMER)
     {
@@ -1530,6 +1546,7 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_KEEP_ALIVE_EXPIRY, arg, NULL);
+        if (status == STUN_INVALID_PARAMS) stun_free(timer);
     }
     else
     {

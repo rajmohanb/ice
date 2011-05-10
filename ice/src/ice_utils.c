@@ -2387,6 +2387,7 @@ int32_t ice_utils_start_keep_alive_timer_for_comp(
     }
 
     timer = comp->keepalive_timer;
+    timer->timer_id = 0;
 
     timer->h_instance = media->ice_session->instance;
     timer->h_session = media->ice_session;
@@ -3753,6 +3754,69 @@ int32_t ice_media_utils_clear_turn_session(ice_media_stream_t *media,
             media->h_turn_sessions[i] = NULL;
 
     return status;
+}
+
+
+
+int32_t ice_media_utils_clear_media_stream(ice_media_stream_t *media)
+{
+    int32_t i, count = 0;
+    ice_session_t *session = media->ice_session;
+
+    if (!media) return STUN_INVALID_PARAMS;
+
+    if (media->o_removed == false) return STUN_OK;
+
+    /** 
+     * check if media has been removed. If so, then free the media context 
+     * only after all the related turn sessions have been destroyed.
+     */
+    for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+        if (media->h_turn_sessions[i] != NULL)
+            count++;
+
+    if (count) return STUN_OK;
+
+    /** remove the reference for this media stream in the session context */
+    for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+        if (session->aps_media_streams[i] == media)
+            session->aps_media_streams[i] = NULL;
+
+    stun_free(media);
+
+    /** check if session has been destroyed */
+    if (session->o_destroyed == true)
+    {
+        if (session->instance)
+        {
+            /** 
+             * free the session context only after all 
+             * the media streams have been destroyed.
+             */
+            count = 0;
+
+            for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+                if (session->aps_media_streams[i] != NULL)
+                    count++;
+
+            if (count == 0)
+            {
+                /** clear references of this session in the instance */
+                for (i = 0; i < ICE_MAX_CONCURRENT_SESSIONS; i++)
+                    if (session->instance->aps_sessions[i] == (handle)session)
+                        session->instance->aps_sessions[i] = NULL;
+
+                count = 0;
+                for (i = 0; i < ICE_MAX_CONCURRENT_SESSIONS; i++)
+                    if (session->instance->aps_sessions[i] != NULL)
+                        count++;
+
+                if (count == 0) stun_free(session);
+            }
+        }
+    }
+
+    return STUN_OK;
 }
 
 

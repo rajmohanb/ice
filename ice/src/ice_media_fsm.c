@@ -151,7 +151,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_stream_checklist_timer_expiry,
         ice_media_process_rx_msg,
         ice_media_stream_restart,
         ice_media_stream_remote_params,
@@ -535,6 +535,7 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
                 "check timer");
         return STUN_NO_RESOURCE;
     }
+    media->checklist_timer->timer_id = 0;
 
     status = ice_media_utils_start_check_list_timer(media);
 
@@ -894,6 +895,8 @@ int32_t ice_media_stream_checklist_timer_expiry(
 
     ice_media_utils_dump_cand_pair_stats(media);
 
+    media->checklist_timer->timer_id = 0;
+
     status = ice_media_utils_get_next_connectivity_check_pair(media, &pair);
     if (status == STUN_OK)
     {
@@ -916,7 +919,6 @@ int32_t ice_media_stream_checklist_timer_expiry(
          * No more pairs available for connectivity checks.
          * Hence terminate the check list timer
          */
-        media->checklist_timer->timer_id = 0;
         status = STUN_OK;
 
         /** TODO
@@ -945,6 +947,8 @@ int32_t ice_media_stream_evaluate_valid_pairs(
     ICE_LOG(LOG_SEV_INFO,
             "Nomination timer expired. Time to evaluate the candidate pairs "\
             "in valid list and nominate one of them for media %p", media);
+
+    media->nomination_timer->timer_id = 0;
 
     /**
      * RFC 5245 sec 8.1.1.1 Regular Nomination
@@ -1355,12 +1359,13 @@ int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media,
 
     status = handler(media, h_msg);
 
-    /** validate media handle */
-
     if (cur_state != media->state)
     {
         ice_media_utils_notify_state_change_event(media);
     }
+
+    if (media->o_removed == true)
+        ice_media_utils_clear_media_stream(media);
 
     return status;
 }

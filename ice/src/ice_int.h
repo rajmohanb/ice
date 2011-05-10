@@ -306,6 +306,8 @@ struct struct_ice_media_stream
     handle h_cc_svr_session;
  
     ice_component_t media_comps[ICE_MAX_COMPONENTS];
+
+    bool_t o_removed;
 };
 
 
@@ -363,6 +365,7 @@ struct struct_ice_session
     ice_media_stream_t *aps_media_streams[ICE_MAX_MEDIA_STREAMS];
 
     bool_t use_relay;
+    bool_t o_destroyed;
 
     /**
      * turn/relay server configuration

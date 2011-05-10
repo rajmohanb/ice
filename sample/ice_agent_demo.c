@@ -1046,6 +1046,8 @@ void app_destroy_ice_session(void)
         return;
     }
 
+    g_session = NULL;
+
     /** 
      * do'nt set the g_session to NULL. When destroy 
      * completes, the app will be notified via callback 

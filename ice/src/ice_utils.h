@@ -256,6 +256,8 @@ int32_t ice_media_utils_update_nominated_pair_for_comp(
 int32_t ice_media_utils_clear_turn_session(ice_media_stream_t *media, 
                                     handle h_turn_inst, handle h_turn_session);
 
+int32_t ice_media_utils_clear_media_stream(ice_media_stream_t *media);
+
 
 /******************************************************************************/
 
