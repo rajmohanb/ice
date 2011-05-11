@@ -545,7 +545,8 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
      * and evaluates the valid pairs. This timer is only applicable
      * when the agent's role is CONTROLLING for the session.
      */
-    if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
+    if ((media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING) &&
+        (media->ice_session->instance->nomination_mode == ICE_NOMINATION_TYPE_REGULAR))
     {
         media->nomination_timer = (ice_timer_params_t *) 
                     stun_calloc (1, sizeof(ice_timer_params_t));
