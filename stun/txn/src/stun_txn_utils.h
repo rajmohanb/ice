@@ -25,6 +25,9 @@ extern "C" {
 int32_t stun_txn_utils_generate_txn_id(u_char *txn_id, uint32_t bytes);
 
 
+int32_t stun_txn_utils_killall_timers (stun_txn_context_t *txn_ctxt);
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

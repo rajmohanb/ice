@@ -23,6 +23,7 @@ extern "C" {
 #include "stun_msg.h"
 #include "stun_txn_api.h"
 #include "stun_txn_int.h"
+#include "stun_txn_utils.h"
 #include "stun_txn_fsm.h"
 
 static stun_txn_fsm_handler 
@@ -44,7 +45,7 @@ static stun_txn_fsm_handler
         process_resp,
         resend_req,
         ignore_msg,
-        terminate_txn,
+        overall_timeout,
     },
     /** STUN_OG_TXN_PROCEEDING */
     {
@@ -52,8 +53,8 @@ static stun_txn_fsm_handler
         ignore_msg,
         process_resp,
         ignore_msg,
-        terminate_txn,
-        terminate_txn,
+        rm_timeout,
+        overall_timeout,
     },
     /** STUN_OG_TXN_TERMINATED */
     {
@@ -185,6 +186,10 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
             uint32_t rm_timer = 
                 txn_ctxt->instance->rm_timer * txn_ctxt->instance->rto;
 
+            txn_ctxt->h_rto_timer = NULL;
+            stun_free(txn_ctxt->rto_params);
+            txn_ctxt->rto_params = NULL;
+
             txn_ctxt->h_rm_timer = txn_ctxt->instance->start_timer_cb(
                                                 rm_timer, txn_ctxt->rm_params);
             ICE_LOG (LOG_SEV_DEBUG, "RM timer handle %p\n", txn_ctxt->h_rto_timer);
@@ -207,9 +212,36 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
 
 
 
+int32_t rm_timeout (stun_txn_context_t *txn_ctxt, handle h_msg)
+{
+    txn_ctxt->h_rm_timer = NULL;
+    stun_free(txn_ctxt->rm_params);
+    txn_ctxt->rm_params = NULL;
+
+    stun_txn_utils_killall_timers(txn_ctxt);
+    txn_ctxt->state = STUN_OG_TXN_TERMINATED;
+    return STUN_TERMINATED;
+}
+
+
+int32_t overall_timeout (stun_txn_context_t *txn_ctxt, handle h_msg)
+{
+    txn_ctxt->h_overall_timer = NULL;
+    stun_free(txn_ctxt->oall_params);
+    txn_ctxt->oall_params = NULL;
+
+    stun_txn_utils_killall_timers(txn_ctxt);
+    txn_ctxt->state = STUN_OG_TXN_TERMINATED;
+    return STUN_TERMINATED;
+}
+
+
+
 int32_t terminate_txn (stun_txn_context_t *txn_ctxt, handle h_msg)
 {
-    ICE_LOG (LOG_SEV_DEBUG, "RM timer expired.. returning STUN_TERMINATED");
+    ICE_LOG (LOG_SEV_DEBUG, 
+            "Terminating transaction... returning STUN_TERMINATED");
+    stun_txn_utils_killall_timers(txn_ctxt);
     txn_ctxt->state = STUN_OG_TXN_TERMINATED;
     return STUN_TERMINATED;
 }
