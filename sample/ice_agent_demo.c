@@ -65,7 +65,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.5"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v0.52"
 #define ICE_VENDOR_NAME_LEN 25
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/

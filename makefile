@@ -13,7 +13,7 @@
 #******************************************************************************/
 
 # build customization flags
-MB_ENABLE_ICE_DEBUG := y
+MB_ENABLE_ICE_DEBUG := n
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
