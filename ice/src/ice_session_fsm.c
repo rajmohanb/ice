@@ -68,7 +68,7 @@ static ice_session_fsm_handler
     {
         ice_ignore_msg,
         handle_gather_result,
-        turn_alloc_failed,
+        ice_gather_failed,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
@@ -274,19 +274,28 @@ EXIT_PT:
 
 
 
-int32_t turn_alloc_failed(ice_session_t *session, handle h_msg, handle *h_param)
+int32_t ice_gather_failed(ice_session_t *session, handle h_msg, handle *h_param)
 {
     int32_t status;
     ice_int_params_t *param = (ice_int_params_t *)h_msg;
     ice_media_stream_t *media;
 
-    status = turn_session_get_app_param(
-                        param->h_inst, param->h_session, (handle *)&media);
+    if (session->use_relay == true)
+    {
+        status = turn_session_get_app_param(
+                            param->h_inst, param->h_session, (handle *)&media);
+    }
+    else
+    {
+        status = stun_binding_session_get_app_param(
+                            param->h_inst, param->h_session, (handle *)&media);
+    }
+
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "[ICE SESSION] unable to get application param from "\
-                "TURN handle");
+                "STUN/TURN handle");
         return status;
     }
 

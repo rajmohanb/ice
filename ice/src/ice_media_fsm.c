@@ -382,8 +382,17 @@ int32_t ice_media_stream_gather_failed(
     int32_t status;
     ice_int_params_t *param = (ice_int_params_t *)h_msg;
 
-    status = ice_utils_validate_turn_session_handle(
+    if (media->ice_session->use_relay == true)
+    {
+        status = ice_utils_validate_turn_session_handle(
                                     media, param->h_session, &comp_id);
+    }
+    else
+    {
+        status = ice_utils_validate_bind_session_handle(
+                                    media, param->h_session, &comp_id);
+    }
+
     if (status != STUN_OK) return status;
 
     ICE_LOG(LOG_SEV_ERROR,

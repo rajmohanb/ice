@@ -106,14 +106,18 @@ void app_log(/** char *file_name, uint32_t line_num, */
 void app_timer_expiry_cb (void *timer_id, void *arg)
 {
     int32_t status;
+    handle ice_session;
 
     app_log (LOG_SEV_DEBUG, "in sample application timer callback");
 
     /** inject timer message */
-    status = ice_session_inject_timer_event(timer_id, arg);
+    status = ice_session_inject_timer_event(timer_id, arg, &ice_session);
     if (status == STUN_TERMINATED)
     {
-        app_log (LOG_SEV_INFO, "ice_session_inject_timer_event() returned failure");
+        app_log (LOG_SEV_INFO, 
+                "ice_session_inject_timer_event() returned failure. The ICE"\
+                " session has terminated due to timeout");
+        g_cc_done = true;
     }
 
     return;

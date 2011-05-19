@@ -468,7 +468,9 @@ int32_t stun_binding_session_inject_received_msg(
 }
 
 
-int32_t stun_binding_session_inject_timer_event(handle timer_id, handle arg)
+
+int32_t stun_binding_session_inject_timer_event(
+                        handle timer_id, handle arg, handle *bind_session)
 {
     handle h_txn;
     stun_bind_timer_params_t *timer;
@@ -482,6 +484,7 @@ int32_t stun_binding_session_inject_timer_event(handle timer_id, handle arg)
 
     if (timer->type == BIND_STUN_TXN_TIMER)
     {
+        *bind_session = session;
         return stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
     }
 

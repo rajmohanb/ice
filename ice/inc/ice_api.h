@@ -340,7 +340,8 @@ int32_t ice_session_form_check_lists(handle h_inst, handle h_session);
 
 int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session);
 
-int32_t ice_session_inject_timer_event(handle timer_id, handle arg);
+int32_t ice_session_inject_timer_event(
+                    handle timer_id, handle arg, handle *ice_session);
 
 int32_t ice_instance_find_session_for_received_msg(handle h_inst, 
                     handle h_msg, handle transport_param, handle *h_session);

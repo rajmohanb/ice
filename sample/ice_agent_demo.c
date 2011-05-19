@@ -1264,15 +1264,19 @@ void ice_agent_handle_user_choice(char *choice)
 void ice_agent_handle_timer_event(ice_demo_timer_event_t *event, uint32_t bytes)
 {
     int32_t status;
+    handle ice_session;
 
     if (g_inst == NULL) return;
 
     /** inject timer message */
-    status = ice_session_inject_timer_event(event->timer_id, event->arg);
+    status = ice_session_inject_timer_event(
+                        event->timer_id, event->arg, &ice_session);
     if (status == STUN_TERMINATED)
     {
-        app_log (LOG_SEV_INFO, "ice_session_inject_timer_event() returned failure");
-        /** TODO = */
+        app_log (LOG_SEV_INFO, 
+                "ice_session_inject_timer_event() returned failure. "\
+                "The ICE session has terminated due to timeout");
+        g_demo_exit = true;
     }
 
     return;

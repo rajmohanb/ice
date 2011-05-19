@@ -1466,11 +1466,13 @@ int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session)
 
 
 
-int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
+int32_t ice_session_inject_timer_event(
+                    handle timer_id, handle arg, handle *ice_session)
 {
     int32_t i, status = STUN_OK;
     ice_timer_params_t *timer;
     ice_instance_t *instance;
+    ice_session_t *session;
 
     if ((timer_id == NULL) || (arg == NULL))
         return STUN_INVALID_PARAMS;
@@ -1492,6 +1494,9 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     instance = timer->h_instance;
     ICE_VALIDATE_SESSION_HANDLE(timer->h_session);
 
+    session = (ice_session_t *) timer->h_session;
+    *ice_session = session;
+
     if(timer->type == ICE_TURN_TIMER)
     {
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_TURN_TIMER");
@@ -1501,8 +1506,6 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     }
     else if (timer->type == ICE_CC_TIMER)
     {
-        ice_session_t *session = (ice_session_t *) timer->h_session;
-
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CC_TIMER");
 
         /** conn check timer event has to be fed thru the resp media fsm */
@@ -1513,8 +1516,6 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     }
     else if (timer->type == ICE_CHECK_LIST_TIMER)
     {
-        ice_session_t *session = (ice_session_t *) timer->h_session;
-
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CHECK_LIST_TIMER");
         
         status = ice_session_fsm_inject_msg(session, 
@@ -1523,8 +1524,6 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     }
     else if (timer->type == ICE_NOMINATION_TIMER)
     {
-        ice_session_t *session = (ice_session_t *) timer->h_session;
-
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_NOMINATION_TIMER");
         
         status = ice_session_fsm_inject_msg(session, 
@@ -1533,15 +1532,31 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
     }
     else if (timer->type == ICE_BIND_TIMER)
     {
+        handle h_bind_session;
+        ice_int_params_t event_params= {0};
+
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_BIND_TIMER");
-        status = stun_binding_session_inject_timer_event(timer_id, timer->arg);
+        status = stun_binding_session_inject_timer_event(
+                                timer_id, timer->arg, &h_bind_session);
+
+        if (status == STUN_TERMINATED)
+        {
+            ICE_LOG (LOG_SEV_DEBUG, 
+                    "[ICE]: STUN BINDING session terminated due to timeout. "\
+                    "Gathering of candidates failed");
+
+            event_params.h_inst = session->instance->h_turn_inst;
+            event_params.h_session = h_bind_session;
+
+            /** if the gathering failed, let the ice media know of it */
+            status = ice_session_fsm_inject_msg(session, 
+                                ICE_GATHER_FAILED, &event_params, NULL);
+        }
 
         stun_free(timer);
     }
     else if (timer->type == ICE_KEEP_ALIVE_TIMER)
     {
-        ice_session_t *session = (ice_session_t *) timer->h_session;
-
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_KEEP_ALIVE_TIMER");
         
         status = ice_session_fsm_inject_msg(session, 

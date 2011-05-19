@@ -2093,6 +2093,33 @@ int32_t ice_utils_validate_turn_session_handle(
 
 
 
+int32_t ice_utils_validate_bind_session_handle(
+            ice_media_stream_t *media, handle h_bind_session, uint32_t *comp_id)
+{
+    int32_t i;
+
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->h_bind_sessions[i] == h_bind_session)
+        {
+            *comp_id = i+1;
+            break;
+        }
+    }
+
+    if (i == ICE_MAX_COMPONENTS)
+    {
+        /** we dont have this session handle? */
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Invalid bind session handle for this media, ignoring ...");
+        return STUN_INVALID_PARAMS;
+    }
+
+    return STUN_OK;
+}
+
+
+
 int32_t ice_utils_get_free_local_candidate(
                         ice_media_stream_t *media, ice_candidate_t **cand)
 {

@@ -81,7 +81,8 @@ int32_t stun_binding_session_inject_received_msg(
 int32_t stun_binding_session_send_message(handle h_inst, 
                             handle h_session, stun_msg_type_t msg_type);
 
-int32_t stun_binding_session_inject_timer_event(handle timer_id, handle arg);
+int32_t stun_binding_session_inject_timer_event(
+                        handle timer_id, handle arg, handle *bind_session);
 
 int32_t stun_binding_instance_find_session_for_received_msg(
                             handle h_inst, handle h_msg, handle *h_session);

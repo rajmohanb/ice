@@ -137,6 +137,9 @@ int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media);
 int32_t ice_utils_validate_turn_session_handle(
         ice_media_stream_t *media, handle h_turn_session, uint32_t *comp_id);
 
+int32_t ice_utils_validate_bind_session_handle(
+        ice_media_stream_t *media, handle h_bind_session, uint32_t *comp_id);
+
 int32_t ice_utils_get_free_local_candidate(
                         ice_media_stream_t *media, ice_candidate_t **cand);
 

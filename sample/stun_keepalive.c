@@ -87,15 +87,18 @@ void app_log(stun_log_level_t level, char *format, ...)
 void app_timer_expiry_cb (void *timer_id, void *arg)
 {
     int32_t status;
+    handle bind_session;
 
     app_log (LOG_SEV_DEBUG, "in sample application timer callback");
 
     /** inject timer message */
-    status = stun_binding_session_inject_timer_event(timer_id, arg);
+    status = stun_binding_session_inject_timer_event(
+                                        timer_id, arg, &bind_session);
     if (status == STUN_TERMINATED)
     {
         app_log (LOG_SEV_INFO, 
-                "stun_binding_session_inject_timer_event() returned failure: %s", 
+                "stun_binding_session_inject_timer_event() returned "\
+                "failure: %s. STUN Binding session terminated due to timeout", 
                 stun_retval[status]);
         o_done = true;
     }
