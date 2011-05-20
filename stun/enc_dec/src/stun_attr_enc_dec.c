@@ -572,7 +572,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
 {
     stun_msg_integrity_attr_t *integrity;
     stun_method_type_t method;
-    uint16_t val16, key_len;
+    uint16_t val16, key_len = 0;
     u_char md5_key[16], hmac[20];
     u_char mi_print[STUN_MI_PRINT_BUF_LEN] = {0};
 
@@ -1183,8 +1183,8 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
         if (inet_aton((char *)addr->address, &mapped_addr) == 0)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Invalid IPv4 XOR MAPPED ADDESS %s. Encoding of XOR MAPPED"\
-                    " ADDRESS failed", addr->address); 
+                    "Invalid IPv4 XOR MAPPED ADDESS [%s]. Encoding of XOR "\
+                    "MAPPED ADDRESS failed", addr->address);
             return STUN_INVALID_PARAMS;
         }
         mapped_addr.s_addr = ntohl(mapped_addr.s_addr);
@@ -1202,8 +1202,8 @@ int32_t stun_attr_encode_xor_mapped_address(stun_attr_hdr_t *attr,
         if (inet_pton(AF_INET6, (char *)addr->address, xor_addr) <= 0)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Invalid IPv6 XOR MAPPED ADDESS %s. Encoding of XOR MAPPED "\
-                    "ADDRESS failed", addr->address); 
+                    "Invalid IPv6 XOR MAPPED ADDESS [%s]. Encoding of XOR "\
+                    "MAPPED ADDRESS failed", addr->address);
             return STUN_INVALID_PARAMS;
         }
 

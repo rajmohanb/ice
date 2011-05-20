@@ -31,6 +31,7 @@ extern "C" {
 #include "ice_utils.h"
 
 
+
 s_char *cand_pair_states[] =
 {
     "ICE_CP_FROZEN",
@@ -1603,8 +1604,8 @@ ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
 
         if ((cand->transport.type == src->host_type) &&
             (cand->transport.port == src->port) &&
-            (stun_strcmp((char *)cand->transport.ip_addr,
-                          (char *)src->ip_addr) == 0))
+            (ice_utils_host_compare(cand->transport.ip_addr, 
+                                src->ip_addr, cand->transport.type) == true))
         {
             return cand;
         }
@@ -3846,6 +3847,59 @@ int32_t ice_media_utils_clear_media_stream(ice_media_stream_t *media)
     return STUN_OK;
 }
 
+
+
+bool_t ice_utils_host_compare (u_char *host1, 
+                    u_char *host2, stun_inet_addr_type_t addr_type)
+{
+    int32_t retval, size, family;
+    u_char addr1[ICE_SIZEOF_IPV6_ADDR] = {0};
+	u_char addr2[ICE_SIZEOF_IPV6_ADDR] = {0};
+
+    if (addr_type == STUN_INET_ADDR_IPV4)
+    {
+        family = AF_INET;
+        size = ICE_SIZEOF_IPV4_ADDR;
+    }
+    else if (addr_type == STUN_INET_ADDR_IPV6)
+    {
+        family = AF_INET6;
+        size = ICE_SIZEOF_IPV6_ADDR;
+    }
+    else
+        return false;
+
+    retval = inet_pton(family, (const char *)host1, &addr1);
+    if (retval != 1)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+            "[ICE UTILS] inet_pton failed, probably invalid address [%s]", 
+            host1);
+        return false;
+    }
+
+    retval = inet_pton(family, (const char *)host2, &addr2);
+    if (retval != 1)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+            "[ICE UTILS] inet_pton failed, probably invalid address [%s]",
+            host2);
+        return false;
+    }
+    
+    retval = stun_memcmp(addr1, addr2, size);
+    if (retval == 0)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE UTILS] Given IP addresses matched");
+        return true;
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE UTILS] Given IP addresses differ");
+
+    return false;
+}
 
 
 /******************************************************************************/

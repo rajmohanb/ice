@@ -21,6 +21,9 @@ extern "C" {
 
 /******************************************************************************/
 
+#define ICE_SIZEOF_IPV6_ADDR    16      /** sizeof(struct in_addr) */
+#define ICE_SIZEOF_IPV4_ADDR    4       /** sizeof(struct in6_addr) */
+
 uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand);
 
 uint64_t ice_utils_compute_peer_reflexive_candidate_priority(
@@ -260,6 +263,9 @@ int32_t ice_media_utils_clear_turn_session(ice_media_stream_t *media,
                                     handle h_turn_inst, handle h_turn_session);
 
 int32_t ice_media_utils_clear_media_stream(ice_media_stream_t *media);
+
+bool_t ice_utils_host_compare (u_char *host1, 
+                    u_char *host2, stun_inet_addr_type_t addr_type);
 
 
 /******************************************************************************/
