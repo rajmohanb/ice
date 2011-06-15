@@ -79,7 +79,7 @@ $(ICE_AGENT_DEMO) :
 	@echo "Creating ice agent demo.... " $(TARGET)
 	$(CC) $(CFLAGS) $(ICE_FULL_INC) -o ice_agent_demo.o ice_agent_demo.c
 	$(CC) ice_agent_demo.o -o $(ICE_AGENT_DEMO) $(ICE_FULL_LIBRARY)
-	#$(CC) ice_agent_demo.o -o $(ICE_AGENT_DEMO)  -Wl,-Map,ice_full.map  $(ICE_FULL_LIBRARY)
+	#$(CC) ice_agent_demo.o -o $(ICE_AGENT_DEMO)  -Wl,-Map,ice_agent_demo.map  $(ICE_FULL_LIBRARY)
 
 $(STUN_KEEPALIVE):
 	@echo "Creating stun keepalive sample... " $(TARGET)

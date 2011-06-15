@@ -20,7 +20,7 @@
 *                                                                              *
 *******************************************************************************/
 
-#define TEST_IPV6
+//#define TEST_IPV6
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,7 +42,9 @@
 #ifdef TEST_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #else
-#define STUN_SRV_IP "192.168.1.2"
+//#define STUN_SRV_IP "192.168.1.2"
+#define STUN_SRV_IP "208.97.25.20" // NO xor mapped addr
+//#define STUN_SRV_IP "64.34.202.155" // YES xor mapped addr
 #endif
 #define STUN_SRV_PORT 3478
 
@@ -296,7 +298,7 @@ int main (int argc, char *argv[])
         if (status != STUN_OK)
         {
             app_log (LOG_SEV_ERROR, 
-                    "stun_binding_session_send_message() returned error %d\n", 
+                    "stun_binding_session_send_message() returned error %s\n", 
                     stun_retval[status]);
             return -1;
         }
@@ -340,6 +342,22 @@ int main (int argc, char *argv[])
             status = stun_binding_session_inject_received_msg(h_inst, h_target, h_rcvdmsg);
             if (status == STUN_TERMINATED)
             {
+                status = stun_binding_session_get_xor_mapped_address(
+                                            h_inst, h_target, &mapped_addr);
+                if (status != STUN_OK)
+                {
+                    app_log(LOG_SEV_ERROR, 
+                        "unable to get xor mapped address. Returned error: %s", 
+                        stun_retval[status]);
+                    o_error = true;
+                }
+                else
+                {
+                    app_log(LOG_SEV_ERROR, 
+                            "\n\nXOR MAPPED ADDRESS and PORT : %s and %d\n\n", 
+                            mapped_addr.ip_addr, mapped_addr.port);
+                }
+
                 status = stun_binding_session_get_mapped_address(
                                             h_inst, h_target, &mapped_addr);
                 if (status != STUN_OK)
@@ -352,10 +370,11 @@ int main (int argc, char *argv[])
                 else
                 {
                     app_log(LOG_SEV_ERROR, 
-                            "\n\nMAPPED ADDRESS and POR : %s and %d\n\n", 
+                            "\n\nMAPPED ADDRESS and PORT : %s and %d\n\n", 
                             mapped_addr.ip_addr, mapped_addr.port);
                     sleep(1);
                 }
+
 
                 stun_binding_destroy_session(h_inst, h_session);
             }
@@ -374,6 +393,8 @@ int main (int argc, char *argv[])
 error_exit:
     stun_binding_destroy_instance(h_inst);
     platform_free(my_buf);
+
+    platform_exit();
 
     return 0;
 }

@@ -87,6 +87,9 @@ int32_t stun_binding_session_inject_timer_event(
 int32_t stun_binding_instance_find_session_for_received_msg(
                             handle h_inst, handle h_msg, handle *h_session);
 
+int32_t stun_binding_session_get_xor_mapped_address(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *mapped_addr);
+
 int32_t stun_binding_session_get_mapped_address(handle h_inst, 
                         handle h_session, stun_inet_addr_t *mapped_addr);
 

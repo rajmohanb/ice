@@ -67,19 +67,25 @@ int32_t stun_binding_create_instance(handle *h_inst)
 
 int32_t stun_binding_nwk_send_cb_fxn(handle h_msg, handle h_param)
 {
+    int32_t sent_bytes;
     stun_binding_session_t *session = 
                                 (stun_binding_session_t *) h_param;
 
-    return session->instance->nwk_send_cb (h_msg, 
+    sent_bytes = session->instance->nwk_send_cb (h_msg, 
             session->server_type, session->stun_server, session->stun_port, 
             session->transport_param, session->app_param);
+
+    if (sent_bytes == -1)
+        return STUN_INT_ERROR;
+    else
+        return STUN_OK;
 }
 
 
 
 handle stun_bind_start_txn_timer(uint32_t duration, handle arg)
 {
-    handle h_txn, h_txn_inst;
+    handle h_txn, h_txn_inst, app_param = NULL;
     int32_t status;
     stun_binding_session_t *session;
     stun_bind_timer_params_t *timer;
@@ -92,8 +98,10 @@ handle stun_bind_start_txn_timer(uint32_t duration, handle arg)
     status = stun_txn_timer_get_txn_handle(arg, &h_txn, &h_txn_inst);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
-    status = stun_txn_get_app_param(h_txn_inst, h_txn, (handle *)&session);
+    status = stun_txn_get_app_param(h_txn_inst, h_txn, &app_param);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    session = (stun_binding_session_t *) app_param;
 
     timer->h_instance = session->instance;
     timer->h_bind_session = session;
@@ -529,7 +537,7 @@ int32_t stun_binding_instance_find_session_for_received_msg(
 
 
 
-int32_t stun_binding_session_get_mapped_address(handle h_inst, 
+int32_t stun_binding_session_get_xor_mapped_address(handle h_inst, 
                         handle h_session, stun_inet_addr_t *mapped_addr)
 {
     stun_binding_instance_t *instance;
@@ -586,6 +594,49 @@ int32_t stun_binding_session_timer_get_session_handle (
     *h_instance = timer->h_instance;
 
     return STUN_OK;
+}
+
+
+
+int32_t stun_binding_session_get_mapped_address(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *mapped_addr)
+{
+    stun_binding_instance_t *instance;
+    stun_binding_session_t *session;
+    stun_addr_family_type_t addr_family;
+    handle h_attr;
+    int32_t status;
+    uint32_t num;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (mapped_addr == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (stun_binding_instance_t *) h_inst;
+    session = (stun_binding_session_t *) h_session;
+
+    /** TODO - make sure the session still exists */
+
+    if (!session->h_resp) return STUN_INVALID_PARAMS;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                session->h_resp, STUN_ATTR_MAPPED_ADDR, 
+                &h_attr, (uint32_t *)&num);
+    if (status != STUN_OK) return status;
+
+    num = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_mapped_addr_get_address(h_attr, 
+                    &addr_family, (u_char *)mapped_addr->ip_addr, &num);
+    if (status != STUN_OK) return status;
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        mapped_addr->host_type = STUN_INET_ADDR_IPV4;
+    else
+        mapped_addr->host_type = STUN_INET_ADDR_IPV6;
+
+    status = stun_attr_mapped_addr_get_port(h_attr, &mapped_addr->port);
+
+    return status;
 }
 
 

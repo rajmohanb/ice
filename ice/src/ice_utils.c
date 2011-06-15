@@ -2224,7 +2224,7 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
     stun_inet_addr_t mapped_addr;
     ice_candidate_t *base_cand, *cand = NULL;
 
-    status = stun_binding_session_get_mapped_address(
+    status = stun_binding_session_get_xor_mapped_address(
                         h_bind_inst, h_bind_session, &mapped_addr);
     if (status != STUN_OK)
     {

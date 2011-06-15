@@ -157,6 +157,7 @@ int32_t stun_attr_mapped_addr_get_address(handle h_attr,
     return STUN_OK;
 }
 
+
 int32_t stun_attr_mapped_addr_get_port(handle h_attr, uint32_t *port)
 {
     stun_mapped_addr_attr_t *attr;

@@ -40,7 +40,8 @@ int32_t cc_utils_create_request_msg(
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "[CONN CHECK] Creating BINDING req message failed", status);
+                "[CONN CHECK] Creating BINDING req message failed - %d",
+                status);
         return status;
     }
 
@@ -198,7 +199,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
     uint32_t num;
     u_char software[MAX_STR_LEN];
     handle h_msg, h_req_attr[1], h_resp_attr[1];
-    stun_addr_family_type_t addr_family;
+    stun_addr_family_type_t addr_family = STUN_ADDR_FAMLY_INVALID;
 
     h_msg = NULL;
     status = stun_msg_create_resp_from_req(h_req, msg_type, &h_msg);
@@ -855,7 +856,8 @@ int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code)
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "[CONN CHECK] Extracting of the error code failed", status);
+                "[CONN CHECK] Extracting of the error code failed - %d",
+                status);
     }
 
     return status;
@@ -880,7 +882,7 @@ uint32_t cc_utils_extract_conn_check_info(handle h_msg,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "[CONN CHECK] Extracting xor mapped addr failed", status);
+                "[CONN CHECK] Extracting xor mapped addr failed - %d", status);
         return status;
     }
 
@@ -896,21 +898,9 @@ uint32_t cc_utils_extract_conn_check_info(handle h_msg,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "[CONN CHECK] Extracting xor mapped port failed", status);
+                "[CONN CHECK] Extracting xor mapped port failed = %d", status);
         return status;
     }
-
-    /** The priority attribute will not be part of the response */
-#if 0
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_PRIORITY, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_priority_get_priority(h_attr, 
-                                        &session->prflx_cand_priority);
-    if (status != STUN_OK) return status;
-#endif
 
     return status;
 }
