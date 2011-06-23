@@ -35,6 +35,13 @@ extern "C" {
 /******************************************************************************/
 
 
+typedef enum
+{
+    TURN_CREATE_PERMISSION = 0,
+    TURN_CHANNEL_BIND,
+} turn_perm_method_t;
+
+
 typedef enum 
 {
     TURN_IDLE = 0,
@@ -181,7 +188,8 @@ int32_t turn_session_inject_received_msg(
 
 int32_t turn_session_allocate(handle h_inst, handle h_session);
 
-int32_t turn_session_create_permissions(handle h_inst, handle h_session);
+int32_t turn_session_create_permissions(handle h_inst, 
+                            handle h_session, turn_perm_method_t method);
 
 int32_t turn_session_bind_channel(handle h_inst, 
                         handle h_session, stun_inet_addr_t *peer);

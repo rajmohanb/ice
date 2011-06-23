@@ -2670,7 +2670,8 @@ int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media)
     {
         if (media->h_turn_sessions[i] == NULL) continue;
 
-        status = turn_session_create_permissions(h_turn_inst, media->h_turn_sessions[i]);
+        status = turn_session_create_permissions(h_turn_inst, 
+                        media->h_turn_sessions[i], TURN_CREATE_PERMISSION);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 

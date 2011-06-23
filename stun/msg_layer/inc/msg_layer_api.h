@@ -331,6 +331,8 @@ int32_t stun_attr_ice_controlled_get_tiebreaker_value(
 int32_t stun_attr_ice_controlled_set_tiebreaker_value(
                                             handle h_attr, uint64_t tiebreak);
 
+int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num);
+
 /* ========================================================================== */
 
 #if 0

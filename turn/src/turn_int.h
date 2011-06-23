@@ -80,8 +80,10 @@ typedef struct
 {
     stun_inet_addr_t peer_addr;
 
+#if 0
     /** use data/send indications or channels for media data */
     bool_t use_channel;
+#endif
 
     /** handle to refresh permission by using channel bind */
     handle   h_perm_chnl_refresh;
@@ -146,13 +148,16 @@ typedef struct
     /** server reflexive mapped address */
     stun_inet_addr_t mapped_addr;
 
-   /** allocation expiry time in seconds */
+    /** allocation expiry time in seconds */
     uint32_t lifetime;
 
     /** handle to allocation refresh timer */
     handle   h_alloc_refresh;
     turn_timer_params_t *alloc_refresh_timer_params;
 
+    /** permission creation/refresh mode */
+    turn_perm_method_t perm_method;
+    
     /** list of permissions */
     turn_permission_t *aps_perms[TURN_MAX_PERMISSIONS];
 
@@ -167,6 +172,8 @@ typedef struct
     /** Keep-Alive timer and related stuff */
     handle   h_keep_alive;
     turn_timer_params_t *keep_alive_timer_params;
+
+    uint16_t channel_num;
 
 } turn_session_t;
 

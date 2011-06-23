@@ -257,6 +257,7 @@ int32_t turn_create_session(handle h_inst, handle *h_session)
     session->instance = instance;
     session->h_txn = NULL;
     session->state = TURN_IDLE;
+    session->channel_num = 1;
 
     session->realm = session->nonce = NULL;
     session->alloc_refresh_timer_params = 
@@ -439,11 +440,14 @@ int32_t turn_session_allocate(handle h_inst, handle h_session)
 }
 
 
-int32_t turn_session_create_permissions(handle h_inst, handle h_session)
+int32_t turn_session_create_permissions(handle h_inst, 
+                                handle h_session, turn_perm_method_t method)
 {
     turn_session_t *session = (turn_session_t *) h_session;
 
     /** make sure that the session is vaild */
+
+    session->perm_method = method;
 
     return turn_session_fsm_inject_msg(session, TURN_CREATE_PERM_REQ, NULL);
 }
@@ -745,8 +749,10 @@ int32_t turn_session_add_peer_address(handle h_inst,
 
         stun_memcpy(&perm->peer_addr, addr, sizeof(stun_inet_addr_t));
 
+#if 0
         /** By default, always use data/send indication? */
         perm->use_channel = false;
+#endif
 
         perm->h_perm_chnl_refresh = NULL;
         perm->perm_chnl_refresh_timer_params = NULL;

@@ -377,6 +377,26 @@ int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg)
 int32_t send_perm_req (turn_session_t *session, handle h_msg)
 {
     int32_t status;
+
+    if (session->perm_method == TURN_CREATE_PERMISSION)
+    {
+        status = turn_utils_send_create_permission_req(session);
+    }
+    else
+    {
+        uint32_t i;
+        turn_permission_t *perm;
+
+        for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
+        {
+            if (session->aps_perms[i] == NULL) continue;
+            perm = session->aps_perms[i];
+
+            status = turn_utils_send_channel_bind_request(session, perm);
+        }
+    }
+
+#if 0
     handle h_txn, h_txn_inst;
     
     h_txn_inst = session->instance->h_txn_inst;
@@ -404,6 +424,7 @@ int32_t send_perm_req (turn_session_t *session, handle h_msg)
     if (status != STUN_OK) return status;
 
     session->h_perm_txn = h_txn;
+#endif
 
     session->state = TURN_OG_CREATING_PERM;
 
@@ -894,6 +915,26 @@ int32_t turn_data_ind(turn_session_t *session, handle h_msg)
 int32_t turn_refresh_permission (turn_session_t *session, handle h_msg)
 {
     int32_t status;
+
+    if (session->perm_method == TURN_CREATE_PERMISSION)
+    {
+        status = turn_utils_send_create_permission_req(session);
+    }
+    else
+    {
+        uint32_t i;
+        turn_permission_t *perm;
+
+        for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
+        {
+            if (session->aps_perms[i] == NULL) continue;
+            perm = session->aps_perms[i];
+
+            status = turn_utils_send_channel_bind_request(session, perm);
+        }
+    }
+
+#if 0
     handle h_txn, h_txn_inst;
     
     h_txn_inst = session->instance->h_txn_inst;
@@ -921,6 +962,7 @@ int32_t turn_refresh_permission (turn_session_t *session, handle h_msg)
     if (status != STUN_OK) return status;
 
     session->h_perm_txn = h_txn;
+#endif
 
     /** no change in state */
 

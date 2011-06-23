@@ -51,6 +51,9 @@ int32_t turn_utils_create_refresh_req_msg(
 int32_t turn_utils_create_permission_req_msg(
                             turn_session_t *session, handle *h_newmsg);
 
+int32_t turn_utils_create_channel_bind_req_msg(turn_session_t *session, 
+                                    turn_permission_t *perm, handle *h_newmsg);
+
 int32_t turn_utils_create_send_ind_msg(
         turn_session_t *session, turn_app_data_t *data, handle *h_newmsg);
 
@@ -79,6 +82,12 @@ int32_t turn_table_validate_session_handle(handle h_inst, handle h_session);
 void turn_utils_free_all_session_timers(turn_session_t *session);
 
 void turn_utils_delete_all_permissions(turn_session_t *session);
+
+int32_t turn_utils_send_create_permission_req(turn_session_t *session);
+
+int32_t turn_utils_send_channel_bind_request (
+                            turn_session_t *session, turn_permission_t *perm);
+
 
 
 /******************************************************************************/

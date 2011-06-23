@@ -843,6 +843,7 @@ int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type)
 
 
 #ifdef MB_ENABLE_TURN
+
 int32_t stun_attr_requested_transport_set_protocol(
                         handle h_attr, stun_transport_protocol_type_t proto)
 {
@@ -864,6 +865,23 @@ int32_t stun_attr_requested_transport_set_protocol(
 
     return STUN_OK;
 }
+
+
+int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num)
+{
+    stun_channel_number_attr_t *chnl = (stun_channel_number_attr_t *) h_attr;
+
+    if (h_attr == NULL) return STUN_INVALID_PARAMS;
+
+    if (chnl->hdr.type != STUN_ATTR_CHANNEL_NUMBER)
+        return STUN_INVALID_PARAMS;
+
+    chnl->channel_number = num;
+    chnl->hdr.length = 2;
+
+    return STUN_OK;
+}
+
 #endif
 
 
