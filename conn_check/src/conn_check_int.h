@@ -109,7 +109,7 @@ typedef struct
     handle h_req;
     handle h_resp;
 
-    stun_inet_addr_t prflx_addr;
+    stun_inet_addr_t mapped_addr;
 
     /** connectivity check result */
     bool_t cc_succeeded;

@@ -840,7 +840,7 @@ int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
 void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
 {
     uint32_t i, count = 0;
-    s_char nom_status[16], valid_status[16];
+    s_char nom_status[16], valid_status[16], candtype[16];
     ice_cand_pair_t *pair;
 
     ICE_LOG (LOG_SEV_DEBUG, 
@@ -868,14 +868,26 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
         else
             stun_strcpy(nom_status, "NOT nominated");
 
+        if (pair->local->type == ICE_CAND_TYPE_HOST)
+            stun_strcpy(candtype, "Host");
+        else if (pair->local->type == ICE_CAND_TYPE_SRFLX)
+            stun_strcpy(candtype, "Server Reflex");
+        else if (pair->local->type == ICE_CAND_TYPE_PRFLX)
+            stun_strcpy(candtype, "Peer Reflex");
+        else if (pair->local->type == ICE_CAND_TYPE_RELAYED)
+            stun_strcpy(candtype, "Relayed");
+        else
+            stun_strcpy(candtype, "Invalid");
+
+
         count++;
         ICE_LOG (LOG_SEV_INFO, 
-                "%d: [%d] %s:%d --> %s:%d %s [%s] [%s] [ %lld %s:%s ]\n", 
+                "%d: [%d] %s:%d --> %s:%d %s [%s] [%s] [ %lld %s:%s ] [%s]\n", 
                 count, pair->local->comp_id, pair->local->transport.ip_addr, 
                 pair->local->transport.port, pair->remote->transport.ip_addr, 
                 pair->remote->transport.port, cand_pair_states[pair->state], 
                 valid_status, nom_status, pair->priority, 
-                pair->local->foundation, pair->remote->foundation);
+                pair->local->foundation, pair->remote->foundation, candtype);
     }
 
     ICE_LOG (LOG_SEV_DEBUG, "Total %d valid pairs for this media\n", count);
@@ -2522,7 +2534,7 @@ void ice_utils_handle_agent_role_conflict(
 
 
 int32_t ice_utils_search_local_candidates(ice_media_stream_t *media, 
-                    conn_check_result_t *check, ice_candidate_t **found_cand)
+                        stun_inet_addr_t *src, ice_candidate_t **found_cand)
 {
     int32_t i;
     ice_candidate_t *local_cand;
@@ -2541,10 +2553,10 @@ int32_t ice_utils_search_local_candidates(ice_media_stream_t *media,
          * Note 2: strncmp is not proper way to compare ip addresses, 
          *         especially ipv6 
          */
-        if((local_cand->transport.type == check->prflx_addr.host_type) &&
-           (local_cand->transport.port == check->prflx_addr.port) &&
+        if((local_cand->transport.type == src->host_type) &&
+           (local_cand->transport.port == src->port) &&
            (stun_strncmp((char *)local_cand->transport.ip_addr, 
-                 (char *)check->prflx_addr.ip_addr, ICE_IP_ADDR_MAX_LEN) == 0))
+                        (char *)src->ip_addr, ICE_IP_ADDR_MAX_LEN) == 0))
         {
             /** OK, this candidate is already part of the local candidates */
             ICE_LOG(LOG_SEV_INFO, 
@@ -2562,7 +2574,7 @@ int32_t ice_utils_search_local_candidates(ice_media_stream_t *media,
 
 
 int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp, 
-                    conn_check_result_t *check, ice_candidate_t **new_prflx)
+                    stun_inet_addr_t *src, ice_candidate_t **new_prflx)
 {
     int32_t i;
     ice_media_stream_t *media = cp->media;
@@ -2589,10 +2601,10 @@ int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp,
     prflx_cand = &media->as_local_cands[i];
 
     /** transport params */
-    prflx_cand->transport.type = check->prflx_addr.host_type;
+    prflx_cand->transport.type = src->host_type;
     memcpy(prflx_cand->transport.ip_addr, 
-                        check->prflx_addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
-    prflx_cand->transport.port = check->prflx_addr.port;
+                        src->ip_addr, ICE_IP_ADDR_MAX_LEN);
+    prflx_cand->transport.port = src->port;
 
     /** Note: protocol is assumed to be always UDP */
     prflx_cand->transport.protocol = ICE_TRANSPORT_UDP;
@@ -2763,16 +2775,16 @@ int32_t ice_utils_add_to_triggered_check_queue(
     
     iter = media->trig_check_list;
     lag = NULL;
+
     /** make sure this candidate pair is not already on the triggered list */
     while (iter != NULL)
     {
         if (iter->cp == cp)
         {
             ICE_LOG(LOG_SEV_INFO,
-                    "[ICE MEDIA] Answer not yet received. Hence Queueing the "\
-                    "incoming connectivity check in Triggered Q, but found "\
-                    "that this pair %p is already on the Triggered Q. "\
-                    "Hence not adding to Q now", cp);
+                    "[ICE MEDIA] Queueing the incoming connectivity check in "\
+                    "Triggered Q, but found that this pair %p is already on "\
+                    "the Triggered Q. Hence not adding to Q now", cp);
             
             return STUN_OK;
         }
@@ -2795,9 +2807,8 @@ int32_t ice_utils_add_to_triggered_check_queue(
     else
         media->trig_check_list = elem;
 
-    ICE_LOG(LOG_SEV_INFO,
-            "[ICE MEDIA] Answer not yet received, hence Queued the candidate "\
-            "pair %p in the triggered Queue", cp);
+    ICE_LOG(LOG_SEV_INFO, 
+            "[ICE MEDIA] Queued the candidate pair %p in the triggered Q", cp);
 
     return STUN_OK;
 }
@@ -2873,7 +2884,7 @@ int32_t ice_utils_add_to_ic_check_queue_without_answer(
     stun_memcpy(&ic_check->peer_addr, remote, sizeof(stun_inet_addr_t));
 
     /** priority */
-    ic_check->prflx_priority = check_info->prflx_priority;
+    ic_check->prflx_priority = check_info->priority;
 
     /** nominated status */
     ic_check->nominated = check_info->nominated;
@@ -2900,9 +2911,13 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
     ice_candidate_t *remote_cand;
     ice_cand_pair_t *cp;
 
+    ICE_LOG(LOG_SEV_INFO,
+            "[ICE] There are [%d] pending checks", media->ic_check_count);
+
     for (i = 0; i < media->ic_check_count; i++)
     {
         ic_check = &media->ic_checks[i];
+        remote_cand = NULL;
 
         /**
          * RFC 5245 Sec 7.2.1.3 Learning Peer Reflexive Candidates
@@ -2945,6 +2960,11 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
              */
             status = ice_media_utils_add_new_candidate_pair(
                                 media, ic_check->local_cand, remote_cand, &cp);
+
+            if (cp == NULL)
+            {
+                ICE_LOG(LOG_SEV_INFO, "[ICE] Pathetic! Fix me. CP is NULL ...");
+            }
 
             /** set the state of this candidate pair to WAITING */
             status = ice_cand_pair_fsm_inject_msg(
@@ -3148,7 +3168,12 @@ int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media,
     new_pair->local = local;
     new_pair->remote = remote;
 
-    /** TODO = calculate pair priority? */
+    /** calculate pair priority? */
+    ice_media_utils_compute_candidate_pair_priority(media, new_pair);
+
+    new_pair->media = media;
+
+    *cp = new_pair;
 
     return STUN_OK;
 }
@@ -3173,7 +3198,7 @@ int32_t ice_utils_process_incoming_check(
         /** Found a peer reflexive candidate */
         status = ice_utils_add_remote_peer_reflexive_candidate(
                                     media, &stun_pkt->src, local_cand->comp_id, 
-                                    check_result->prflx_priority, &remote_cand);
+                                    check_result->priority, &remote_cand);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR,

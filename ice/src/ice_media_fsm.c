@@ -718,7 +718,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                      * against the list local canidates.
                      */
                     status = ice_utils_search_local_candidates(
-                                            media, &check_result, &local_cand);
+                            media, &(check_result.mapped_addr), &local_cand);
                     if (status == STUN_OK)
                     {
                         ICE_LOG (LOG_SEV_INFO, 
@@ -734,7 +734,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                                 "in the media local candidate list");
                          
                         status = ice_utils_add_local_peer_reflexive_candidate(
-                                                cp, &check_result, &local_cand);
+                                  cp, &(check_result.mapped_addr), &local_cand);
 
                         status = ice_utils_search_remote_candidates(media, 
                                                 &stun_pkt->src, &remote_cand);

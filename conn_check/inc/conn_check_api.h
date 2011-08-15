@@ -92,8 +92,8 @@ typedef struct {
     bool_t nominated;
     bool_t controlling_role;
     uint32_t error_code;
-    stun_inet_addr_t prflx_addr;
-    uint32_t prflx_priority;
+    uint32_t priority;
+    stun_inet_addr_t mapped_addr;
 } conn_check_result_t;
 
 

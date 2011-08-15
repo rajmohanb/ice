@@ -647,10 +647,10 @@ int32_t conn_check_session_get_check_result(handle h_inst,
     result->controlling_role = session->controlling_role;
     result->error_code = session->error_code;
     result->nominated = session->nominated;
-    result->prflx_priority = session->prflx_cand_priority;
+    result->priority = session->prflx_cand_priority;
 
-    stun_memcpy(&result->prflx_addr,
-                    &session->prflx_addr, sizeof(stun_inet_addr_t));
+    stun_memcpy(&result->mapped_addr, 
+            &session->mapped_addr, sizeof(stun_inet_addr_t));
 
     return STUN_OK;
 }

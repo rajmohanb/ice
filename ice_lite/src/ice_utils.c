@@ -1538,8 +1538,8 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
 
         /** add a new remote peer reflexive candidate */
         status = ice_utils_add_remote_peer_reflexive_candidate(media, 
-                                &(check_result->prflx_addr), local->comp_id, 
-                                check_result->prflx_priority, &new_prflx_cand);
+                                &(rx_pkt->src), local->comp_id, 
+                                check_result->priority, &new_prflx_cand);
 
         if (status != STUN_OK)
         {
@@ -1549,7 +1549,7 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
         }
 
         remote = new_prflx_cand;
-        remote->priority = check_result->prflx_priority;
+        remote->priority = check_result->priority;
     }
     
     /**

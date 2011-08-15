@@ -698,13 +698,13 @@ ERROR_EXIT_PT:
 int32_t conn_check_utils_extract_info_from_request_msg(
             conn_check_session_t *session, handle h_msg)
 {
-    handle h_attrs[10];
+    handle h_attr;
     uint32_t num;
     int32_t status;
 
     num = 1;
     status = stun_msg_get_specified_attributes(
-                    h_msg, STUN_ATTR_USE_CANDIDATE, h_attrs, &num);
+                    h_msg, STUN_ATTR_USE_CANDIDATE, &h_attr, &num);
     if (status == STUN_OK)
     {
         session->nominated = true;
@@ -714,6 +714,20 @@ int32_t conn_check_utils_extract_info_from_request_msg(
         session->nominated = false;
         status = STUN_OK;
     }
+
+    /** extract priority */
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_PRIORITY, &h_attr, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Priority attribute missing in received request msg?");
+        status = STUN_INVALID_PARAMS;
+    }
+
+    status = stun_attr_priority_get_priority(
+                        h_attr, &(session->prflx_cand_priority));
 
     return status;
 }
@@ -878,7 +892,7 @@ uint32_t cc_utils_extract_conn_check_info(handle h_msg,
 
     num = ICE_IP_ADDR_MAX_LEN;
     status = stun_attr_xor_mapped_addr_get_address(h_attr, 
-                        &addr_family, session->prflx_addr.ip_addr, &num);
+                        &addr_family, session->mapped_addr.ip_addr, &num);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
@@ -887,14 +901,14 @@ uint32_t cc_utils_extract_conn_check_info(handle h_msg,
     }
 
     if (addr_family == STUN_ADDR_FAMILY_IPV4)
-        session->prflx_addr.host_type = STUN_INET_ADDR_IPV4;
+        session->mapped_addr.host_type = STUN_INET_ADDR_IPV4;
     else if (addr_family == STUN_ADDR_FAMILY_IPV6)
-        session->prflx_addr.host_type = STUN_INET_ADDR_IPV6;
+        session->mapped_addr.host_type = STUN_INET_ADDR_IPV6;
     else
-        session->prflx_addr.host_type = STUN_INET_ADDR_MAX;
+        session->mapped_addr.host_type = STUN_INET_ADDR_MAX;
 
     status = stun_attr_xor_mapped_addr_get_port(h_attr, 
-                                            &session->prflx_addr.port);
+                                            &session->mapped_addr.port);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 

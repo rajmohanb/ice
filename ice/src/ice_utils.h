@@ -174,10 +174,10 @@ void ice_utils_handle_agent_role_conflict(
                 ice_media_stream_t *media, ice_agent_role_type_t new_role);
 
 int32_t ice_utils_search_local_candidates(ice_media_stream_t *media, 
-                    conn_check_result_t *check, ice_candidate_t **found_cand);
+                        stun_inet_addr_t *src, ice_candidate_t **found_cand);
 
 int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp, 
-                    conn_check_result_t *check, ice_candidate_t **new_prflx);
+                        stun_inet_addr_t *src, ice_candidate_t **new_prflx);
 
 int32_t ice_utils_install_turn_permissions(ice_media_stream_t *media);
 
