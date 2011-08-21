@@ -294,9 +294,8 @@ int32_t ice_instance_set_connectivity_check_nomination_mode(
 
 int32_t ice_destroy_instance(handle h_inst);
 
-int32_t ice_instance_verify_valid_stun_packet(void);
 
-
+int32_t ice_instance_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len);
 
 
 int32_t ice_create_session(handle h_inst,

@@ -491,6 +491,42 @@ int32_t stun_msg_validate_fingerprint(handle h_msg)
 
 
 
+int32_t stun_msg_verify_if_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
+{
+    uint16_t attr_len;
+
+    /** all stun messages MUST start with a 20-byte header */
+    if (pkt_len < STUN_MSG_HEADER_SIZE) return STUN_MSG_NOT;
+
+    /** most significant 2 bits of every STUN message MUST be zeroes */
+    if ((*pkt & 0xC0) > 0) return STUN_MSG_NOT;
+
+    /** 
+     * the magic cookie field MUST contain the 
+     * fixed value 0x2112A442 in network byte order.
+     */
+    if ((*(pkt+4) != 0x21) || (*(pkt+5) != 0x12) || 
+            (*(pkt+6) != 0xA4) || (*(pkt+7) != 0x42))
+        return STUN_MSG_NOT;
+
+    /**
+     * since all STUN attributes are padded to a multiple of 4 bytes, 
+     * the last 2 bits if the message length field are always zero.
+     */
+    stun_memcpy(&attr_len, pkt+2, sizeof(uint16_t));
+    attr_len = ntohs(attr_len);
+
+    if ((attr_len & 0x03) != 0) return STUN_MSG_NOT;
+
+    if ((attr_len + STUN_MSG_HEADER_SIZE) != pkt_len) return STUN_MSG_NOT;
+
+    /** verify fingerprint */
+
+    return STUN_OK;
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

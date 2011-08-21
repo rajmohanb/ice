@@ -192,6 +192,8 @@ int32_t stun_msg_validate_message_integrity(
 
 int32_t stun_msg_validate_fingerprint(handle h_msg);
 
+int32_t stun_msg_verify_if_valid_stun_packet(u_char *pkt, uint32_t pkt_len);
+
 
 /* ========================================================================== */
 

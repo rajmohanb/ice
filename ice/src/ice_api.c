@@ -1748,6 +1748,13 @@ int32_t ice_session_send_media_data (handle h_inst, handle h_session,
 
 
 
+int32_t ice_instance_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
+{
+    return stun_msg_verify_if_valid_stun_packet(pkt, pkt_len);
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

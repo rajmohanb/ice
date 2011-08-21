@@ -43,12 +43,13 @@
 #else
 #define STUN_SRV_IP "216.146.46.59"
 #define TURN_SRV_IP "192.168.1.2"
+//#define TURN_SRV_IP "109.107.37.45"
 #endif
 
 #define STUN_SRV_PORT 3478
 #define TURN_SRV_PORT 3478
 
-#define TURN_USERNAME   "testwithi"
+#define TURN_USERNAME   "outgoing"
 #define TURN_PASSWORD   "password"
 #define TURN_DOMAIN     "domain.org"
 
@@ -1333,6 +1334,10 @@ int main (int argc, char *argv[])
             }
             else
             {
+                /** check if stun message */
+                status = ice_instance_verify_valid_stun_packet(demo_buf, bytes);
+                if (status == STUN_MSG_NOT) continue;
+
                 status = stun_msg_decode(demo_buf, bytes, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {

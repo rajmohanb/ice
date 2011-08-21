@@ -82,6 +82,7 @@ typedef     void*           handle;
 #define STUN_TRANSPORT_FAIL 10
 #define STUN_VALIDATON_FAIL 11
 #define STUN_NO_RESOURCE    12
+#define STUN_MSG_NOT        13
 
 
 #define stun_malloc platform_malloc
