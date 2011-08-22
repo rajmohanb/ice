@@ -95,8 +95,8 @@ typedef int32_t (*ice_session_nwk_send_cb) (u_char *buf,
                         u_char *ip_addr, uint32_t port, handle param);
 typedef handle (*ice_session_start_timer_cb) (uint32_t duration, handle arg);
 typedef int32_t (*ice_session_stop_timer_cb) (handle timer_id);
-typedef void (*ice_session_rx_app_data) (handle h_inst, 
-        handle h_turn_session, uint32_t comp_id, void *data, uint32_t data_len);
+typedef void (*ice_session_rx_app_data) (handle h_inst, handle h_session, 
+            handle h_media, uint32_t comp_id, void *data, uint32_t data_len);
 
 
 typedef struct {

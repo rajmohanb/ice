@@ -334,6 +334,7 @@ typedef struct
     ice_session_nwk_send_cb nwk_send_cb;
     ice_session_start_timer_cb start_timer_cb;
     ice_session_stop_timer_cb stop_timer_cb;
+    ice_session_rx_app_data rx_app_data_cb;
 
     /** ice nomination mode */
     ice_nomination_type_t nomination_mode;

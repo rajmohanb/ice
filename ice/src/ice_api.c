@@ -642,22 +642,40 @@ void ice_handle_app_data(handle h_turn_inst,
     handle h_msg;
     ice_rx_stun_pkt_t pkt;
 
-    /** TODO =
-     * 1. Check if this is a STUN message
-     * 2. If no, call the ice application callback and pass on the data
-     */
-
     status = turn_session_get_app_param(h_turn_inst, 
                                     h_turn_session, (handle) &media);
     if (status != STUN_OK) return;
 
-    /*
-     * 3. If yes, then determine the media and ice session for turn session.
-     * 4. decode the message 
-     * 5. if the method type is BINDING, then determine the
-     *    conn check session and inject the message into the conn check session.
-     */
+    /** check if this is a STUN message */
+    status = stun_msg_verify_if_valid_stun_packet(data, data_len);
+    if (status == STUN_MSG_NOT)
+    {
+        ice_candidate_t *cand = NULL;
+        ice_instance_t *inst = (ice_instance_t *) media->ice_session->instance;
 
+        cand = ice_utils_get_local_cand_for_transport_param(media, transport_param);
+
+        if (cand == NULL)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE] Could not locate component ID for received "\
+                    "application data. Discarding ....\n");
+            return;
+        }
+
+        /** This is application protocol data, pass it on to app */
+        inst->rx_app_data_cb(inst, 
+                media->ice_session, media, cand->comp_id, data, data_len);
+        return;
+    }
+
+    /*
+     * so, this is a stun message. Determine the media and ice session for 
+     * turn session. 
+     * decode the message 
+     * if the method type is BINDING, then determine the conn check session 
+     * and inject the message into the conn check session.
+     */
     status = stun_msg_decode(data, data_len, &h_msg);
     if (status != STUN_OK)
     {
@@ -712,6 +730,7 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     instance->nwk_send_cb = cbs->nwk_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
+    instance->rx_app_data_cb = cbs->app_data_cb;
     
     /** set callbacks to turn module */
     turn_cbs.nwk_cb = ice_encode_and_send_message;

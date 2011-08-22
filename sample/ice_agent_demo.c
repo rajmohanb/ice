@@ -201,6 +201,13 @@ int32_t app_stop_timer (handle timer_id)
         return STUN_NOT_FOUND;
 }
 
+void app_rx_data(handle h_inst, handle h_session, 
+            handle h_media, uint32_t comp_id, void *data, uint32_t data_len)
+{
+    printf("Data returned for COMP ID: [%d] %s\n", comp_id, data);
+    return;
+}
+
 
 static void encode_session(handle h_inst, handle h_session)
 {
@@ -694,6 +701,7 @@ void app_create_ice_instance(void)
     app_cbs.nwk_cb = app_nwk_send_msg;
     app_cbs.start_timer_cb = app_start_timer;
     app_cbs.stop_timer_cb = app_stop_timer;
+    app_cbs.app_data_cb = app_rx_data;
 
     status = ice_instance_set_callbacks(g_inst, &app_cbs);
     if (status != STUN_OK)
