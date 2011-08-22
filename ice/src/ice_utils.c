@@ -2548,15 +2548,11 @@ int32_t ice_utils_search_local_candidates(ice_media_stream_t *media,
         local_cand = &media->as_local_cands[i];
         if(local_cand->type == ICE_CAND_TYPE_INVALID) continue;
 
-        /** 
-         * Note 1: not checking the transport protocol, UDP is assumed.
-         * Note 2: strncmp is not proper way to compare ip addresses, 
-         *         especially ipv6 
-         */
+        /** not checking the transport protocol, UDP is assumed. */
         if((local_cand->transport.type == src->host_type) &&
            (local_cand->transport.port == src->port) &&
-           (stun_strncmp((char *)local_cand->transport.ip_addr, 
-                        (char *)src->ip_addr, ICE_IP_ADDR_MAX_LEN) == 0))
+           (ice_utils_host_compare(local_cand->transport.ip_addr, 
+                        src->ip_addr, local_cand->transport.type) == true))
         {
             /** OK, this candidate is already part of the local candidates */
             ICE_LOG(LOG_SEV_INFO, 
@@ -2831,15 +2827,11 @@ int32_t ice_utils_search_remote_candidates(ice_media_stream_t *media,
         rem_cand = &media->as_remote_cands[i];
         if(rem_cand->type == ICE_CAND_TYPE_INVALID) continue;
 
-        /** 
-         * Note 1: not checking the transport protocol, UDP is assumed.
-         * Note 2: strncmp is not proper way to compare ip addresses, 
-         *         especially ipv6 
-         */
+        /** not checking the transport protocol, UDP is assumed. */
         if((rem_cand->transport.type == pkt_src->host_type) &&
            (rem_cand->transport.port == pkt_src->port) &&
-           (stun_strncmp((char *)rem_cand->transport.ip_addr, 
-                 (char *)pkt_src->ip_addr, ICE_IP_ADDR_MAX_LEN) == 0))
+           (ice_utils_host_compare(rem_cand->transport.ip_addr, 
+                 pkt_src->ip_addr, rem_cand->transport.type) == true))
         {
             /** OK, this candidate is already part of the remote candidates */
             ICE_LOG(LOG_SEV_INFO, 
