@@ -1346,7 +1346,7 @@ int main (int argc, char *argv[])
                 status = ice_instance_verify_valid_stun_packet(demo_buf, bytes);
                 if (status == STUN_MSG_NOT) continue;
 
-                status = stun_msg_decode(demo_buf, bytes, &h_rcvdmsg);
+                status = stun_msg_decode(demo_buf, bytes, true, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
                     app_log (LOG_SEV_ERROR, 

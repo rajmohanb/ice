@@ -86,7 +86,7 @@ typedef struct tag_ice_candidate
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t comp_id;
 
-    /** TODO -related address */
+    /** related address? */
     struct tag_ice_candidate *base;
 
     handle transport_param;

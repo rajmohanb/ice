@@ -676,7 +676,7 @@ void ice_handle_app_data(handle h_turn_inst,
      * if the method type is BINDING, then determine the conn check session 
      * and inject the message into the conn check session.
      */
-    status = stun_msg_decode(data, data_len, &h_msg);
+    status = stun_msg_decode(data, data_len, true, &h_msg);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR,
@@ -1411,7 +1411,7 @@ int32_t ice_session_inject_received_msg(handle h_inst,
     if (status != STUN_OK)
         return status;
 
-    /** TODO - check for class also */
+    /** need to check for class also? */
     switch(method)
     {
         case STUN_METHOD_BINDING:

@@ -272,8 +272,6 @@ int32_t ice_set_client_software_name(handle h_inst, u_char *name)
     stun_strncpy((char *)instance->client, 
             (char *)name, (SOFTWARE_CLIENT_NAME_LEN - 1));
 
-    /** TODO: propagate to turn instance */
-
     return STUN_OK;
 }
 

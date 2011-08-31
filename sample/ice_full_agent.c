@@ -899,7 +899,7 @@ start_listen:
             else
             {
                 printf ("COUNT: %d\n", ++ic_msg_count);
-                status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
+                status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
                     app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
@@ -992,7 +992,7 @@ start_listen:
             else
             {
                 printf ("COUNT: %d\n", ++ic_msg_count);
-                status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
+                status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
                     app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);

@@ -518,9 +518,19 @@ int32_t stun_msg_verify_if_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
 
     if ((attr_len & 0x03) != 0) return STUN_MSG_NOT;
 
+    /** check is for UDP */
     if ((attr_len + STUN_MSG_HEADER_SIZE) != pkt_len) return STUN_MSG_NOT;
 
-    /** verify fingerprint */
+    /** 
+     * verify fingerprint? It can be verified with the assumption that 
+     * fingerprint is the last attribute in the stun message. But that 
+     * may not always be the case since the spec maintains that though FP 
+     * should be the last attribute, it does not forbid any application 
+     * from adding additional attributes after the FP attribute. In such 
+     * cases, it is recommended that the attributes following the FP must 
+     * be ignored. Hence not checking the ifngerprint as of now here. But 
+     * FP will be validated later during decoding if desired by the app.
+     */
 
     return STUN_OK;
 }

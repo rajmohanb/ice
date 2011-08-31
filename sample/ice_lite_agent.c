@@ -1056,7 +1056,7 @@ int main (int argc, char *argv[])
                 uint32_t log_buf_len = 500;
 
                 printf ("COUNT: %d BYTES %d\n", ++ic_msg_count, bytes);
-                status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
+                status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
                     app_log (LOG_SEV_ERROR, 

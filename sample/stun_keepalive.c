@@ -318,7 +318,7 @@ int main (int argc, char *argv[])
         if (o_done == true) goto error_exit;
         if (bytes == -1) goto error_exit;
 
-        status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
+        status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
         if (status != STUN_OK)
         {
             app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", 

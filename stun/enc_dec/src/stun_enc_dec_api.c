@@ -158,7 +158,8 @@ ERROR_EXIT:
 
 
 
-int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
+int32_t stun_msg_decode(u_char *buf, uint32_t len, 
+                                    bool_t validate_fp, handle *tlv)
 {
     stun_msg_t *msg;
     u_char *pkt = buf;
@@ -253,6 +254,17 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
 
     stun_memcpy(msg->stun_msg, buf, len);
     msg->stun_msg_len = len;
+
+    /** validate fingerprint if desired */
+    if (validate_fp == true)
+    {
+        status = stun_msg_validate_fingerprint((handle)msg);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, "Fingerprint Validation Failed");
+            goto ERROR_EXIT;
+        }
+    }
 
     *tlv = msg;
 
