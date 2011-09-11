@@ -1505,10 +1505,6 @@ ice_media_stream_t *
 
 void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
 {
-    /** 
-     * indicates the number of candidates for which the 
-     * foundation has already been calculated 
-     */
     uint32_t i, j, count = 0;
     ice_candidate_t *cand1, *cand2;
     bool_t found_similar;
@@ -1533,7 +1529,7 @@ void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
             if (cand2->type == ICE_CAND_TYPE_INVALID)
                 continue;
 
-            /** check for same stun server and same host */
+            /** TODO: check for same stun server and same host */
             if ((cand2->type == cand1->type) &&
                 (cand2->transport.protocol == cand1->transport.protocol))
             {
