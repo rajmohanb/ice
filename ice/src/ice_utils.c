@@ -1283,9 +1283,6 @@ int32_t ice_utils_nominate_candidate_pair(
             "conn_check_create_session() returned error %d\n", status);
     }
 
-    //status = conn_check_session_set_transport_param(
-    //                        h_cc_inst, pair->h_cc_session, 
-    //                        session->as_local_candidates[0].transport_param);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
@@ -1529,8 +1526,15 @@ void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
             if (cand2->type == ICE_CAND_TYPE_INVALID)
                 continue;
 
-            /** TODO: check for same stun server and same host */
+            /** Note: 
+             * check for same stun server and same host. As per existing
+             * API, all the media streams for a session share the same
+             * STUN server. Hence not validating the stun server here ...
+             */
             if ((cand2->type == cand1->type) &&
+                (ice_utils_host_compare(cand2->base->transport.ip_addr, 
+                                        cand1->base->transport.ip_addr, 
+                                        cand1->transport.type) == true) &&
                 (cand2->transport.protocol == cand1->transport.protocol))
             {
                 stun_strncpy((char *)cand1->foundation, 
