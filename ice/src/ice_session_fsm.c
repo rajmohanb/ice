@@ -154,7 +154,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
-        ice_ignore_msg,
+        ice_conn_check_timer_event,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_send_media_data,
@@ -970,13 +970,15 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 int32_t ice_conn_check_timer_event (ice_session_t *session, 
                                             handle arg, handle *h_param)
 {
-    int32_t status;
+    int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
     ice_media_stream_t *media;
 
     media = (ice_media_stream_t *)timer->h_media;
 
-    /** TODO - validate media handle? */
+    /** validate media handle? */
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+
     status = ice_media_stream_fsm_inject_msg(
                         media, ICE_MEDIA_CC_TIMER, arg);
     if(status != STUN_OK)

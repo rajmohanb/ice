@@ -115,7 +115,7 @@ int32_t cc_stop_timer(handle timer_id)
 
     if (status == STUN_OK)
     {
-        /** timer stopped successfully, so free the memory for turn timer */
+        /** timer stopped successfully, so free the memory for the timer */
         stun_free(timer);
     }
 
