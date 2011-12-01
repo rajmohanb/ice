@@ -41,7 +41,8 @@
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
 #else
-#define STUN_SRV_IP "216.146.46.59"
+//#define STUN_SRV_IP "216.146.46.59"
+#define STUN_SRV_IP "192.168.1.2"
 #define TURN_SRV_IP "192.168.1.2"
 //#define TURN_SRV_IP "109.107.37.45"
 #endif
@@ -58,7 +59,7 @@
 #ifdef ICE_IPV6
 #define LOCAL_IP   "2001:db8:0:242::67"
 #else
-#define LOCAL_IP   "192.168.1.2"
+#define LOCAL_IP   "172.16.8.100"
 #endif
 
 #define LOCAL_ICE_RTP_HOST_PORT  44444
@@ -66,7 +67,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.53"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v0.54"
 #define ICE_VENDOR_NAME_LEN 25
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -923,7 +924,7 @@ void app_add_media(void)
 
 void app_gather_ice_candidates(void)
 {
-    int32_t status = ice_session_gather_candidates(g_inst, g_session, true);
+    int32_t status = ice_session_gather_candidates(g_inst, g_session, false);
 
     if (status != STUN_OK)
     {

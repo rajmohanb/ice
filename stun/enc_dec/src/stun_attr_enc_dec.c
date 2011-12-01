@@ -573,7 +573,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_msg_integrity_attr_t *integrity;
     stun_method_type_t method;
     uint16_t val16, key_len = 0;
-    u_char md5_key[16], hmac[20];
+    u_char md5_key[255], hmac[20];
     u_char mi_print[STUN_MI_PRINT_BUF_LEN] = {0};
 
     integrity = (stun_msg_integrity_attr_t *) attr;
@@ -627,7 +627,8 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
                             hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
     mi_print[STUN_MI_PRINT_BUF_LEN] = 0;
     ICE_LOG(LOG_SEV_INFO,
-            "   MESSAGE-INTEGRITY: length=20, value=%s", mi_print);
+            "   MESSAGE-INTEGRITY: pwd[%s] md5key[%s] length=20, value=%s", 
+                auth->password, md5_key,  mi_print);
 
     *len = integrity->hdr.length + 4;
     return STUN_OK;

@@ -706,8 +706,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
                 if (check_result.check_succeeded == true)
                 {
-                    ice_candidate_t *local_cand, *remote_cand;
-                    ice_cand_pair_t *prflx_pair = NULL;
+                    ice_candidate_t *local_cand;
+                    ice_cand_pair_t *pair = NULL;
 
                     status = ice_cand_pair_fsm_inject_msg(
                             cp, ICE_EP_EVENT_CHECK_SUCCESS, &check_result);
@@ -731,77 +731,66 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         ICE_LOG (LOG_SEV_INFO, 
                                 "[ICE MEDIA] The mapped address discovered "\
                                 "from connectivity check is NOT present "\
-                                "in the media local candidate list");
+                                "in the media local candidate list. Adding "\
+                                "local peer reflexive candidate ...");
                          
                         status = ice_utils_add_local_peer_reflexive_candidate(
                                   cp, &(check_result.mapped_addr), &local_cand);
-
-                        status = ice_utils_search_remote_candidates(media, 
-                                                &stun_pkt->src, &remote_cand);
-
-                        status = ice_media_utils_add_new_candidate_pair(
-                                                    media, local_cand,
-                                                    remote_cand, &prflx_pair);
                     }
 
-                    /** 
-                     * RFC 5245 Sec 7.1.2.2.2 Constructing a Valid Pair
-                     * construct a valid pair and add to the media list
+                    /**
+                     * RFC 5245 7.1.2.2.2 Constructing a Valid pair
+                     * Check if there exists a candidate pair in this media
+                     * check list with mapped address as local address and 
+                     * remote destination address of the connectivity check.
                      */
-                    if (prflx_pair == NULL)
+                    pair = ice_media_utils_search_cand_pair(
+                                                media, local_cand, cp->remote);
+
+                    if (pair == NULL)
                     {
-                        cp->valid_pair = true;
-                        cp->nominated = check_result.nominated;
+                        ICE_LOG(LOG_SEV_INFO,
+                            "[ICE] Did not find the candidate pair on "\
+                            "current check list, hence adding a new "\
+                            "candidate pair to check list.");
 
-                        ICE_LOG(LOG_SEV_ERROR,
-                                "[ICE] Added candidate pair to NOMINATED list."\
-                                " From %s %p ==> To %s %p", 
-                                cp->local->transport.ip_addr, 
-                                cp->local->transport.port, 
-                                cp->remote->transport.ip_addr, 
-                                cp->remote->transport.port);
+                        /** not found, the pair is not on any check list */
+                        status = ice_media_utils_add_new_candidate_pair(
+                                        media, local_cand, cp->remote, &pair);
 
-                        /** 
-                         * RFC 5245 10. KeepAlives
-                         * An agent must MUST begin the keepalive processing 
-                         * once ICE has selected candidates for usage with 
-                         * media, or media begins to flow, whichever happens 
-                         * first.
-                         */
-                        if (check_result.nominated == true)
-                        {
-                            ice_media_utils_update_nominated_pair_for_comp(
-                                                                    media, cp);
-
-                            status = ice_utils_start_keep_alive_timer_for_comp(
-                                                     media, cp->local->comp_id);
-                        }
+                        /** the check has already succeeded for this pair */
+                        pair->state = ICE_CP_SUCCEEDED;
                     }
                     else
                     {
-                        prflx_pair->valid_pair = true;
-                        prflx_pair->nominated = check_result.nominated;
+                        /** found, the pair is already available on the check list */
+                        ICE_LOG(LOG_SEV_INFO,
+                            "[ICE] Found the candidate pair on current check list");
+                    }
 
-                        ICE_LOG(LOG_SEV_ERROR,
-                                "[ICE] Added candidate pair to NOMINATED list. From %s %p ==> To %s %p", 
-                                prflx_pair->local->transport.ip_addr, prflx_pair->local->transport.port, 
-                                prflx_pair->remote->transport.ip_addr, prflx_pair->remote->transport.port);
+                    pair->valid_pair = true;
+                    pair->nominated = check_result.nominated;
 
-                        /** 
-                         * RFC 5245 10. KeepAlives
-                         * An agent must MUST begin the keepalive processing 
-                         * once ICE has selected candidates for usage with 
-                         * media, or media begins to flow, whichever happens 
-                         * first.
-                         */
-                        if (check_result.nominated == true)
-                        {
-                            ice_media_utils_update_nominated_pair_for_comp(
-                                                            media, prflx_pair);
+                    ICE_LOG(LOG_SEV_ERROR,
+                            "[ICE] Added candidate pair to VALID list."\
+                            " From %s %d ==> To %s %d", 
+                            pair->local->transport.ip_addr, 
+                            pair->local->transport.port, 
+                            pair->remote->transport.ip_addr, 
+                            pair->remote->transport.port);
 
-                            status = ice_utils_start_keep_alive_timer_for_comp(
-                                             media, prflx_pair->local->comp_id);
-                        }
+                    /** 
+                     * RFC 5245 10. KeepAlives
+                     * An agent MUST begin the keepalive processing once 
+                     * ICE has selected candidates for usage with media, 
+                     * or media begins to flow, whichever happens first.
+                     */
+                    if (check_result.nominated == true)
+                    {
+                        ice_media_utils_update_nominated_pair_for_comp(media, pair);
+
+                        status = ice_utils_start_keep_alive_timer_for_comp(
+                                                    media, pair->local->comp_id);
                     }
 
 

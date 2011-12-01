@@ -267,6 +267,9 @@ int32_t ice_media_utils_clear_media_stream(ice_media_stream_t *media);
 bool_t ice_utils_host_compare (u_char *host1, 
                     u_char *host2, stun_inet_addr_type_t addr_type);
 
+ice_cand_pair_t *ice_media_utils_search_cand_pair(
+        ice_media_stream_t *media, ice_candidate_t *local, ice_candidate_t *remote);
+
 
 /******************************************************************************/
 

@@ -329,6 +329,12 @@ int32_t ice_utils_set_peer_media_params(
     uint32_t j, k, x = 0;
     ice_candidate_t *cand;
 
+    /** reset the existing remote candidate parameter information */
+    stun_memset(media->as_remote_cands, 0, 
+            sizeof(ice_candidate_t) * ICE_CANDIDATES_MAX_SIZE);
+    stun_memset(media->peer_ufrag, 0, sizeof(char) * ICE_MAX_UFRAG_LEN);
+    stun_memset(media->peer_pwd, 0, sizeof(char) * ICE_MAX_PWD_LEN);
+
     /** store the number of components of peer */
     media->num_peer_comp = media_params->num_comps;
 
@@ -365,7 +371,17 @@ int32_t ice_utils_set_peer_media_params(
             cand->priority = peer_cand->priority;
             stun_memcpy(cand->foundation, 
                     peer_cand->foundation, ICE_FOUNDATION_MAX_LEN);
-            cand->comp_id = peer_cand->component_id;
+            
+            /** 
+             * the comp id is present at two places in the data provided
+             * by the application. One at comp level and the other at each
+             * candidate level. The following is just incase of a scenario
+             * where the the application does not update at both places.
+             */
+            if (peer_cand->component_id)
+                cand->comp_id = peer_cand->component_id;
+            else
+                cand->comp_id = peer_comp->comp_id;
 
             /** 
              * should we care about the following?
@@ -411,6 +427,10 @@ int32_t ice_utils_set_peer_media_params(
                         media_params->ice_ufrag, ICE_MAX_UFRAG_LEN - 1);
     stun_strncpy(media->peer_pwd, 
                         media_params->ice_pwd, ICE_MAX_PWD_LEN - 1);
+
+    ICE_LOG(LOG_SEV_ERROR, 
+        "[ICE MEDIA] remote params ufrag[%s]; pwd[%s]", 
+        media->peer_ufrag, media->peer_pwd);
 
     return STUN_OK;
 }
@@ -1895,6 +1915,7 @@ int32_t ice_media_utils_get_valid_list(ice_media_stream_t *media,
     }
 
     valid_pairs->num_valid = j;
+    valid_pairs->h_media = (handle) media;
 
     return STUN_OK;
 }
@@ -2203,7 +2224,7 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     if (base_cand == NULL)
     {
         ICE_LOG(LOG_SEV_ERROR, "Unable to find base candidate for"\
-               " component id", comp_id);
+               " component id [%d]", comp_id);
         return STUN_INT_ERROR;
     }
 
@@ -3918,6 +3939,30 @@ bool_t ice_utils_host_compare (u_char *host1,
 
     return false;
 }
+
+
+
+ice_cand_pair_t *ice_media_utils_search_cand_pair(
+        ice_media_stream_t *media, ice_candidate_t *local, ice_candidate_t *remote)
+{
+    ice_cand_pair_t *cp = NULL;
+    ice_cand_pair_t *temp_cp = NULL;
+    uint32_t i;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        temp_cp = &media->ah_cand_pairs[i];
+
+        if ((temp_cp->local == local) && (temp_cp->remote == remote))
+        {
+            cp = temp_cp;
+            break;
+        }
+    }
+
+    return cp;
+}
+
 
 
 /******************************************************************************/

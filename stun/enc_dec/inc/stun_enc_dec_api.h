@@ -27,6 +27,7 @@ extern "C" {
 
 #define STUN_MSG_AUTH_PASSWORD_LEN  128
 
+
 typedef struct 
 {
     uint32_t len;

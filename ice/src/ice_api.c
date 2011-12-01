@@ -680,7 +680,7 @@ void ice_handle_app_data(handle h_turn_inst,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR,
-                "[ICE] Decoding of STUN message received via TURN failed", 
+                "[ICE] Decoding of STUN message received via TURN failed [%d]",
                 status);
         return;
     }
@@ -758,7 +758,7 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "stun_binding_instance_set_callbacks() returned error: %s\n", 
+                "stun_binding_instance_set_callbacks() returned error: %d\n", 
                 status);
         return status;
     }
