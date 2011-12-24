@@ -1569,7 +1569,7 @@ void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
             /** need to generate foundation id */
             count++;
 
-            snprintf((char *)cand1->foundation, 
+            stun_snprintf((char *)cand1->foundation, 
                     ICE_FOUNDATION_MAX_LEN, "%d", count);
         }
     }
@@ -1613,8 +1613,9 @@ uint32_t ice_utils_get_conn_check_timer_duration(ice_media_stream_t *media)
      */
     for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
     {
-        if ((session->aps_media_streams[i]) && 
-            (session->aps_media_streams[i]->state == ICE_MEDIA_CC_RUNNING))
+        if (session->aps_media_streams[i] && 
+            ((session->aps_media_streams[i]->state == ICE_MEDIA_CC_RUNNING) ||
+             (session->aps_media_streams[i]->state == ICE_MEDIA_NOMINATING)))
             num_active_checklists++;
     }
 
@@ -2463,14 +2464,14 @@ int32_t ice_utils_start_keep_alive_timer_for_comp(
         ICE_LOG(LOG_SEV_DEBUG, 
                 "[ICE] Started ICE Keep Alive timer for %d msec for media %p"\
                 " and comp id %d. timer id is %p", 
-                ICE_CC_NOMINATION_TIMER_VALUE, media, comp_id, timer->timer_id);
+                ICE_KEEP_ALIVE_TIMER_VALUE, media, comp_id, timer->timer_id);
         status =  STUN_OK;
     }
     else
     {
         ICE_LOG(LOG_SEV_DEBUG, 
                 "[ICE] Starting of ICE Keep Alive timer for %d msec for media "\
-                "%p and comp id %d failed", ICE_CC_NOMINATION_TIMER_VALUE, 
+                "%p and comp id %d failed", ICE_KEEP_ALIVE_TIMER_VALUE, 
                 media, comp_id);
         status = STUN_INT_ERROR;
     }

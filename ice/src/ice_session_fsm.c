@@ -713,6 +713,10 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
         session->peer_mode = session_params->ice_mode;
     }
 
+    if ((session->peer_mode == ICE_MODE_LITE) &&
+        (session->local_mode == ICE_MODE_FULL))
+        session->role = ICE_AGENT_ROLE_CONTROLLING;
+
     /**
      * if this session's current implementation is ice-lite and remote/peer 
      * implementation for this session is ice-lite, then ice session moves
