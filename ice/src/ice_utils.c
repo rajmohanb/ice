@@ -2262,9 +2262,19 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
                         h_bind_inst, h_bind_session, &mapped_addr);
     if (status != STUN_OK)
     {
-        app_log(LOG_SEV_ERROR, 
-            "unable to get mapped address. Returned error: %d", status);
-        return STUN_NOT_FOUND;
+#ifdef MB_SUPPORT_3489
+        status = stun_binding_session_get_mapped_address(
+                        h_bind_inst, h_bind_session, &mapped_addr);
+
+        if (status != STUN_OK)
+        {
+#endif
+            app_log(LOG_SEV_ERROR, 
+                "unable to get mapped address. Returned error: %d", status);
+            return STUN_NOT_FOUND;
+#ifdef MB_SUPPORT_3489
+        }
+#endif
     }
 
     /** get the base candidate for this component */
@@ -3043,7 +3053,7 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
             (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
         {
             /**
-             * Typically at this stage when we have just reeived the remote
+             * Typically at this stage when we have just received the remote
              * answer, and formed the check lists, all the candidate pairs
              * will be in FROZEN state.
              */
@@ -3057,10 +3067,11 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
                  */
                 if (cp->valid_pair == false)
                 {
-                    ICE_LOG(LOG_SEV_CRITICAL,
+                    ICE_LOG(LOG_SEV_INFO,
                             "[ICE] Candidate pair connectivity check state is "\
-                            "Succeeded. However the valid pair flag is FALSE "\
-                            "for media %p. Fixme!!!", media);
+                            "Succeeded. However the valid pair flag for this "\
+                            "check is FALSE");
+
                     return STUN_INT_ERROR;
                 }
 
@@ -3311,11 +3322,42 @@ int32_t ice_utils_process_incoming_check(
             /** check if this pair is valid */
             if (cp->valid_pair == false)
             {
-                ICE_LOG(LOG_SEV_CRITICAL,
+                ice_cand_pair_t *vp = NULL;
+
+                /**
+                 * If this connectivity check has not been validated by 
+                 * the controlled agent, then the check might have 
+                 * resulted in the creation of another valid candidate 
+                 * pair. This happens when the controlled agent is behind
+                 * a NAT and the server reflexive candidate is chosen. The
+                 * ice spec does not explicitly state this behavior.
+                 */ 
+                ICE_LOG(LOG_SEV_INFO,
                         "[ICE] Candidate pair connectivity check state is "\
-                        "Succeeded. However the valid pair flag is FALSE "\
-                        "for media %p. Fixme!!!", media);
-                return STUN_INT_ERROR;
+                        "Succeeded. However the valid pair flag for this "\
+                        "check is FALSE. Hence search for the associated "\
+                        "pair in the valid list");
+
+                vp = ice_media_utils_get_associated_valid_pair_for_cand_pair(media, cp);
+
+                if (vp)
+                {
+                    ICE_LOG(LOG_SEV_INFO,
+                            "[ICE] CONTROLLED ROLE - Associated valid pair"\
+                            "found for the nominated check request "\
+                            "received from peer. Hence nominating the "\
+                            "validated pair");
+                    cp = vp;
+                }
+                else
+                {
+                    /** This should never happen! */
+                    ICE_LOG(LOG_SEV_CRITICAL,
+                            "[ICE] No validated pair found for the "\
+                            "incoming nominated connectivity check in the"\
+                            "valid list. CONTROLLED ROLE");
+                    return status;
+                }
             }
 
             cp->nominated = true;
@@ -3964,6 +4006,28 @@ ice_cand_pair_t *ice_media_utils_search_cand_pair(
     return cp;
 }
 
+
+
+ice_cand_pair_t *ice_media_utils_get_associated_valid_pair_for_cand_pair(
+                                ice_media_stream_t *media, ice_cand_pair_t *cp)
+{
+    ice_cand_pair_t *temp_cp = NULL;
+    uint32_t i;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        temp_cp = &media->ah_cand_pairs[i];
+
+        if ((temp_cp->valid_pair == true) && 
+            (temp_cp->local->comp_id == cp->local->comp_id) && 
+            (temp_cp->remote == cp->remote))
+        {
+            break;
+        }
+    }
+
+    return temp_cp;
+}
 
 
 /******************************************************************************/
