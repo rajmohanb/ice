@@ -45,7 +45,7 @@ extern "C" {
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
 
-#include <platform_api.h>
+#include <stun_base.h>
 
 #ifndef SHA_DIGESTSIZE
 #define SHA_DIGESTSIZE  20
@@ -79,6 +79,7 @@ typedef struct tag_timer_node {
     struct tag_timer_node *prev;
 } struct_timer_node;
 
+#ifdef PLATFORM_USE_MISC_API
 static struct_timer_node *timer_head = NULL;
 static timer_t timerid;
 static sem_t timer_mutex;
@@ -244,6 +245,7 @@ void platform_exit(void)
 
     return;
 }
+#endif /*End of PLATFORM_USE_MISC_API*/
 
 void *platform_malloc(unsigned int size)
 {
@@ -275,6 +277,7 @@ void platform_free(void *obj)
     free(obj);
 }
 
+#ifdef PLATFORM_USE_MISC_API
 void *platform_start_timer(int duration, 
                                 timer_expiry_callback timer_cb, void *arg)
 {
@@ -524,6 +527,7 @@ unsigned int platform_socket_recvfrom(int sock_fd, unsigned char *buf,
 
     return bytes;
 }
+#endif /* End of PLATFORM_USE_MISC_API*/
 
 
 bool platform_get_random_data(unsigned char *data, unsigned int len)

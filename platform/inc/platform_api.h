@@ -37,8 +37,6 @@ extern "C" {
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "stun_base.h"
-
 #define PLATFORM_TIMER_PERIODIC_TIME_VALUE  20 /** milliseconds */
 
 #define IP_ADDR_MAX_LEN                     46

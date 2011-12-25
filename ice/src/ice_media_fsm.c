@@ -771,7 +771,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                     pair->valid_pair = true;
                     pair->nominated = check_result.nominated;
 
-                    ICE_LOG(LOG_SEV_ERROR,
+                    ICE_LOG(LOG_SEV_INFO,
                             "[ICE] Added candidate pair to VALID list."\
                             " From %s %d ==> To %s %d", 
                             pair->local->transport.ip_addr, 

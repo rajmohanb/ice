@@ -428,7 +428,7 @@ int32_t ice_utils_set_peer_media_params(
     stun_strncpy(media->peer_pwd, 
                         media_params->ice_pwd, ICE_MAX_PWD_LEN - 1);
 
-    ICE_LOG(LOG_SEV_ERROR, 
+    ICE_LOG(LOG_SEV_DEBUG, 
         "[ICE MEDIA] remote params ufrag[%s]; pwd[%s]", 
         media->peer_ufrag, media->peer_pwd);
 

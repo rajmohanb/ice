@@ -17,7 +17,7 @@ SRC = platform_api.c crc.c
 
 INCLUDE := -I ../inc -I ../../ -I $(ICE_APP_INCLUDE_PATH)
 
-CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) $(INCLUDE) 
+CFLAGS += -c -Wall -Wstrict-prototypes -DPLATFORM_USE_MISC_API $(ICE_APP_CFLAGS) $(INCLUDE) 
 
 OBJS:=$(SRC:c=o)
 #

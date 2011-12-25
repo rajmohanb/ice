@@ -951,7 +951,8 @@ int32_t ice_create_session(handle h_inst,
 
     *h_session = session;
 
-    ICE_LOG(LOG_SEV_DEBUG, "[ICE] ICE session created successfully");
+    ICE_LOG(LOG_SEV_DEBUG, "[ICE] ICE session created successfully with "\
+            "Agent role [%d] mode [%d]", session->role, session->local_mode);
 
     return STUN_OK;
 }
