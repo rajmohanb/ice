@@ -66,7 +66,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.54"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v0.55"
 #define ICE_VENDOR_NAME_LEN 25
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -494,6 +494,8 @@ static void ice_input_remote_sdp(handle h_inst, handle h_session, handle h_media
                 strcpy((char *)cand->ip_addr, ipaddr);
                 cand->port = port;
 
+            } else if (strcmp(attr, "ice-lite") == 0) {
+                peer_session_desc.ice_mode = ICE_MODE_LITE;
             }
             }
             break;

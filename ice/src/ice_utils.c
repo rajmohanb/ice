@@ -3344,7 +3344,7 @@ int32_t ice_utils_process_incoming_check(
                 {
                     ICE_LOG(LOG_SEV_INFO,
                             "[ICE] CONTROLLED ROLE - Associated valid pair"\
-                            "found for the nominated check request "\
+                            " found for the nominated check request "\
                             "received from peer. Hence nominating the "\
                             "validated pair");
                     cp = vp;
