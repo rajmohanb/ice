@@ -1,3 +1,23 @@
+/*******************************************************************************
+*                                                                              *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                   MindBricks Confidential Proprietary.                       *
+*                         All Rights Reserved.                                 *
+*                                                                              *
+********************************************************************************
+*                                                                              *
+* This document contains information that is confidential and proprietary to   *
+* MindBricks Technologies. No part of this document may be reproduced in any   *
+* form whatsoever without prior written approval from MindBricks Technologies. *
+*                                                                              *
+*******************************************************************************/
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/******************************************************************************/
+
 
 #define MB_ENABLE_TURN
 
@@ -327,3 +347,12 @@ int main (int argc, char *argv[])
 
     return 0;
 }
+
+
+/******************************************************************************/
+
+#ifdef __cplusplus
+}
+#endif
+
+/******************************************************************************/

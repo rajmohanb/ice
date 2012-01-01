@@ -1,16 +1,16 @@
 #*******************************************************************************
-# 
-#             Copyright (C) 2009-2011, MindBricks Technologies
-#			         MindBricks Confidential Proprietary.
-#                             All Rights Reserved.
-#
-#********************************************************************************
-#
-# This document contains information that is confidential and proprietary to 
-# MindBricks Technologies. No part of this document may be reproduced in any 
-# form whatsoever without prior written approval from MindBricks Technologies.
-#
-#*******************************************************************************/
+#                                                                              #
+#             Copyright (C) 2009-2012, MindBricks Technologies                 #
+#			         MindBricks Confidential Proprietary.                      #
+#                             All Rights Reserved.                             #
+#                                                                              #
+#*******************************************************************************
+#                                                                              #
+# This document contains information that is confidential and proprietary to   #
+# MindBricks Technologies. No part of this document may be reproduced in any   #
+# form whatsoever without prior written approval from MindBricks Technologies. #
+#                                                                              #
+#******************************************************************************/
 
 # Macros
 OG_CC := og_cc

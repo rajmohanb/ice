@@ -1,6 +1,6 @@
 #*******************************************************************************
 # 
-#             Copyright (C) 2009-2011, MindBricks Technologies
+#             Copyright (C) 2009-2012, MindBricks Technologies
 #			         MindBricks Confidential Proprietary.
 #                             All Rights Reserved.
 #
@@ -13,7 +13,7 @@
 #******************************************************************************/
 
 # build customization flags
-MB_ENABLE_ICE_DEBUG := n
+MB_ENABLE_ICE_DEBUG := y
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
@@ -32,7 +32,7 @@ ICE_APP_INCLUDE_PATH := .
 ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN -DMB_LOG_RX_TX_MSGS
 
 ifeq ($(strip $(MB_ENABLE_ICE_DEBUG)), y)
-ICE_APP_CFLAGS += -g -DDEBUG -DDEBUG1 #-DDEBUG2
+ICE_APP_CFLAGS += -g -DDEBUG -DDEBUG1 -DMB_SUPPORT_3489 #-DDEBUG2
 endif
 
 export ICE_APP_INCLUDE_PATH
