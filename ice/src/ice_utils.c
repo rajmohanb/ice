@@ -2183,7 +2183,7 @@ int32_t ice_utils_get_free_local_candidate(
 int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand, 
                                 stun_inet_addr_t *alloc_addr, 
                                 ice_cand_type_t cand_type, uint32_t comp_id,
-                                ice_candidate_t *base_cand)
+                                ice_candidate_t *base_cand, bool_t def_cand)
 {
     stun_memcpy(cand->transport.ip_addr, 
                         alloc_addr->ip_addr, ICE_IP_ADDR_MAX_LEN);
@@ -2194,7 +2194,7 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
     cand->comp_id = comp_id;
 
     cand->base = base_cand;
-    cand->default_cand = false;
+    cand->default_cand = def_cand;
     cand->transport_param = base_cand->transport_param;
 
     cand->priority = ice_utils_compute_candidate_priority(cand);
@@ -2235,15 +2235,39 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     /** copy server reflexive candidate information */
     ice_utils_copy_gathered_candidate_info(cand, 
                             &alloc_info.mapped_addr, ICE_CAND_TYPE_SRFLX, 
-                            comp_id, base_cand);
+                            comp_id, base_cand, false);
 
     status = ice_utils_get_free_local_candidate(media, &cand);
     if (status == STUN_NO_RESOURCE) return status;
 
+    /** 
+     * If a relayed candidate is identical to a host candidate (which can 
+     * happen in rare cases), the relayed candidate must be discarded. 
+     */
+    if (ice_utils_host_compare(base_cand->transport.ip_addr, 
+                               alloc_info.relay_addr.ip_addr, 
+                               base_cand->transport.type) == true)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "Discovered relayed candidate is "\
+                "identical to host candidate. Hence ignoring...");
+        return STUN_OK;
+    }
+
     /** copy relay candidate information */
     ice_utils_copy_gathered_candidate_info(cand, 
                             &alloc_info.relay_addr, ICE_CAND_TYPE_RELAYED, 
-                            comp_id, base_cand);
+                            comp_id, base_cand, true);
+
+    /**
+     * Sec 4.1.4 of RFC 5245 - choosing default candidates
+     * It is recommended that default candidates be chosen based on the
+     * likelihood of those candidates to work with the peer that is being
+     * contacted. It is RECOMMENDED that the default candidates are the
+     * relayed candidates (if relayed candidates are available), server
+     * reflexive candidates (if server reflexive candidates are available),
+     * and finally host candidates.
+     */
+    base_cand->default_cand = false;
 
     return STUN_OK;
 }
@@ -2293,7 +2317,18 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
     /** copy server reflexive candidate information */
     ice_utils_copy_gathered_candidate_info(cand, 
                             &mapped_addr, ICE_CAND_TYPE_SRFLX, 
-                            base_cand->comp_id, base_cand);
+                            base_cand->comp_id, base_cand, true);
+
+    /**
+     * Sec 4.1.4 of RFC 5245 - choosing default candidates
+     * It is recommended that default candidates be chosen based on the
+     * likelihood of those candidates to work with the peer that is being
+     * contacted. It is RECOMMENDED that the default candidates are the
+     * relayed candidates (if relayed candidates are available), server
+     * reflexive candidates (if server reflexive candidates are available),
+     * and finally host candidates.
+     */
+    base_cand->default_cand = false;
 
     return STUN_OK;
 }

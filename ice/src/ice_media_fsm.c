@@ -365,7 +365,7 @@ int32_t ice_media_stream_check_gather_resp(
          * Now that all the candidates have been gathered for each of the
          * components, the foundation id needs to be computed which is
          * used for the frozen algorithm
-         * TODO - should the foundation id be computed across all media streams?
+         * Note - should the foundation id be computed across all media streams?
          */
         ice_utils_compute_foundation_ids(media);
     }

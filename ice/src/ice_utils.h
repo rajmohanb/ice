@@ -149,7 +149,7 @@ int32_t ice_utils_get_free_local_candidate(
 int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand, 
                                 stun_inet_addr_t *alloc_addr, 
                                 ice_cand_type_t cand_type, uint32_t comp_id,
-                                ice_candidate_t *base_cand);
+                                ice_candidate_t *base_cand, bool_t def_cand);
 
 int32_t ice_utils_copy_turn_gathered_candidates(
         ice_media_stream_t *media, ice_int_params_t *param, uint32_t comp_id);
