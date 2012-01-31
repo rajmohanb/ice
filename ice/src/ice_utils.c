@@ -1166,6 +1166,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     cc_params.nominated = pair->check_nom_status;
     cc_params.prflx_cand_priority = 
         ice_utils_compute_peer_reflexive_candidate_priority(pair->local);
+    cc_params.tie_breaker = media->ice_session->tie_breaker;
     status = conn_check_session_set_session_params(
                                 h_cc_inst, pair->h_cc_session, &cc_params);
     if (status != STUN_OK)
@@ -1279,72 +1280,6 @@ int32_t ice_utils_create_conn_check_session(
 ERROR_EXIT:
     conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
     media->h_cc_svr_session = NULL;
-
-    return status;
-}
-
-
-
-int32_t ice_utils_nominate_candidate_pair(
-        ice_session_t *session, ice_cand_pair_t *pair)
-{
-    int32_t status = STUN_OK;
-    conn_check_session_params_t cc_params;
-
-    handle h_cc_inst;
-
-    h_cc_inst = session->instance->h_cc_inst;
-
-    status = conn_check_create_session(h_cc_inst, 
-                                    CC_CLIENT_SESSION, &pair->h_cc_session);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_create_session() returned error %d\n", status);
-    }
-
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_set_transport_param() returned error %d\n", 
-            status);
-    }
-
-    status = conn_check_session_set_peer_transport_params(h_cc_inst, 
-                            pair->h_cc_session, 
-                            pair->remote->transport.type,
-                            pair->remote->transport.ip_addr,
-                            pair->remote->transport.port);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_set_peer_transport_params() returned "\
-            "error %d\n", status);
-    }
-
-    /** set the ice session handle as application handle */
-    status = conn_check_session_set_app_param(h_cc_inst, pair->h_cc_session, session);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_set_app_param() returned error %d\n", status);
-    }
-
-    /** TODO = session params - need to fill */
-    status = conn_check_session_set_session_params(h_cc_inst, 
-                                                pair->h_cc_session, &cc_params);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_set_nominated() returned error %d\n", status);
-    }
-
-    status = conn_check_session_initiate_check(h_cc_inst, pair->h_cc_session);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-            "conn_check_session_initiate_check() returned error %d\n", status);
-    }
 
     return status;
 }

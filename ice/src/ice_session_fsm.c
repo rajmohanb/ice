@@ -540,10 +540,6 @@ int32_t ice_nominate(ice_session_t *session, handle h_msg, handle *h_param)
     }
     else
     {
-        /** well as of now, we always nominate the first pair */
-        //status = ice_utils_nominate_candidate_pair(session, &session->ah_candidate_pairs[0]);
-        //if (status != STUN_OK) return status;
-
         session->state = ICE_SES_NOMINATING;
     }
 

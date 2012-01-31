@@ -99,6 +99,8 @@ unsigned int platform_socket_listen(
 
 bool platform_get_random_data(unsigned char *data, unsigned int len);
 
+unsigned long long int platform_64bit_random_number(void);
+
 void platform_hmac_sha
 (
   char*    k,     /* secret key */

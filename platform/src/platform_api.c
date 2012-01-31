@@ -236,6 +236,9 @@ bool platform_init(void)
 {
     platform_timer_init();
 
+    /** random number generation */
+    platform_srand(platform_time(NULL));
+
     return true;
 }
 
@@ -557,7 +560,7 @@ bool platform_get_random_data(unsigned char *data, unsigned int len)
 #if 0
     /** 
      * in case a particular platform does not support 
-     * urandom mechanis,, then this can be made use of.
+     * urandom mechanism, then this can be made use of.
      */
     static bool_t o_rand_init_done = false;
     u_int32 val1, val2, val3;
@@ -580,6 +583,12 @@ bool platform_get_random_data(unsigned char *data, unsigned int len)
 #endif
 
     return true;
+}
+
+
+unsigned long long int platform_64bit_random_number(void)
+{
+    return (((unsigned long long int) rand() << 32) | rand());
 }
 
 

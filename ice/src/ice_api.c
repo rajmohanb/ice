@@ -945,6 +945,9 @@ int32_t ice_create_session(handle h_inst,
         session->role = ICE_AGENT_ROLE_CONTROLLED;
     }
 
+    /** select a random number as tie-breaker */
+    session->tie_breaker = platform_64bit_random_number();
+
     session->state = ICE_SES_IDLE;
     session->peer_mode = ICE_INVALID_MODE;
     session->o_destroyed = false;

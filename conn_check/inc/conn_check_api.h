@@ -80,6 +80,9 @@ typedef struct {
     /** conn check: nominated one or not */
     bool_t nominated;
 
+    /** tie-breaker value */
+    uint64_t tie_breaker;
+
     /** candidate priority for peer reflexive candidate */
     uint32_t prflx_cand_priority;
 

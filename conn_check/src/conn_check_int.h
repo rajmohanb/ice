@@ -101,6 +101,7 @@ typedef struct
     bool_t nominated;
     bool_t controlling_role;
     uint32_t prflx_cand_priority;
+    uint64_t tie_breaker;
 
     /** session state */
     conn_check_session_state_t state;

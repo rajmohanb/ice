@@ -46,9 +46,6 @@ int32_t ice_media_utils_compute_initial_states_for_pairs(
 int32_t ice_utils_get_next_connectivity_check_pair(
         ice_media_stream_t *media, ice_cand_pair_t **pair);
 
-int32_t ice_utils_nominate_candidate_pair(
-        ice_session_t *session, ice_cand_pair_t *pair);
-
 int32_t ice_utils_copy_media_host_candidates(
                 ice_api_media_stream_t *src, ice_media_stream_t *dest);
 

@@ -362,6 +362,9 @@ struct struct_ice_session
     /** controlling or controlled */
     ice_agent_role_type_t role;
 
+    /** tie-breaker */
+    uint64_t tie_breaker;
+
     uint32_t num_media_streams;
     ice_media_stream_t *aps_media_streams[ICE_MAX_MEDIA_STREAMS];
 

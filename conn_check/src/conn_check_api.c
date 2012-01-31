@@ -417,6 +417,7 @@ int32_t conn_check_session_set_session_params(handle h_inst,
     session->nominated = params->nominated;
     session->controlling_role = params->controlling_role;
     session->prflx_cand_priority = params->prflx_cand_priority;
+    session->tie_breaker = params->tie_breaker;
 
     return STUN_OK;
 }

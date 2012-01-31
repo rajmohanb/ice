@@ -101,7 +101,7 @@ int32_t cc_utils_create_request_msg(
         attr_count++;
 
         status = stun_attr_ice_controlling_set_tiebreaker_value(
-                                            ah_attr[attr_count - 1], 123456767);
+                            ah_attr[attr_count - 1], session->tie_breaker);
         if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
     else
@@ -117,7 +117,7 @@ int32_t cc_utils_create_request_msg(
         attr_count++;
 
         status = stun_attr_ice_controlled_set_tiebreaker_value(
-                                            ah_attr[attr_count - 1], 123456767);
+                            ah_attr[attr_count - 1], session->tie_breaker);
         if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
 
