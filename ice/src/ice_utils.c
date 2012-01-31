@@ -2521,20 +2521,6 @@ int32_t ice_utils_find_cand_pair_for_conn_check_session(
 
 
 
-void ice_utils_handle_agent_role_conflict(
-                ice_media_stream_t *media, ice_agent_role_type_t new_role)
-{
-    ice_session_t *ice_session = media->ice_session;
-
-    ICE_LOG(LOG_SEV_INFO, "Changing the AGENT ROLE for the session");
-
-    ice_session->role = new_role;
-
-    return;
-}
-
-
-
 int32_t ice_utils_search_local_candidates(ice_media_stream_t *media, 
                         stun_inet_addr_t *src, ice_candidate_t **found_cand)
 {
@@ -3998,6 +3984,62 @@ ice_cand_pair_t *ice_media_utils_get_associated_valid_pair_for_cand_pair(
 
     return temp_cp;
 }
+
+
+
+int32_t ice_utils_handle_role_conflict_response(
+                ice_cand_pair_t *cp, conn_check_result_t *result)
+{
+    int32_t status = STUN_OK;
+    bool_t role_changed = false;
+
+    /** sec 7.1.2.1 Failure cases - Applicable only for STUN client */
+    /**
+     * If the request had contained the ICE-CONTROLLED 
+     * attribute, the agent MUST switch to the controlling 
+     * role if it has not already done so. If the request 
+     * had contained the ICE-CONTROLLING attribute, the 
+     * agent MUST switch to the controlled role if it has 
+     * not already done so.
+     */
+    if ((result->controlling_role == true) &&
+        (cp->media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING))
+    {
+        cp->media->ice_session->role = ICE_AGENT_ROLE_CONTROLLED;
+        role_changed = true;
+
+        ICE_LOG(LOG_SEV_WARNING, 
+                "ICE AGENT ROLE for the session changed to CONTROLLED");
+    }
+    else if ((result->controlling_role == false) &&
+            (cp->media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
+    {
+        cp->media->ice_session->role = ICE_AGENT_ROLE_CONTROLLING;
+        role_changed = true;
+
+        ICE_LOG(LOG_SEV_WARNING, 
+                "ICE AGENT ROLE for the session changed to CONTROLLING");
+    }
+
+    /**
+     * once it has switched, the agent must enqueue the 
+     * candidate pair whose check generated the 487 into 
+     * the triggered check queue.
+     *
+     * Note, however, that the tie-breaker value must not 
+     * be reselected.
+     */
+    if (role_changed == true)
+    {
+        status = ice_utils_add_to_triggered_check_queue(cp->media, cp);
+
+        /** The state of that pair is set to waiting */
+        status = ice_cand_pair_fsm_inject_msg(cp, ICE_CP_EVENT_UNFREEZE, NULL);
+    }
+
+    return status;
+}
+
 
 
 /******************************************************************************/

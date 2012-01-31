@@ -35,7 +35,7 @@ ICE_LITE_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_ice_lite.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_encdec.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_txn.a \
-	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lm -lrt -ldl
+	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
 
 ICE_FULL_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_ice.a \
 	$(ICE_LIB_DEST_PATH)/lib_turn.a \
@@ -44,13 +44,13 @@ ICE_FULL_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_ice.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_encdec.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_txn.a \
-	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lm -lrt -ldl
+	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
 
 STUN_BIND_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_stun_binding.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_encdec.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_txn.a \
-	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lm -lrt -ldl
+	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
 
 
 CFLAGS += -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX

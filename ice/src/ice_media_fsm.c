@@ -836,14 +836,13 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                     /** RFC 5245 7.1.2.1 Failure Cases */
                     if (check_result.error_code == STUN_ERROR_ROLE_CONFLICT)
                     {
-                        ice_agent_role_type_t new_role;
-                        
-                        if (check_result.controlling_role == true)
-                            new_role = ICE_AGENT_ROLE_CONTROLLED;
-                        else
-                            new_role = ICE_AGENT_ROLE_CONTROLLING;
+                        status = ice_utils_handle_role_conflict_response(
+                                                            cp, &check_result);
 
-                        ice_utils_handle_agent_role_conflict(media, new_role);
+                        if (status != STUN_OK)
+                            ICE_LOG(LOG_SEV_ERROR,
+                                "[ICE] Handling of 487 Role Conflict response "\
+                                "failed");
                     }
                 }
 
