@@ -729,7 +729,7 @@ int32_t ice_media_utils_prune_checklist(ice_media_stream_t *media)
                 (pair_hi->remote == pair_lo->remote))
             {
                 stun_memset(pair_lo, 0, sizeof(ice_cand_pair_t));
-                ICE_LOG(LOG_SEV_DEBUG, "pruned one cand pair");
+                ICE_LOG(LOG_SEV_DEBUG, "pruned one candidate pair");
             }
 
         }
@@ -2725,8 +2725,10 @@ int32_t ice_media_utils_update_cand_pair_states(
 
 
 int32_t ice_utils_detect_repair_role_conflicts(
-                    ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt)
+        ice_media_stream_t *media, conn_check_result_t *check_result)
 {
+    /** sec 7.2.1.1 of RFC 5245 - Detecting and repairing role conflicts */
+
     return STUN_OK;
 }
 
@@ -3169,6 +3171,7 @@ int32_t ice_utils_process_incoming_check(
     ice_candidate_t *remote_cand;
     ice_cand_pair_t *cp;
 
+
     /**
      * RFC 5245 Sec 7.2.1.3 Learning Peer Reflexive Candidates
      */
@@ -3301,8 +3304,8 @@ int32_t ice_utils_process_incoming_check(
                     ICE_LOG(LOG_SEV_INFO,
                             "[ICE] CONTROLLED ROLE - Associated valid pair"\
                             " found for the nominated check request "\
-                            "received from peer. Hence nominating the "\
-                            "validated pair");
+                            "received from peer. Hence choosing the "\
+                            "validated pair as the nominated pair");
                     cp = vp;
                 }
                 else
@@ -3987,6 +3990,29 @@ ice_cand_pair_t *ice_media_utils_get_associated_valid_pair_for_cand_pair(
 
 
 
+ice_cand_pair_t *ice_media_utils_get_associated_nominated_pair_for_cand_pair(
+                                ice_media_stream_t *media, ice_cand_pair_t *cp)
+{
+    ice_cand_pair_t *temp_cp = NULL;
+    uint32_t i;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        temp_cp = &media->ah_cand_pairs[i];
+
+        if ((temp_cp->nominated == true) && 
+            (temp_cp->local->comp_id == cp->local->comp_id) && 
+            (temp_cp->remote == cp->remote))
+        {
+            break;
+        }
+    }
+
+    return temp_cp;
+}
+
+
+
 int32_t ice_utils_handle_role_conflict_response(
                 ice_cand_pair_t *cp, conn_check_result_t *result)
 {
@@ -4038,6 +4064,52 @@ int32_t ice_utils_handle_role_conflict_response(
     }
 
     return status;
+}
+
+
+
+void ice_utils_check_for_role_change(
+        ice_media_stream_t *media, conn_check_result_t *check_result)
+{
+    if ((check_result->controlling_role == true) &&
+            (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
+    {
+        media->ice_session->role = ICE_AGENT_ROLE_CONTROLLING;
+        ICE_LOG(LOG_SEV_WARNING, 
+                "[ICE] Agent role for this session switched to CONTROLLING");
+    }
+
+    if ((check_result->controlling_role == false) &&
+            (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING))
+    {
+        media->ice_session->role = ICE_AGENT_ROLE_CONTROLLED;
+        ICE_LOG(LOG_SEV_WARNING, 
+                "[ICE] Agent role for this session switched to CONTROLLED");
+    }
+
+    return;
+}
+
+
+
+bool_t ice_media_utils_did_all_checks_fail(ice_media_stream_t *media)
+{
+    uint32_t i;
+    ice_cand_pair_t *cp = NULL;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+        if(cp->local == NULL) continue;
+
+        if (cp->state != ICE_CP_FAILED)
+        {
+            /** atleast one candidate pair is still alive */
+            return false;
+        }
+    }
+
+    return true;
 }
 
 

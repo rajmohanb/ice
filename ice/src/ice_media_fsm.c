@@ -609,11 +609,6 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             return STUN_OK;
         }
 
-        /** TODO =
-         * RFC 5245 sec 7.2.1.1 Detecting and Repairing Role Conflicts
-         */
-        status = ice_utils_detect_repair_role_conflicts(media, stun_pkt);
-
         /** create new incoming connectivity check dialog */
         status = ice_utils_create_conn_check_session(media, stun_pkt);
         if (status != STUN_OK)
@@ -634,6 +629,10 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             status = conn_check_session_get_check_result(
                                 h_cc_inst, media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
+
+    
+            /** RFC 5245 sec 7.2.1.1 Detecting and Repairing Role Conflicts */
+            ice_utils_check_for_role_change(media, &check_result);
 
             local = ice_utils_get_local_cand_for_transport_param(
                                             media, stun_pkt->transport_param);
@@ -657,8 +656,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 return status;
             }
 
-            /** if we are here, then answer has been received */
 
+            /** if we are here, then answer has been received */
             status = ice_utils_process_incoming_check(
                                     media, local, stun_pkt, &check_result);
 
@@ -694,9 +693,6 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              * corresponding cand pair fsm. Then destroy the 
              * connectivity check session if no longer required.
              */
-            ICE_LOG (LOG_SEV_INFO, 
-                    "[ICE MEDIA] Connectivity check succeeded");
-
             status = ice_utils_find_cand_pair_for_conn_check_session(
                                                     media, h_cc_dialog, &cp);
             if (status == STUN_OK)
@@ -708,6 +704,9 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                 {
                     ice_candidate_t *local_cand;
                     ice_cand_pair_t *pair = NULL;
+
+                    ICE_LOG (LOG_SEV_INFO, 
+                            "[ICE MEDIA] Connectivity check succeeded");
 
                     status = ice_cand_pair_fsm_inject_msg(
                             cp, ICE_EP_EVENT_CHECK_SUCCESS, &check_result);
@@ -779,13 +778,31 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                             pair->remote->transport.ip_addr, 
                             pair->remote->transport.port);
 
+                    /**
+                     * It is possible that when this agent is in controlled 
+                     * role, the peer controlling agent might have already
+                     * nominated a candidate pair, say using aggressive
+                     * nomination, when this check is still in progress. So
+                     * check for the condition now.
+                     */
+                    if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED)
+                    {
+                        ice_cand_pair_t *temp = 
+                            ice_media_utils_get_associated_nominated_pair_for_cand_pair(media, pair);
+                        if (temp)
+                        {
+                            temp->nominated = false;
+                            pair->nominated = true;
+                        }
+                    }
+
                     /** 
                      * RFC 5245 10. KeepAlives
                      * An agent MUST begin the keepalive processing once 
                      * ICE has selected candidates for usage with media, 
                      * or media begins to flow, whichever happens first.
                      */
-                    if (check_result.nominated == true)
+                    if (pair->nominated == true)
                     {
                         ice_media_utils_update_nominated_pair_for_comp(media, pair);
 
@@ -810,22 +827,19 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                         /** just fallthrough ... */
                     }
 
-                    if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
+                    /**
+                     * Once there is at least one nominated pair in the 
+                     * valid list for every component of at least one 
+                     * media stream and the state of the check list is
+                     * Running:
+                     *
+                     * - The agent MUST change the state of processing 
+                     *   for its check list for that media stream to 
+                     *   Completed.
+                     */
+                    if(ice_media_utils_have_nominated_list(media) == true)
                     {
-                        /**
-                         * Once there is at least one nominated pair in the 
-                         * valid list for every component of at least one 
-                         * media stream and the state of the check list is
-                         * Running:
-                         *
-                         * - The agent MUST change the state of processing 
-                         *   for its check list for that media stream to 
-                         *   Completed.
-                         */
-                        if(ice_media_utils_have_nominated_list(media) == true)
-                        {
-                            media->state = ICE_MEDIA_CC_COMPLETED;
-                        }
+                        media->state = ICE_MEDIA_CC_COMPLETED;
                     }
                 }
                 else
@@ -843,6 +857,12 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
                             ICE_LOG(LOG_SEV_ERROR,
                                 "[ICE] Handling of 487 Role Conflict response "\
                                 "failed");
+                    }
+
+                    if (ice_media_utils_did_all_checks_fail(media) == true)
+                    {
+                        /** all checks have failed */
+                        media->state = ICE_MEDIA_CC_FAILED;
                     }
                 }
 
@@ -1186,6 +1206,12 @@ int32_t ice_media_conn_check_timer_expiry(
             {
                 status = ice_cand_pair_fsm_inject_msg(
                         cp, ICE_CP_EVENT_CHECK_FAILED, &check_result);
+
+                if (ice_media_utils_did_all_checks_fail(media) == true)
+                {
+                    /** all checks have failed */
+                    media->state = ICE_MEDIA_CC_FAILED;
+                }
             }
 
             status = conn_check_destroy_session(h_cc_inst, h_cc_dialog);

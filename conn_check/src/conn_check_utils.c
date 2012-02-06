@@ -358,101 +358,6 @@ ERROR_EXIT_PT1:
 }
 
 
-int32_t cc_utils_extract_data_from_binding_resp(
-                                conn_check_session_t *session, handle h_msg)
-{
-#if 0
-    handle h_attr[0];
-    int32_t num, len, status;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_XOR_MAPPED_ADDR, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_mapped_addr_get_address(
-                                    h_attr[0], session->srflx_ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_xor_mapped_addr_get_port(
-                                    h_attr[0], &session->srflx_port);
-    if (status != STUN_OK) return status;
-
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_XOR_RELAYED_ADDR, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_relayed_addr_get_address(
-                                    h_attr[0], session->relay_ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_xor_relayed_addr_get_port(
-                                    h_attr[0], &session->relay_port);
-    if (status != STUN_OK) return status;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_LIFETIME, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_lifetime_get_duration(
-                                    h_attr[0], &session->lifetime);
-    if (status != STUN_OK) return status;
-#endif
-    int32_t status = STUN_OK;
-    return status;
-}
-
-
-int32_t cc_utils_get_app_data_for_current_state(
-                                conn_check_session_t *session, handle *data)
-{
-    conn_check_result_t *result = NULL;
-
-    switch(session->state)
-    {
-        case CC_OG_IDLE:
-        case CC_OG_CHECKING:
-            break;
-
-        case CC_OG_TERMINATED:
-        {
-            result = (conn_check_result_t *)
-                        stun_calloc(1, sizeof(conn_check_result_t));
-            if (result == NULL) return STUN_MEM_ERROR;
-
-            result->check_succeeded = session->cc_succeeded;
-
-            /** TODO - copy peer reflexive address if learned */
-        }
-        break;
-
-        case CC_IC_TERMINATED:
-        {
-            result = (conn_check_result_t *)
-                        stun_calloc(1, sizeof(conn_check_result_t));
-            if (result == NULL) return STUN_MEM_ERROR;
-
-            result->check_succeeded = session->cc_succeeded;
-            result->nominated = session->nominated;
-        }
-        break;
-
-        case CC_IC_IDLE:
-            break;
-
-        default:
-            break;
-    }
-
-    *data = result;
-    return STUN_OK;
-}
-
 
 int32_t conn_check_utils_verify_request_msg(
                     conn_check_session_t *session, handle h_msg)
@@ -708,6 +613,9 @@ int32_t conn_check_utils_extract_info_from_request_msg(
     if (status == STUN_OK)
     {
         session->nominated = true;
+
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USE-CANDIDATE attribute present in the request message");
     }
     else if (status == STUN_NOT_FOUND)
     {
@@ -917,6 +825,125 @@ uint32_t cc_utils_extract_conn_check_info(handle h_msg,
     }
 
     return status;
+}
+
+
+
+int32_t conn_check_detect_repair_role_conflicts(
+        conn_check_session_t *session, handle h_msg, int32_t *resp_code)
+{
+    handle h_attr = NULL;
+    bool_t controlling, controlled;
+    uint64_t tie_breaker;
+    uint32_t num;
+    int32_t status;
+
+    *resp_code = 0;
+    controlling = controlled = false;
+
+    /** sec 7.2.1.1 of RFC5245 - Detecting and Repairing Role Conflicts */
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_ICE_CONTROLLING, &h_attr, &num);
+    if (status == STUN_NOT_FOUND)
+    {
+        num = 1;
+        status = stun_msg_get_specified_attributes(
+                        h_msg, STUN_ATTR_ICE_CONTROLLED, &h_attr, &num);
+
+        if (status == STUN_NOT_FOUND)
+        {
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[CONN CHECK] Request message does not contain either "\
+                    "ICE-CONTROLLING or ICE-CONTROLLED attribute. Peer agent"\
+                    "is compliant to previous version?");
+            /** 
+             * the peer agent may have implemented a previous version of this
+             * spec. There may be a conflict, but it can not be detected.
+             */
+            return STUN_OK;
+        }
+        else if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting ICE-CONTROLLING attribute from "\
+                    "the message failed");
+            return status;
+        }
+        else
+        {
+            controlled = true;
+        }
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting ICE-CONTROLLING attribute from the "\
+                "message failed");
+        return status;
+    }
+    else
+    {
+        controlling = true;
+    }
+
+    if ((session->controlling_role == true) && (controlling == true))
+    {
+        status = stun_attr_ice_controlling_get_tiebreaker_value(
+                                                    h_attr, &tie_breaker);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting tie-breaker value from "\
+                    "ICE-CONTROLLING attribute failed");
+            return status;
+        }
+
+        if (session->tie_breaker >= tie_breaker)
+        {
+            /** 
+             * Agent generates binding error response with an error 
+             * code of 487 (role conflict) but retains it's role.
+             */
+            *resp_code = STUN_ERROR_ROLE_CONFLICT;
+        }
+        else
+        {
+            /** agent switches the role */
+            session->controlling_role = false;
+        }
+    }
+
+    /** if this agent is in controlled role */
+    if ((session->controlling_role == false) && (controlled == true))
+    {
+        status = stun_attr_ice_controlled_get_tiebreaker_value(
+                                                    h_attr, &tie_breaker);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting tie-breaker value from "\
+                    "ICE-CONTROLLED attribute failed");
+            return status;
+        }
+
+        if (session->tie_breaker >= tie_breaker)
+        {
+            /** agent switches the role */
+            session->controlling_role = true;
+        }
+        else
+        {
+            /** 
+             * Agent generates binding error response with an error 
+             * code of 487 (role conflict) but retains it's role.
+             */
+            *resp_code = STUN_ERROR_ROLE_CONFLICT;
+        }
+    }
+    
+    return STUN_OK;
 }
 
 

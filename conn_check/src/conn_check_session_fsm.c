@@ -108,7 +108,7 @@ int32_t cc_initiate (conn_check_session_t *session, handle h_msg)
 
 int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
 {
-    int32_t status;
+    int32_t status, respcode;
     handle h_resp, h_txn, h_txn_inst;
 
     h_txn_inst = session->instance->h_txn_inst;
@@ -150,34 +150,56 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
         return STUN_TERMINATED;
     }
 
-    ICE_LOG(LOG_SEV_INFO, 
-            "[CONN CHECK] Incoming conn check request validation succeeded. "\
-            "All decks clear for sending response");
-
-    /** if everything is fine, then go ahead and send success response */
-    status = cc_utils_create_resp_from_req(
-                    session, h_msg, STUN_SUCCESS_RESP, &h_resp);
+    /** connectivity check specific verification */
+    respcode = 0;
+    status = conn_check_detect_repair_role_conflicts(session, h_msg, &respcode);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "[CONN CHECK] Creating a response from the request "\
-                "message failed");
-        return status;
+                "[CONN CHECK] Error while detecting and repairing role conflict");
+        return STUN_TERMINATED;
     }
 
-    session->h_resp = h_resp;
+    if (respcode == STUN_ERROR_ROLE_CONFLICT)
+    {
+        ICE_LOG(LOG_SEV_WARNING, 
+            "Role conflict detected. Sending 487 Role Conflict response");
 
-    status = stun_txn_send_stun_message(h_txn_inst, h_txn, h_resp);
-    if (status != STUN_OK)
-    { 
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[CONN CHECK] Sending conn check response via stun "\
-                "transaction failed - %d", status);
-        return status;
+        conn_check_utils_send_error_resp(session, 
+                                        401, STUN_REJECT_RESPONSE_401);
     }
+    else
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+                "[CONN CHECK] Incoming conn check request validation succeeded. "\
+                "All decks clear for sending response");
 
-    session->state = CC_IC_TERMINATED;
-    session->cc_succeeded = true;
+        /** if everything is fine, then go ahead and send success response */
+        status = cc_utils_create_resp_from_req(
+                        session, h_msg, STUN_SUCCESS_RESP, &h_resp);
+    
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Creating a response from the request "\
+                    "message failed");
+            return status;
+        }
+
+        session->h_resp = h_resp;
+
+        status = stun_txn_send_stun_message(h_txn_inst, h_txn, h_resp);
+        if (status != STUN_OK)
+        { 
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Sending conn check response via stun "\
+                    "transaction failed - %d", status);
+            return status;
+        }
+
+        session->state = CC_IC_TERMINATED;
+        session->cc_succeeded = true;
+    }
 
     return STUN_TERMINATED;
 }
