@@ -454,7 +454,7 @@ int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
 
 int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
 {
-    int32_t status, index, count;
+    int32_t status, index, cmp_count, fail_count;
     stun_msg_type_t msg_class;
     stun_method_type_t method;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) pkt;
@@ -506,22 +506,32 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
      * present for each component of each media, that is, each
      * media moves into COMPLETED state
      */
-    count = 0;
+    cmp_count = fail_count = 0;
     for (index = 0; index < ICE_MAX_MEDIA_STREAMS; index++)
     {
         media = session->aps_media_streams[index];
         if (!media) continue;
 
-        if(media->state == ICE_MEDIA_CC_COMPLETED) count++;
+        if(media->state == ICE_MEDIA_CC_COMPLETED) cmp_count++;
+        if(media->state == ICE_MEDIA_CC_FAILED) fail_count++;
     }
 
-    if (count == session->num_media_streams)
+    if (cmp_count == session->num_media_streams)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
             "[ICE SESSION] All media streams have moved to "\
             "ICE_MEDIA_CC_COMPLETED state. Hence ICE session state entering "\
             "ICE_SES_CC_COMPLETED state");
         session->state = ICE_SES_CC_COMPLETED;
+    }
+
+    if (fail_count == session->num_media_streams)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE SESSION] All media streams have moved to "\
+            "ICE_MEDIA_CC_FAILED state. Hence ICE session state entering "\
+            "ICE_SES_CC_FAILED state");
+        session->state = ICE_SES_CC_FAILED;
     }
 
     return STUN_OK;

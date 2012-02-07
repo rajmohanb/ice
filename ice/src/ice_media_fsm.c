@@ -977,7 +977,7 @@ int32_t ice_media_stream_evaluate_valid_pairs(
     {
         /** 
          * No valid pairs for one or more components for this media
-         * so far. That is the connectivity checks have failed to 
+         * so far. That is, the connectivity checks have failed to 
          * generate any valid pairs for this media. Hence moving 
          * the state of the media stream to Failed.
          */
