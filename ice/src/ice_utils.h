@@ -261,8 +261,8 @@ int32_t ice_media_utils_clear_media_stream(ice_media_stream_t *media);
 bool_t ice_utils_host_compare (u_char *host1, 
                     u_char *host2, stun_inet_addr_type_t addr_type);
 
-ice_cand_pair_t *ice_media_utils_search_cand_pair(
-        ice_media_stream_t *media, ice_candidate_t *local, ice_candidate_t *remote);
+ice_cand_pair_t *ice_media_utils_search_cand_pair(ice_media_stream_t *media, 
+                                ice_candidate_t *local, ice_candidate_t *remote);
 
 ice_cand_pair_t *ice_media_utils_get_associated_valid_pair_for_cand_pair(
                                 ice_media_stream_t *media, ice_cand_pair_t *cp);
@@ -277,6 +277,9 @@ void ice_utils_check_for_role_change(
         ice_media_stream_t *media, conn_check_result_t *check_result);
 
 bool_t ice_media_utils_did_all_checks_fail(ice_media_stream_t *media);
+
+int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media, 
+            ice_rx_stun_pkt_t *stun_pkt, handle h_cc_inst, handle h_cc_dialog);
 
 
 /******************************************************************************/
