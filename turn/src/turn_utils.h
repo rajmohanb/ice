@@ -88,6 +88,10 @@ int32_t turn_utils_send_create_permission_req(turn_session_t *session);
 int32_t turn_utils_send_channel_bind_request (
                             turn_session_t *session, turn_permission_t *perm);
 
+int32_t turn_utils_validate_integrity_for_rcvd_msg(
+                                    turn_session_t *session, handle h_rcvdmsg);
+
+
 
 
 /******************************************************************************/

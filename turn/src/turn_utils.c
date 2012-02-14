@@ -25,6 +25,8 @@ extern "C" {
 #include "turn_api.h"
 #include "turn_int.h"
 
+#include <openssl/md5.h>
+
 
 int32_t turn_utils_create_request_msg(turn_session_t *session, 
                                     stun_method_type_t method, handle *h_msg)
@@ -1235,6 +1237,42 @@ int32_t turn_utils_send_channel_bind_request (
     return status;
 }
 
+
+
+int32_t turn_utils_validate_integrity_for_rcvd_msg(
+                                    turn_session_t *session, handle h_rcvdmsg)
+{
+    stun_MD5_CTX ctx;
+    int32_t len, status;
+    u_char key[16];
+
+    /** first generate the hmac key */
+    stun_MD5_Init(&ctx);
+
+    len = stun_strlen((char *)session->cfg.username);
+    stun_MD5_Update(&ctx, session->cfg.username, len);
+    stun_MD5_Update(&ctx, ":", 1);
+
+    len = stun_strlen((char *)session->cfg.realm);
+    stun_MD5_Update(&ctx, session->cfg.realm, len);
+    stun_MD5_Update(&ctx, ":", 1);
+
+    len = stun_strlen((char *)session->cfg.credential);
+    stun_MD5_Update(&ctx, session->cfg.credential, len);
+
+    stun_MD5_Final(key, &ctx);
+
+    /** validate message integrity */
+    len = 16;
+    status = stun_msg_validate_message_integrity(h_rcvdmsg, key, len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, "Validation of STUN response failed");
+        return status;
+    }
+
+    return status;
+}
 
 
 /******************************************************************************/

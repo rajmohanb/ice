@@ -194,6 +194,30 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
     handle h_txn, h_new_txn, h_txn_inst = session->instance->h_txn_inst;
     bool_t txn_terminated = false;
 
+    status = stun_msg_get_class(h_rcvdmsg, &class_type);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Error while extracting message class %d", status);
+        goto ERROR_EXIT_PT1;
+    }
+
+    if (class_type == STUN_SUCCESS_RESP)
+    {
+        /** 
+         * validate intergrity of the response only for 
+         * success response since negative responses will 
+         * not have the message-integrity attribute.
+         */
+        status = turn_utils_validate_integrity_for_rcvd_msg(session, h_rcvdmsg);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_INFO, 
+                "[TURN] Message Integrity validation failed. Discarding msg...");
+            return status;
+        }
+    }
+
     /** 
      * note: 
      * split up the response based on 1xx, 2xx etc to split up this huge handler
@@ -219,13 +243,6 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
         goto ERROR_EXIT_PT1;
     }
 
-    status = stun_msg_get_class(h_rcvdmsg, &class_type);
-    if (status != STUN_OK)
-    {
-        ICE_LOG (LOG_SEV_ERROR, 
-                "Error while extracting message class %d", status);
-        goto ERROR_EXIT_PT1;
-    }
 
     if (class_type == STUN_ERROR_RESP)
     {
@@ -396,36 +413,6 @@ int32_t send_perm_req (turn_session_t *session, handle h_msg)
         }
     }
 
-#if 0
-    handle h_txn, h_txn_inst;
-    
-    h_txn_inst = session->instance->h_txn_inst;
-
-    /** delete an existing transaction, if any */
-    stun_destroy_txn(h_txn_inst, session->h_perm_txn, false, false);
-    session->h_perm_txn = session->h_perm_req = session->h_perm_resp = NULL;
-
-    status = turn_utils_create_permission_req_msg(session, &session->h_perm_req);
-    if (status != STUN_OK)
-        return status;
-
-    status = stun_create_txn(h_txn_inst,
-                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
-    if (status != STUN_OK) return status;
-
-
-    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
-    if (status != STUN_OK) return status;
-
-    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
-    if (status != STUN_OK) return status;
-
-    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_perm_req);
-    if (status != STUN_OK) return status;
-
-    session->h_perm_txn = h_txn;
-#endif
-
     session->state = TURN_OG_CREATING_PERM;
 
     return STUN_OK;
@@ -439,7 +426,16 @@ int32_t process_perm_resp (turn_session_t *session, handle h_rcvdmsg)
     handle h_txn, h_txn_inst = session->instance->h_txn_inst;
     bool_t txn_terminated = false;
 
-    /** TODO = processing */
+    /** processing */
+
+    /** validate intergrity of the response */
+    status = turn_utils_validate_integrity_for_rcvd_msg(session, h_rcvdmsg);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_INFO, 
+            "[TURN] Message Integrity validation failed. Discarding msg...");
+        return status;
+    }
 
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
     if (status != STUN_OK)
@@ -542,6 +538,15 @@ int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg)
     stun_msg_type_t class_type;
     handle h_txn, h_new_txn, h_txn_inst = session->instance->h_txn_inst;
     bool_t txn_terminated = false;
+
+    /** validate intergrity of the response */
+    status = turn_utils_validate_integrity_for_rcvd_msg(session, h_rcvdmsg);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_INFO, 
+            "[TURN] Message Integrity validation failed. Discarding msg...");
+        return status;
+    }
 
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
     if (status != STUN_OK)
@@ -687,6 +692,15 @@ int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg)
     handle h_txn, h_new_txn, h_txn_inst = session->instance->h_txn_inst;
     bool_t txn_terminated = false;
 
+    /** validate intergrity of the response */
+    status = turn_utils_validate_integrity_for_rcvd_msg(session, h_rcvdmsg);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_INFO, 
+            "[TURN] Message Integrity validation failed. Discarding msg...");
+        return status;
+    }
+    
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
     if (status != STUN_OK)
     {
@@ -933,36 +947,6 @@ int32_t turn_refresh_permission (turn_session_t *session, handle h_msg)
             status = turn_utils_send_channel_bind_request(session, perm);
         }
     }
-
-#if 0
-    handle h_txn, h_txn_inst;
-    
-    h_txn_inst = session->instance->h_txn_inst;
-
-    /** delete an existing transaction, if any */
-    stun_destroy_txn(h_txn_inst, session->h_perm_txn, false, false);
-    session->h_perm_txn = session->h_perm_req = session->h_perm_resp = NULL;
-
-    status = turn_utils_create_permission_req_msg(session, &session->h_perm_req);
-    if (status != STUN_OK)
-        return status;
-
-    status = stun_create_txn(h_txn_inst,
-                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
-    if (status != STUN_OK) return status;
-
-
-    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
-    if (status != STUN_OK) return status;
-
-    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
-    if (status != STUN_OK) return status;
-
-    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_perm_req);
-    if (status != STUN_OK) return status;
-
-    session->h_perm_txn = h_txn;
-#endif
 
     /** no change in state */
 

@@ -212,7 +212,17 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
     bool_t txn_terminated = false;
     stun_msg_type_t msg_class;
 
-    /** TODO = normal processing and validation of a packet as defined in STUN RFC */
+    /** normal processing and validation of a packet as defined in STUN RFC */
+    /** sec 10.1.3 of RFC 5389 */
+    status = stun_msg_validate_message_integrity(h_rcvdmsg, 
+                                session->peer_pwd, session->peer_pwd_len);
+    if (status == STUN_VALIDATON_FAIL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Message Integrity validation failed for received response. "\
+            "Hence discarding the message");
+        return STUN_VALIDATON_FAIL;
+    }
 
     /**
      * RFC 5245 sec 7.1.2 - Processing the response
