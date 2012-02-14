@@ -163,7 +163,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len,
 {
     stun_msg_t *msg;
     u_char *pkt = buf;
-    uint16_t val16, attr_len, i;
+    uint16_t val16, i;
     uint32_t val32;
     handle h_msg;
     int32_t status;
@@ -208,7 +208,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len,
     pkt += 2;
 
     stun_memcpy(&val16, pkt, sizeof(uint16_t));
-    attr_len = ntohs(val16);
+    msg->hdr.length = ntohs(val16);
 
     pkt += 2;
     stun_memcpy(&val32, pkt, sizeof(uint32_t));

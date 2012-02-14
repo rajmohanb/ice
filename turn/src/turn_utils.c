@@ -1029,7 +1029,7 @@ int32_t turn_utils_process_data_indication(
 
     /** TODO = 
      * This xor-peer-addr must be a valid one trusted by the 
-     * application. Valiadte the received source ip address.
+     * application. Validate the received source IP address.
      */
 
 

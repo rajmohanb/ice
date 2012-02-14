@@ -340,6 +340,7 @@ ERROR_EXIT:
 }
 
 
+
 int32_t stun_msg_validate_message_integrity(
                             handle h_msg, u_char *key, uint32_t key_len)
 {
@@ -363,7 +364,7 @@ int32_t stun_msg_validate_message_integrity(
     {
         ICE_LOG(LOG_SEV_ERROR, 
             "Extracting message integrity attribute from message "\
-            "returned error: %d", status);
+            "returned error: %d. Attribute missing?", status);
         return STUN_VALIDATON_FAIL;
     }
 
