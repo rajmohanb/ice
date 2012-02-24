@@ -440,7 +440,6 @@ int32_t ice_utils_set_peer_media_params(
 uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand)
 {
     uint32_t type_pref;
-    uint32_t local_pref;
     uint64_t prio;
 
     if (cand == NULL) return STUN_INVALID_PARAMS;
@@ -456,15 +455,8 @@ uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand)
     else 
         return 0;
 
-    if(cand->transport.type == STUN_INET_ADDR_IPV4)
-        local_pref = LOCAL_PREF_IPV4;
-    else if (cand->transport.type == STUN_INET_ADDR_IPV6)
-        local_pref = LOCAL_PREF_IPV6;
-    else
-        return 0;
-
     prio = (pow(2, 24) * type_pref) + 
-           (pow(2, 8) * local_pref) + 
+           (pow(2, 8) * cand->local_pref) + 
            (256 - cand->comp_id);
 
     return prio;
@@ -475,22 +467,14 @@ uint64_t ice_utils_compute_peer_reflexive_candidate_priority(
                                                     ice_candidate_t *cand)
 {
     uint32_t type_pref;
-    uint32_t local_pref;
     uint64_t prio;
 
     if (cand == NULL) return STUN_INVALID_PARAMS;
 
     type_pref = CAND_TYPE_PREF_PRFLX_CANDIDATE;
 
-    if(cand->transport.type == STUN_INET_ADDR_IPV4)
-        local_pref = LOCAL_PREF_IPV4;
-    else if (cand->transport.type == STUN_INET_ADDR_IPV6)
-        local_pref = LOCAL_PREF_IPV6;
-    else
-        return 0;
-
     prio = (pow(2, 24) * type_pref) + 
-           (pow(2, 8) * local_pref) + 
+           (pow(2, 8) * cand->local_pref) + 
            (256 - cand->comp_id);
 
     return prio;
@@ -1319,10 +1303,10 @@ int32_t ice_utils_copy_media_host_candidates(
         host_comp = &src->host_cands[i];
 
         /** transport params */
-        cand->transport.type = host_comp->type;
+        cand->transport.type = host_comp->addr.host_type;
         memcpy(cand->transport.ip_addr, 
-                            host_comp->ip_addr, ICE_IP_ADDR_MAX_LEN);
-        cand->transport.port = host_comp->port;
+                            host_comp->addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
+        cand->transport.port = host_comp->addr.port;
         cand->transport.protocol = host_comp->protocol;
 
         /** component id */
@@ -1337,6 +1321,7 @@ int32_t ice_utils_copy_media_host_candidates(
 
         /** initialize the rest */
         cand->type = ICE_CAND_TYPE_HOST;
+        cand->local_pref = host_comp->local_pref;
         cand->priority = ice_utils_compute_candidate_priority(cand);
 
         /**
@@ -2143,7 +2128,7 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
     stun_memcpy(cand->transport.ip_addr, 
                         alloc_addr->ip_addr, ICE_IP_ADDR_MAX_LEN);
     cand->transport.port = alloc_addr->port;
-    cand->transport.protocol = ICE_TRANSPORT_UDP; /** TODO */
+    cand->transport.protocol = ICE_TRANSPORT_UDP;
 
     cand->type = cand_type;
     cand->comp_id = comp_id;
@@ -2151,6 +2136,7 @@ int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand,
     cand->base = base_cand;
     cand->default_cand = def_cand;
     cand->transport_param = base_cand->transport_param;
+    cand->local_pref = base_cand->local_pref;
 
     cand->priority = ice_utils_compute_candidate_priority(cand);
 
@@ -2625,12 +2611,13 @@ int32_t ice_utils_add_local_peer_reflexive_candidate(ice_cand_pair_t *cp,
 
     prflx_cand->type = ICE_CAND_TYPE_PRFLX;
 
+    prflx_cand->default_cand = false;
+    prflx_cand->base = cp->local;
+    prflx_cand->local_pref = cp->local->local_pref;
+
     /** calculation of priority is bit different from spec - revisit? */
     prflx_cand->priority = 
         ice_utils_compute_peer_reflexive_candidate_priority(prflx_cand);
-
-    prflx_cand->default_cand = false;
-    prflx_cand->base = cp->local;
 
     /** TODO = foundation */
     stun_strncpy((char *)prflx_cand->foundation, "4", 1);

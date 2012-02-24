@@ -100,6 +100,10 @@ typedef struct tag_ice_candidate
 {
     ice_transport_t transport;
     ice_cand_type_t type;
+
+    /** local preference provided by the ICE agent */
+    uint32_t local_pref;
+
     uint32_t priority;
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t comp_id;

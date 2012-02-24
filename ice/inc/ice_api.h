@@ -162,10 +162,16 @@ typedef struct {
 typedef struct
 {
     /** host candidate transport details */
-    stun_inet_addr_type_t type;
-    u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
-    uint32_t port;
+    stun_inet_addr_t addr;
     ice_transport_type_t protocol;
+
+    /** 
+     * local preference for this candidate as defined in ICE RFC 4.1.2.1. 
+     * It must be an integer from 0 to 65535 inclusive. If the device is 
+     * multi-homed only, then set the value as per preference. Otherwise, 
+     * if a single IP address, then set it to 65535.
+     */
+    uint32_t local_pref;
 
     /** component id */
     uint32_t comp_id;
