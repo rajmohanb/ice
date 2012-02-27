@@ -77,7 +77,7 @@ typedef struct
     handle h_req;
     handle h_resp;
 
-    uint32_t refresh_duration;
+    uint32_t refresh_duration; /** milliseconds */
     stun_bind_timer_params_t *refresh_timer;
     bool_t refresh_started;
 

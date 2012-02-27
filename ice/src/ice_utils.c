@@ -3696,6 +3696,10 @@ int32_t ice_media_utils_init_stun_gather_candidates(
             stun_cfg->server.ip_addr, stun_cfg->server.port);
     if (status != STUN_OK) goto ERROR_EXIT;
 
+    status = stun_binding_session_enable_session_refresh(
+            h_bind_inst, h_bind_session, ICE_BINDING_KEEP_ALIVE_TIMER_VALUE);
+    if (status != STUN_OK) goto ERROR_EXIT;
+
     status = stun_binding_session_send_message(
                     h_bind_inst, h_bind_session, STUN_REQUEST);
     if (status != STUN_OK) goto ERROR_EXIT;

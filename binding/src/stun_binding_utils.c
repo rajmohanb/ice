@@ -68,19 +68,19 @@ int32_t stun_binding_utils_start_refresh_timer(stun_binding_session_t *session)
     timer->type = BIND_REFRESH_TIMER;
 
     timer->timer_id = session->instance->start_timer_cb(
-            (session->refresh_duration * 1000), session->refresh_timer);
+                    session->refresh_duration, session->refresh_timer);
     if (timer->timer_id)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
                 "[STUN BINDING] Started STUN Binding refresh timer for %d "\
-                "sec ", session->refresh_duration);
+                "msec ", session->refresh_duration);
         status =  STUN_OK;
     }
     else
     {
         ICE_LOG(LOG_SEV_DEBUG, 
                 "[STUN BINDING] Starting of STUN Binding refresh timer "\
-                "for %d sec failed ", session->refresh_duration);
+                "for %d msec failed ", session->refresh_duration);
         status = STUN_INT_ERROR;
     }
 
