@@ -69,20 +69,22 @@ typedef     void*           handle;
 #define     NULL            0x00
 #endif
 
-#define STUN_OK             0
-#define STUN_INT_ERROR      1
-#define STUN_MEM_ERROR      2
-#define STUN_INVALID_PARAMS 3
-#define STUN_NOT_FOUND      4
-#define STUN_TERMINATED     5
-#define STUN_ENCODE_FAILED  6
-#define STUN_DECODE_FAILED  7
-#define STUN_MEM_INSUF      8
-#define STUN_NOT_SUPPORTED  9
-#define STUN_TRANSPORT_FAIL 10
-#define STUN_VALIDATON_FAIL 11
-#define STUN_NO_RESOURCE    12
-#define STUN_MSG_NOT        13
+#define STUN_OK                 0
+#define STUN_INT_ERROR          1
+#define STUN_MEM_ERROR          2
+#define STUN_INVALID_PARAMS     3
+#define STUN_NOT_FOUND          4
+#define STUN_TERMINATED         5
+#define STUN_ENCODE_FAILED      6
+#define STUN_DECODE_FAILED      7
+#define STUN_MEM_INSUF          8
+#define STUN_NOT_SUPPORTED      9
+#define STUN_TRANSPORT_FAIL     10
+#define STUN_VALIDATON_FAIL     11
+#define STUN_NO_RESOURCE        12
+#define STUN_MSG_NOT            13
+#define STUN_BINDING_DONE       14
+#define STUN_BINDING_CHANGED    15
 
 
 #define stun_malloc platform_malloc

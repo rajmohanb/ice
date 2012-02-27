@@ -29,6 +29,8 @@ typedef enum
 {
     /** timer started by turn transactions */
     BIND_STUN_TXN_TIMER = 0,
+
+    BIND_REFRESH_TIMER,
     
     /** that's all we have as of now */
 } stun_bind_timer_type_t;
@@ -74,6 +76,10 @@ typedef struct
     handle h_txn;
     handle h_req;
     handle h_resp;
+
+    uint32_t refresh_duration;
+    stun_bind_timer_params_t *refresh_timer;
+    bool_t refresh_started;
 
 } stun_binding_session_t;
 

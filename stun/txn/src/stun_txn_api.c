@@ -488,9 +488,9 @@ int32_t stun_txn_inject_received_msg (handle h_inst,
     /** make sure given transaction is still alive */
     status = stun_txn_table_find_txn(inst->h_table, h_msg, &h_temp);
 
-    if (msg_class ==  STUN_REQUEST)
+    if (msg_class == STUN_REQUEST)
     {
-        /** hmm... a farm fresh juicy server transaction */ 
+        /** hmm... server transaction */ 
     	stun_msg_get_txn_id(h_msg, txn_ctxt->txn_id);
 
         /** add it the table */

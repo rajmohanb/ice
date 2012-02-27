@@ -811,12 +811,12 @@ int main (int argc, char *argv[])
     media.num_comp = 2;
 
 #ifdef ICE_IPV6
-    media.host_cands[0].type = STUN_INET_ADDR_IPV6;
+    media.host_cands[0].addr.host_type = STUN_INET_ADDR_IPV6;
 #else
-    media.host_cands[0].type = STUN_INET_ADDR_IPV4;
+    media.host_cands[0].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
-    strcpy((char *)media.host_cands[0].ip_addr, LOCAL_IP);
-    media.host_cands[0].port = LOCAL_ICE_RTP_HOST_PORT;
+    strcpy((char *)media.host_cands[0].addr.ip_addr, LOCAL_IP);
+    media.host_cands[0].addr.port = LOCAL_ICE_RTP_HOST_PORT;
     media.host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[0].comp_id = RTP_COMPONENT_ID;
     media.host_cands[0].transport_param = (handle)sockfd_ice[0];
@@ -826,12 +826,12 @@ int main (int argc, char *argv[])
             media.host_cands[0].comp_id, sockfd_ice[0]);
 
 #ifdef ICE_IPV6
-    media.host_cands[1].type = STUN_INET_ADDR_IPV6;
+    media.host_cands[1].addr.host_type = STUN_INET_ADDR_IPV6;
 #else
-    media.host_cands[1].type = STUN_INET_ADDR_IPV4;
+    media.host_cands[1].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
-    strcpy((char *)media.host_cands[1].ip_addr, LOCAL_IP);
-    media.host_cands[1].port = LOCAL_ICE_RTCP_HOST_PORT;
+    strcpy((char *)media.host_cands[1].addr.ip_addr, LOCAL_IP);
+    media.host_cands[1].addr.port = LOCAL_ICE_RTCP_HOST_PORT;
     media.host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media.host_cands[1].transport_param = (handle)sockfd_ice[1];

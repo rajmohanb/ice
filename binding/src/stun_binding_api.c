@@ -254,6 +254,9 @@ int32_t stun_binding_create_session(handle h_inst,
 
     session->instance = instance;
     session->h_txn = NULL;
+    session->refresh_started = false;
+    session->refresh_duration = 0;
+    session->refresh_timer = NULL;
 
     for (i = 0; i < STUN_BINDING_MAX_CONCURRENT_SESSIONS; i++)
     {
@@ -384,11 +387,25 @@ int32_t stun_binding_destroy_session(handle h_inst, handle h_session)
 
     if (session->h_txn != NULL)
     {
-       status = stun_destroy_txn(instance->h_txn_inst, session->h_txn, false, false);
+       status = stun_destroy_txn(instance->h_txn_inst, 
+                                        session->h_txn, false, false);
 		if (status != STUN_OK) {
         	ICE_LOG(LOG_SEV_ERROR,"Error in stun_destroy_txn()");
 			/* fallthrough to free the session */
 		}
+    }
+
+    /** stop timer and free timer memory */
+    if (session->refresh_timer)
+    {
+        status = session->instance->stop_timer_cb(
+                            session->refresh_timer->timer_id);
+        if (status == STUN_OK)
+        {
+            stun_free(session->refresh_timer);
+        }
+        else
+            status = STUN_OK;
     }
 
     stun_free(session);
@@ -396,6 +413,7 @@ int32_t stun_binding_destroy_session(handle h_inst, handle h_session)
 
     return status;
 }
+
 
 int32_t stun_binding_session_send_message(handle h_inst, 
                 handle h_session, stun_msg_type_t msg_type)
@@ -447,10 +465,11 @@ int32_t stun_binding_session_send_message(handle h_inst,
 int32_t stun_binding_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg)
 {
+    int32_t status;
     stun_binding_instance_t *instance;
     stun_binding_session_t *session;
-    int32_t status;
     stun_method_type_t method;
+    stun_msg_type_t msg_class;
 
     if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
         return STUN_INVALID_PARAMS;
@@ -471,8 +490,43 @@ int32_t stun_binding_session_inject_received_msg(
 		"stun_binding_session_inject_received_msg() session[%p]", session);
     session->h_resp = h_msg;
 
-    return stun_txn_inject_received_msg(
+    status = stun_txn_inject_received_msg(
                 instance->h_txn_inst, session->h_txn, h_msg);
+
+    /** if session refresh not configured, return here */
+    if (session->refresh_duration == 0) return status;
+    
+    stun_msg_get_class(h_msg, &msg_class);
+
+    if ((session->refresh_started == false) && (status == STUN_TERMINATED))
+    {
+        if (msg_class == STUN_SUCCESS_RESP)
+        {
+            /** start refresh timer */
+            status = stun_binding_utils_start_refresh_timer(session);
+
+            if (status == STUN_OK)
+            {
+                session->refresh_started = true;
+                status = STUN_BINDING_DONE;
+            }
+            else
+                status = STUN_TERMINATED;
+        }
+        else
+        {
+            status = STUN_TERMINATED;
+        }
+    }
+    else
+    {
+        if (msg_class == STUN_SUCCESS_RESP)
+            status = STUN_OK;
+        else
+            status = STUN_TERMINATED;
+    }
+
+    return status;
 }
 
 
@@ -481,6 +535,7 @@ int32_t stun_binding_session_inject_timer_event(
                         handle timer_id, handle arg, handle *bind_session)
 {
     handle h_txn;
+    int32_t status = STUN_INVALID_PARAMS;
     stun_bind_timer_params_t *timer;
     stun_binding_session_t *session;
 
@@ -495,9 +550,18 @@ int32_t stun_binding_session_inject_timer_event(
         *bind_session = session;
         return stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
     }
+    else if (timer->type == BIND_REFRESH_TIMER)
+    {
+        status = stun_binding_utils_initiate_session_refresh(session);
+
+        if (status != STUN_OK)
+        {
+            status = STUN_TERMINATED;
+        }
+    }
 
     /**
-     * TBD - timer handling.
+     * Note - timer handling.
      * Can the timer be moved into session context, so that the timer is
      * not allocated on the heap every time which not only saves time but
      * also avoids unnecessary memory operation. The timer will be started
@@ -505,9 +569,7 @@ int32_t stun_binding_session_inject_timer_event(
      * stun binding session is destroyed.
      */
 
-    /** stun transaction timer is the only available timer as of now */
-
-    return STUN_INVALID_PARAMS;
+    return status;
 }
 
 
@@ -639,6 +701,25 @@ int32_t stun_binding_session_get_mapped_address(handle h_inst,
     return status;
 }
 
+
+int32_t stun_binding_session_enable_session_refresh(
+                handle h_inst, handle h_session, uint32_t duration)
+{
+    stun_binding_instance_t *instance;
+    stun_binding_session_t *session;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (duration == 0))
+        return STUN_INVALID_PARAMS;
+
+    instance = (stun_binding_instance_t *) h_inst;
+    session = (stun_binding_session_t *) h_session;
+
+    /** TODO - make sure the session still exists */
+
+    session->refresh_duration = duration;
+
+    return STUN_OK;
+}
 
 
 /******************************************************************************/

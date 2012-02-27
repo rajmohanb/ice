@@ -96,6 +96,10 @@ int32_t stun_binding_session_get_mapped_address(handle h_inst,
 int32_t stun_binding_session_timer_get_session_handle (
                     handle arg, handle *h_session, handle *h_instance);
 
+int32_t stun_binding_session_enable_session_refresh(
+                handle h_inst, handle h_session, uint32_t duration);
+
+
 
 /******************************************************************************/
 
