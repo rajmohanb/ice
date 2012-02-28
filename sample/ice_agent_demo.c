@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
 *               Copyright (C) 2009-2012, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*                  Copyright (C) 2009-2012, Rajmohan Banavi                    *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -41,7 +42,8 @@
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
 #else
-#define STUN_SRV_IP "192.168.1.2"
+#define STUN_SRV_IP "10.1.71.4"
+//#define STUN_SRV_IP "192.168.1.2"
 #define TURN_SRV_IP "192.168.1.2"
 //#define TURN_SRV_IP "109.107.37.45"
 #endif

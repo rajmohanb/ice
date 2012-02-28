@@ -1,8 +1,9 @@
 #*******************************************************************************
 #                                                                              #
-#             Copyright (C) 2009-2012, MindBricks Technologies                 #
-#			         MindBricks Confidential Proprietary.                      #
-#                             All Rights Reserved.                             #
+#               Copyright (C) 2009-2012, MindBricks Technologies               #
+#                  Copyright (C) 2009-2012, Rajmohan Banavi                    #
+#                     MindBricks Confidential Proprietary.                     #
+#                            All Rights Reserved.                              #
 #                                                                              #
 #*******************************************************************************
 #                                                                              #
@@ -53,7 +54,7 @@ STUN_BIND_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_stun_binding.a \
 	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
 
 
-CFLAGS += -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX
+CFLAGS += -g -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX
 
 OBJ:=$(SRC:c=o)
 

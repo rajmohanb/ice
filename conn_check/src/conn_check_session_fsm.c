@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
 *               Copyright (C) 2009-2012, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*                  Copyright (C) 2009-2012, Rajmohan Banavi                    *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -224,6 +225,10 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         return STUN_VALIDATON_FAIL;
     }
 
+
+    /** validate the source and destination for this packet */
+
+
     /**
      * RFC 5245 sec 7.1.2 - Processing the response
      */
@@ -246,8 +251,6 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
                 status);
         return status;
     }
-
-    /** validate the source and destination for this packet = TODO */
 
     /** check if success or failure response */
     status = stun_msg_get_class(h_rcvdmsg, &msg_class);
