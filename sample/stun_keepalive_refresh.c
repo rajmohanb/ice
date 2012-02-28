@@ -43,8 +43,9 @@
 #ifdef TEST_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #else
+#define STUN_SRV_IP "10.1.71.2"
 //#define STUN_SRV_IP "192.168.1.2"
-#define STUN_SRV_IP "208.97.25.20" // NO xor mapped addr
+//define STUN_SRV_IP "208.97.25.20" // NO xor mapped addr
 //#define STUN_SRV_IP "64.34.202.155" // YES xor mapped addr
 #endif
 #define STUN_SRV_PORT 3478
@@ -261,54 +262,62 @@ int main (int argc, char *argv[])
 
     my_buf = (unsigned char *) platform_malloc (TRANSPORT_MTU_SIZE);
 
-    while ((o_error == false) && (count < 100))
+
+    app_log (LOG_SEV_ERROR, "**************************************************************\n");
+    status = stun_binding_create_session(h_inst, 
+                                STUN_BIND_CLIENT_SESSION, &h_session);
+    if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, "**************************************************************\n");
+        app_log (LOG_SEV_ERROR, 
+                "stun_binding_create_session() returned error %d\n", 
+                stun_retval[status]);
+        return -1;
+    }
 
-        status = stun_binding_create_session(h_inst, 
-                                    STUN_BIND_CLIENT_SESSION, &h_session);
-        if (status != STUN_OK)
-        {
-            app_log (LOG_SEV_ERROR, 
-                    "stun_binding_create_session() returned error %d\n", 
-                    stun_retval[status]);
-            return -1;
-        }
+    status = stun_binding_session_set_transport_param(
+                                    h_inst, h_session, (handle)sockfd_stun);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "stun_binding_session_set_transport_param() returned error %d\n", 
+                stun_retval[status]);
+        return -1;
+    }
 
-        status = stun_binding_session_set_transport_param(
-                                        h_inst, h_session, (handle)sockfd_stun);
-        if (status != STUN_OK)
-        {
-            app_log (LOG_SEV_ERROR, 
-                    "stun_binding_session_set_transport_param() returned error %d\n", 
-                    stun_retval[status]);
-            return -1;
-        }
+    status = stun_binding_session_set_stun_server(
+            h_inst, h_session, addr_type, (u_char *)STUN_SRV_IP, STUN_SRV_PORT);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "stun_binding_session_set_stun_server() returned error %d\n", 
+                stun_retval[status]);
+        return -1;
+    }
 
-        status = stun_binding_session_set_stun_server(
-                h_inst, h_session, addr_type, (u_char *)STUN_SRV_IP, STUN_SRV_PORT);
-        if (status != STUN_OK)
-        {
-            app_log (LOG_SEV_ERROR, 
-                    "stun_binding_session_set_stun_server() returned error %d\n", 
-                    stun_retval[status]);
-            return -1;
-        }
+    status = stun_binding_session_enable_session_refresh(h_inst, h_session, 10);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "stun_binding_session_enable_session_refresh() returned error %s\n", 
+                stun_retval[status]);
+        return -1;
+    }
 
-        status = stun_binding_session_send_message(h_inst, h_session, STUN_REQUEST);
-        if (status != STUN_OK)
-        {
-            app_log (LOG_SEV_ERROR, 
-                    "stun_binding_session_send_message() returned error %s\n", 
-                    stun_retval[status]);
-            return -1;
-        }
+    status = stun_binding_session_send_message(h_inst, h_session, STUN_REQUEST);
+    if (status != STUN_OK)
+    {
+        app_log (LOG_SEV_ERROR, 
+                "stun_binding_session_send_message() returned error %s\n", 
+                stun_retval[status]);
+        return -1;
+    }
 
-        app_log (LOG_SEV_ERROR, "COUNT: %d\n", count);
-        count++;
+    app_log (LOG_SEV_ERROR, "COUNT: %d\n", count);
 
+
+    while ((o_error == false) && (count < 5))
+    {
         /** if you have come so far, then the stun binding request has been sent */
-
         while (o_done == false)
         {
             bytes = platform_socket_recv(sockfd_stun, my_buf, TRANSPORT_MTU_SIZE, 0);
@@ -341,8 +350,9 @@ int main (int argc, char *argv[])
             stun_inet_addr_t mapped_addr;
 
             status = stun_binding_session_inject_received_msg(h_inst, h_target, h_rcvdmsg);
-            if (status == STUN_TERMINATED)
+            if (status == STUN_BINDING_DONE)
             {
+                count++;
                 status = stun_binding_session_get_xor_mapped_address(
                                             h_inst, h_target, &mapped_addr);
                 if (status != STUN_OK)
@@ -359,6 +369,7 @@ int main (int argc, char *argv[])
                             mapped_addr.ip_addr, mapped_addr.port);
                 }
 
+#if 0
                 status = stun_binding_session_get_mapped_address(
                                             h_inst, h_target, &mapped_addr);
                 if (status != STUN_OK)
@@ -375,9 +386,8 @@ int main (int argc, char *argv[])
                             mapped_addr.ip_addr, mapped_addr.port);
                     sleep(1);
                 }
-
-
-                stun_binding_destroy_session(h_inst, h_session);
+#endif
+                app_log (LOG_SEV_ERROR, "**************************************************************\n");
             }
             else if (status != STUN_OK)
             {
@@ -390,6 +400,8 @@ int main (int argc, char *argv[])
             }
         }
     }
+
+    stun_binding_destroy_session(h_inst, h_session);
 
 error_exit:
     stun_binding_destroy_instance(h_inst);

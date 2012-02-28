@@ -1,7 +1,7 @@
 #*******************************************************************************
 #                                                                              #
 #               Copyright (C) 2009-2012, MindBricks Technologies               #
-#                  Copyright (C) 2009-2012, Rajmohan Banavi                    #
+#                  Rajmohan Banavi (rajmohan@mindbricks.com)                   #
 #                     MindBricks Confidential Proprietary.                     #
 #                            All Rights Reserved.                              #
 #                                                                              #
