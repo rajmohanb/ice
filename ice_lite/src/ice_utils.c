@@ -764,10 +764,10 @@ int32_t ice_utils_copy_media_host_candidates(
         host_comp = &src->host_cands[i];
 
         /** transport params */
-        cand->transport.type = host_comp->type;
+        cand->transport.type = host_comp->addr.host_type;
         memcpy(cand->transport.ip_addr, 
-                            host_comp->ip_addr, ICE_IP_ADDR_MAX_LEN);
-        cand->transport.port = host_comp->port;
+                            host_comp->addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
+        cand->transport.port = host_comp->addr.port;
         cand->transport.protocol = host_comp->protocol;
 
         /** component id */

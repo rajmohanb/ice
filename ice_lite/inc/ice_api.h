@@ -128,9 +128,7 @@ typedef struct {
 typedef struct
 {
     /** host candidate transport details */
-    stun_inet_addr_type_t type;
-    u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
-    uint32_t port;
+    stun_inet_addr_t addr;
     ice_transport_type_t protocol;
 
     /** component id */

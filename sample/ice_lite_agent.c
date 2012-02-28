@@ -762,12 +762,12 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     sockfd_ice[num_fds++] = temp_sockfd;
 
 #ifdef ICE_IPV6
-    media->host_cands[0].type = STUN_INET_ADDR_IPV6;
+    media->host_cands[0].addr.host_type = STUN_INET_ADDR_IPV6;
 #else
-    media->host_cands[0].type = STUN_INET_ADDR_IPV4;
+    media->host_cands[0].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
-    strcpy((char *)media->host_cands[0].ip_addr, LOCAL_IP);
-    media->host_cands[0].port = rtp_port;
+    strcpy((char *)media->host_cands[0].addr.ip_addr, LOCAL_IP);
+    media->host_cands[0].addr.port = rtp_port;
     media->host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media->host_cands[0].comp_id = RTP_COMPONENT_ID;
     media->host_cands[0].transport_param = (handle)temp_sockfd;
@@ -799,12 +799,12 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     sockfd_ice[num_fds++] = temp_sockfd;
 
 #ifdef ICE_IPV6
-    media->host_cands[1].type = STUN_INET_ADDR_IPV6;
+    media->host_cands[1].addr.host_type = STUN_INET_ADDR_IPV6;
 #else
-    media->host_cands[1].type = STUN_INET_ADDR_IPV4;
+    media->host_cands[1].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
-    strcpy((char *)media->host_cands[1].ip_addr, LOCAL_IP);
-    media->host_cands[1].port = rtcp_port;
+    strcpy((char *)media->host_cands[1].addr.ip_addr, LOCAL_IP);
+    media->host_cands[1].addr.port = rtcp_port;
     media->host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media->host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media->host_cands[1].transport_param = (handle)temp_sockfd;
