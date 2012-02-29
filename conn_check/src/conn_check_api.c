@@ -523,11 +523,8 @@ int32_t conn_check_session_inject_received_msg(
             break;
 
         case STUN_SUCCESS_RESP:
-            event = CONN_CHECK_OK_RESP;
-            break;
-
         case STUN_ERROR_RESP:
-            event = CONN_CHECK_ERROR_RESP;
+            event = CONN_CHECK_RESP;
             break;
 
         case STUN_INDICATION:

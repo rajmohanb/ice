@@ -47,8 +47,7 @@ typedef struct {
 typedef enum 
 {
     CONN_CHECK_REQ = 0,
-    CONN_CHECK_OK_RESP,
-    CONN_CHECK_ERROR_RESP,
+    CONN_CHECK_RESP,
     CONN_CHECK_TIMER,
     CONN_CHECK_EVENT_MAX,
 } conn_check_event_t;
