@@ -23,6 +23,9 @@ extern "C" {
 /******************************************************************************/
 
 
+#define CONN_CHECK_SIZEOF_IPV6_ADDR    16      /** sizeof(struct in_addr) */
+#define CONN_CHECK_SIZEOF_IPV4_ADDR    4       /** sizeof(struct in6_addr) */
+
 
 int32_t cc_utils_create_request_msg(
                             conn_check_session_t *session, handle *h_req);
@@ -59,6 +62,8 @@ uint32_t cc_utils_extract_conn_check_info(handle h_msg,
 int32_t conn_check_detect_repair_role_conflicts(
         conn_check_session_t *session, handle h_msg, int32_t *resp_code);
 
+bool_t conn_check_utils_host_compare (u_char *host1, 
+                    u_char *host2, stun_inet_addr_type_t addr_type);
 
 
 /******************************************************************************/

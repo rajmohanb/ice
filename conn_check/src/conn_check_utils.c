@@ -948,6 +948,59 @@ int32_t conn_check_detect_repair_role_conflicts(
 }
 
 
+
+bool_t conn_check_utils_host_compare (u_char *host1, 
+                    u_char *host2, stun_inet_addr_type_t addr_type)
+{
+    int32_t retval, size, family;
+    u_char addr1[CONN_CHECK_SIZEOF_IPV6_ADDR] = {0};
+	u_char addr2[CONN_CHECK_SIZEOF_IPV6_ADDR] = {0};
+
+    if (addr_type == STUN_INET_ADDR_IPV4)
+    {
+        family = AF_INET;
+        size = CONN_CHECK_SIZEOF_IPV4_ADDR;
+    }
+    else if (addr_type == STUN_INET_ADDR_IPV6)
+    {
+        family = AF_INET6;
+        size = CONN_CHECK_SIZEOF_IPV6_ADDR;
+    }
+    else
+        return false;
+
+    retval = inet_pton(family, (const char *)host1, &addr1);
+    if (retval != 1)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+            "[CONN CHECK] inet_pton failed, probably invalid address [%s]", 
+            host1);
+        return false;
+    }
+
+    retval = inet_pton(family, (const char *)host2, &addr2);
+    if (retval != 1)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+            "[CONN CHECK] inet_pton failed, probably invalid address [%s]",
+            host2);
+        return false;
+    }
+    
+    retval = stun_memcmp(addr1, addr2, size);
+    if (retval == 0)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "[CONN CHECK] Given IP addresses matched");
+        return true;
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG, "[CONN CHECK] Given IP addresses differ");
+
+    return false;
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

@@ -4133,8 +4133,8 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
     ice_cand_pair_t *cp = NULL;
 
     /** received connectivity check binding response */
-    status = conn_check_session_inject_received_msg(
-                                h_cc_inst, h_cc_dialog, stun_pkt->h_msg);
+    status = conn_check_session_inject_received_msg(h_cc_inst, 
+                            h_cc_dialog, (conn_check_rx_pkt_t *) stun_pkt);
     if (status == STUN_TERMINATED)
     {
         conn_check_result_t check_result;

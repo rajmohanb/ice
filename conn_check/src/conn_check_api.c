@@ -488,7 +488,7 @@ int32_t conn_check_session_initiate_check(handle h_inst, handle h_session)
 
 
 int32_t conn_check_session_inject_received_msg(
-                        handle h_inst, handle h_session, handle h_msg)
+            handle h_inst, handle h_session, conn_check_rx_pkt_t *rx_msg)
 {
     conn_check_instance_t *instance;
     conn_check_session_t *session;
@@ -499,17 +499,17 @@ int32_t conn_check_session_inject_received_msg(
     stun_msg_type_t class;
     conn_check_session_state_t cur_state;
 
-    if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
+    if ((h_inst == NULL) || (h_session == NULL) || (rx_msg == NULL))
         return STUN_INVALID_PARAMS;
 
     instance = (conn_check_instance_t *) h_inst;
     session = (conn_check_session_t *) h_session;
 
-    status = stun_msg_get_class(h_msg, &class);
+    status = stun_msg_get_class(rx_msg->h_msg, &class);
     if (status != STUN_OK)
         return status;
 
-    status = stun_msg_get_method(h_msg, &method);
+    status = stun_msg_get_method(rx_msg->h_msg, &method);
     if (status != STUN_OK)
         return status;
 
@@ -540,10 +540,10 @@ int32_t conn_check_session_inject_received_msg(
 
     /** TODO: make sure this session exists by searching in the instance */
     
-    session->h_resp = h_msg;
+    session->h_resp = rx_msg->h_msg;
 
     cur_state = session->state;
-    return conn_check_session_fsm_inject_msg(session, event, h_msg);
+    return conn_check_session_fsm_inject_msg(session, event, rx_msg);
 }
 
 

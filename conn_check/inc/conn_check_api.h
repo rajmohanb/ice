@@ -101,6 +101,21 @@ typedef struct {
 } conn_check_result_t;
 
 
+
+typedef struct
+{
+    /** parsed stun packet handle */
+    handle h_msg;
+
+    /** transport parameter */
+    handle transport_param;
+
+    /** source address of stun packet */
+    stun_inet_addr_t src;
+
+} conn_check_rx_pkt_t;
+
+
 /******************************************************************************/
 
 int32_t conn_check_create_instance(handle *h_inst);
@@ -138,7 +153,7 @@ int32_t conn_check_session_set_peer_credentials(handle h_inst,
 int32_t conn_check_destroy_session(handle h_inst, handle h_session);
 
 int32_t conn_check_session_inject_received_msg(
-                        handle h_inst, handle h_session, handle h_msg);
+            handle h_inst, handle h_session, conn_check_rx_pkt_t *rx_msg);
 
 int32_t conn_check_instance_inject_timer_event(
                     handle h_timerid, handle arg, handle *h_session);

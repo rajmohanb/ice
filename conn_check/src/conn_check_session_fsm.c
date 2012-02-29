@@ -44,7 +44,7 @@ static conn_check_session_fsm_handler
     {
         cc_ignore_event,
         cc_handle_resp,
-        cc_ignore_event,
+        cc_handle_resp,
         cc_timeout,
     },
     /** CC_OG_TERMINATED */
@@ -107,11 +107,13 @@ int32_t cc_initiate (conn_check_session_t *session, handle h_msg)
 
 
 
-int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg)
+int32_t cc_process_ic_check (conn_check_session_t *session, handle h_rcvdmsg)
 {
     int32_t status, respcode;
-    handle h_resp, h_txn, h_txn_inst;
+    handle h_resp, h_txn, h_txn_inst, h_msg;
+    conn_check_rx_pkt_t *rx_msg = (conn_check_rx_pkt_t *) h_rcvdmsg;
 
+    h_msg = rx_msg->h_msg;
     h_txn_inst = session->instance->h_txn_inst;
 
     status = stun_create_txn(h_txn_inst,
@@ -212,10 +214,11 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
     handle h_txn, h_txn_inst = session->instance->h_txn_inst;
     bool_t txn_terminated = false;
     stun_msg_type_t msg_class;
+    conn_check_rx_pkt_t *rx_msg = (conn_check_rx_pkt_t *) h_rcvdmsg;
 
     /** normal processing and validation of a packet as defined in STUN RFC */
     /** sec 10.1.3 of RFC 5389 */
-    status = stun_msg_validate_message_integrity(h_rcvdmsg, 
+    status = stun_msg_validate_message_integrity(rx_msg->h_msg, 
                                 session->peer_pwd, session->peer_pwd_len);
     if (status == STUN_VALIDATON_FAIL)
     {
@@ -226,16 +229,13 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
     }
 
 
-    /** validate the source and destination for this packet */
-
-
     /**
      * RFC 5245 sec 7.1.2 - Processing the response
      */
-    status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
+    status = stun_txn_instance_find_transaction(h_txn_inst, rx_msg->h_msg, &h_txn);
     if (status != STUN_OK) return status;
 
-    status = stun_txn_inject_received_msg(h_txn_inst, h_txn, h_rcvdmsg);
+    status = stun_txn_inject_received_msg(h_txn_inst, h_txn, rx_msg->h_msg);
     if (status == STUN_OK)
     {
         return status;
@@ -252,8 +252,28 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         return status;
     }
 
+    /** 
+     * check that the source IP address and port of the response equals the
+     * destination IP address and port that the Binding request was sent to.
+     * and that the destination IP address and port of the response matches
+     * the source IP address and port that the Binding request was sent from.
+     */
+    if ((rx_msg->src.host_type != session->stun_server_type) || 
+        (conn_check_utils_host_compare(rx_msg->src.ip_addr, 
+                                       session->stun_server, 
+                                       session->stun_server_type) == false) ||
+        (rx_msg->src.port != session->stun_port) ||
+        (rx_msg->transport_param != session->transport_param))
+    {
+        /** not symmetric */
+        session->cc_succeeded = false;
+        status = STUN_TERMINATED;
+
+        goto ERROR_EXIT_PT;
+    }
+
     /** check if success or failure response */
-    status = stun_msg_get_class(h_rcvdmsg, &msg_class);
+    status = stun_msg_get_class(rx_msg->h_msg, &msg_class);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
@@ -269,7 +289,7 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         session->cc_succeeded = false;
 
         /** get STUN error code */
-        status = cc_utils_extract_error_code(h_rcvdmsg, &session->error_code);
+        status = cc_utils_extract_error_code(rx_msg->h_msg, &session->error_code);
         if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
     else if(msg_class == STUN_SUCCESS_RESP)
@@ -280,7 +300,7 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         session->cc_succeeded = true;
 
         /** extract the mapped address */
-        status = cc_utils_extract_conn_check_info(h_rcvdmsg, session);
+        status = cc_utils_extract_conn_check_info(rx_msg->h_msg, session);
         if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
     else

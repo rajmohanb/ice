@@ -620,8 +620,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             return STUN_INT_ERROR;
         }
 
-        status = conn_check_session_inject_received_msg(
-                        h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
+        status = conn_check_session_inject_received_msg(h_cc_inst, 
+                media->h_cc_svr_session, (conn_check_rx_pkt_t *)stun_pkt);
         if (status == STUN_TERMINATED)
         {
             ice_candidate_t *local;
