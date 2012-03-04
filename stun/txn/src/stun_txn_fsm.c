@@ -172,11 +172,14 @@ int32_t process_resp (stun_txn_context_t *txn_ctxt, handle h_msg)
 
 int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
 {
-    int32_t status;
+    int32_t status = STUN_OK;
 
-    status = txn_ctxt->instance->nwk_send_cb(txn_ctxt->h_req, 
+    if (txn_ctxt->cancelled == false)
+    {
+        status = txn_ctxt->instance->nwk_send_cb(txn_ctxt->h_req, 
                                         txn_ctxt->app_transport_param);
-    if (status != STUN_OK) return status;
+        if (status != STUN_OK) return status;
+    }
 
     txn_ctxt->rc_count += 1;
 
@@ -194,8 +197,16 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
             txn_ctxt->h_rm_timer = txn_ctxt->instance->start_timer_cb(
                                                 rm_timer, txn_ctxt->rm_params);
             ICE_LOG (LOG_SEV_DEBUG, "RM timer handle %p\n", txn_ctxt->h_rto_timer);
-
-            txn_ctxt->state = STUN_OG_TXN_PROCEEDING;
+            if (txn_ctxt->h_rm_timer)
+            {
+                txn_ctxt->state = STUN_OG_TXN_PROCEEDING;
+            }
+            else
+            {
+                ICE_LOG (LOG_SEV_CRITICAL, "Starting RM timer failed. "\
+                        "Platform timer api returned NULL\n");
+                status = STUN_INT_ERROR;
+            }
         }
         else
         {
@@ -203,8 +214,16 @@ int32_t resend_req (stun_txn_context_t *txn_ctxt, handle h_msg)
             txn_ctxt->h_rto_timer = txn_ctxt->instance->start_timer_cb(
                                                 new_rto, txn_ctxt->rto_params);
             ICE_LOG (LOG_SEV_DEBUG, "RTO timer handle %p", txn_ctxt->h_rto_timer);
-
-            txn_ctxt->last_rto = new_rto; 
+            if (txn_ctxt->h_rto_timer)
+            {
+                txn_ctxt->last_rto = new_rto; 
+            }
+            else
+            {
+                ICE_LOG (LOG_SEV_CRITICAL, "Starting RTO timer failed. "\
+                        "Platform timer api returned NULL\n");
+                status = STUN_INT_ERROR;
+            }
         }
     }
 

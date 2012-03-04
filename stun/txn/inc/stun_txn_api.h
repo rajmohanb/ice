@@ -83,6 +83,9 @@ int32_t stun_txn_timer_set_handle(handle h_timer, handle timer_handle);
 int32_t stun_txn_timer_get_handle(handle h_timer, handle *timer_handle);
 
 
+int32_t stun_cancel_txn(handle h_inst, handle h_txn);
+
+
 int32_t stun_destroy_txn(handle h_inst, 
                         handle h_txn, bool_t keep_req, bool_t keep_resp);
 

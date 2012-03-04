@@ -150,7 +150,11 @@ int32_t conn_check_session_set_local_credentials(handle h_inst,
 int32_t conn_check_session_set_peer_credentials(handle h_inst, 
                 handle h_session, conn_check_credentials_t *cred);
 
+int32_t conn_check_cancel_session(handle h_inst, handle h_session);
+
+
 int32_t conn_check_destroy_session(handle h_inst, handle h_session);
+
 
 int32_t conn_check_session_inject_received_msg(
             handle h_inst, handle h_session, conn_check_rx_pkt_t *rx_msg);

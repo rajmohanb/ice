@@ -104,6 +104,8 @@ typedef struct {
     handle app_transport_param;
     handle app_param;
 
+    bool_t cancelled;
+
 } stun_txn_context_t;
 
 

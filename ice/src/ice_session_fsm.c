@@ -887,6 +887,12 @@ int32_t ice_remove_media_stream (ice_session_t *session,
         status = conn_check_destroy_session(
                     session->instance->h_cc_inst, cp->h_cc_session);
 
+        if ((status == STUN_OK) && (cp->h_cc_cancel))
+        {
+            status = conn_check_destroy_session(
+                    session->instance->h_cc_inst, cp->h_cc_cancel);
+        }
+
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 

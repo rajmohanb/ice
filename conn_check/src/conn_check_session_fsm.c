@@ -38,15 +38,18 @@ static conn_check_session_fsm_handler
         cc_initiate,
         cc_ignore_event,
         cc_ignore_event,
+        cc_ignore_event,
     },
     /** CC_OG_CHECKING */
     {
         cc_ignore_event,
         cc_handle_resp,
         cc_timeout,
+        cc_cancel,
     },
     /** CC_OG_TERMINATED */
     {
+        cc_ignore_event,
         cc_ignore_event,
         cc_ignore_event,
         cc_ignore_event,
@@ -56,9 +59,11 @@ static conn_check_session_fsm_handler
         cc_process_ic_check,
         cc_ignore_event,
         cc_ignore_event,
+        cc_ignore_event,
     },
     /** CC_IC_TERMINATED */
     {
+        cc_ignore_event,
         cc_ignore_event,
         cc_ignore_event,
         cc_ignore_event,
@@ -352,6 +357,12 @@ int32_t cc_timeout (conn_check_session_t *session, handle h_txn)
     }
     
     return STUN_TERMINATED;
+}
+
+
+int32_t cc_cancel (conn_check_session_t *session, handle h_txn)
+{
+    return stun_cancel_txn(session->instance->h_txn_inst, session->h_txn);
 }
 
 

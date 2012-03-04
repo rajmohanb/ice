@@ -108,6 +108,7 @@ int32_t stun_txn_destroy_instance(handle h_inst)
     return STUN_OK;
 }
 
+
 int32_t stun_create_txn(handle h_inst, stun_txn_type_t type, 
                             stun_transport_type_t tport, handle *h_txn)
 {
@@ -168,6 +169,7 @@ int32_t stun_create_txn(handle h_inst, stun_txn_type_t type,
 
     txn->rc_count = 0;
     txn->last_rto = 0;
+    txn->cancelled = false;
 
     /** do not add it to the transaction table yet */
      
@@ -233,6 +235,23 @@ int32_t stun_txn_get_app_param(handle h_inst, handle h_txn, handle *h_param)
     instance = (stun_txn_instance_t *) h_inst;
 
     *h_param = txn_ctxt->app_param;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_cancel_txn(handle h_inst, handle h_txn)
+{
+    stun_txn_context_t *txn_ctxt;
+    stun_txn_instance_t *instance;
+
+    if ((h_inst == NULL) || (h_txn == NULL))
+        return STUN_INVALID_PARAMS;
+
+    txn_ctxt = (stun_txn_context_t *) h_txn;
+    instance = (stun_txn_instance_t *) h_inst;
+
+    txn_ctxt->cancelled = true;
 
     return STUN_OK;
 }

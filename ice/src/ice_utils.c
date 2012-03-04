@@ -3249,6 +3249,15 @@ int32_t ice_utils_process_incoming_check(
              * enqueueing this pair in the triggered check queue. 
              * Change the state of the candidate pair to Waiting 
              */
+            cp->h_cc_cancel = cp->h_cc_session;
+            cp->h_cc_session = NULL;
+            conn_check_cancel_session(
+                    media->ice_session->instance->h_cc_inst, cp->h_cc_cancel);
+
+            status = ice_cand_pair_fsm_inject_msg(
+                                    cp, ICE_CP_EVENT_UNFREEZE, NULL);
+
+            status = ice_utils_add_to_triggered_check_queue(media, cp);
         }
         else if (cp->state == ICE_CP_FAILED)
         {

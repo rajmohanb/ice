@@ -48,7 +48,7 @@ static ice_cand_pair_fsm_handler
     },
     /** ICE_CP_INPROGRESS */
     {
-        ice_cp_ignore_msg,
+        ice_cp_unfreeze,
         ice_cp_ignore_msg,
         ice_cp_check_succeeded,
         ice_cp_check_failed,

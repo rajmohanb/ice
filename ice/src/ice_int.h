@@ -154,6 +154,7 @@ typedef struct
     bool_t check_nom_status;
 
     handle h_cc_session;
+    handle h_cc_cancel;
 
     handle h_transport_conn;
 

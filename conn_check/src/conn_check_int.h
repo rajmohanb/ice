@@ -49,6 +49,7 @@ typedef enum
     CONN_CHECK_REQ = 0,
     CONN_CHECK_RESP,
     CONN_CHECK_TIMER,
+    CONN_CHECK_CANCEL,
     CONN_CHECK_EVENT_MAX,
 } conn_check_event_t;
 

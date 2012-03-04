@@ -424,6 +424,26 @@ int32_t conn_check_session_set_session_params(handle h_inst,
 }
 
 
+int32_t conn_check_cancel_session(handle h_inst, handle h_session)
+{
+    conn_check_instance_t *instance;
+    conn_check_session_t *session;
+    uint32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+    session = (conn_check_session_t *) h_session;
+
+    for (i = 0; i < CONN_CHECK_MAX_CONCURRENT_SESSIONS; i++)
+        if (instance->ah_session[i] == h_session) { break; }
+
+    if (i == CONN_CHECK_MAX_CONCURRENT_SESSIONS) { return STUN_INVALID_PARAMS; }
+
+    return conn_check_session_fsm_inject_msg(session, CONN_CHECK_CANCEL, NULL);
+}
+
 
 int32_t conn_check_destroy_session(handle h_inst, handle h_session)
 {
