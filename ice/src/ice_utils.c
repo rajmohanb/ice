@@ -2975,11 +2975,13 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
             }
             else if (cp->state == ICE_CP_INPROGRESS)
             {
-                /** TODO =
+                /**
                  * cancel the in-progress transaction. In addition, 
                  * create a new connectivity check for this pair by 
                  * enqueueing this pair in the triggered check queue. 
                  * Change the state of the candidate pair to Waiting 
+                 * At this instance, this agent would not have started
+                 * any connectivity checks.
                  */
             }
             else if (cp->state == ICE_CP_FAILED)
