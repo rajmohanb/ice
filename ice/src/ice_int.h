@@ -288,9 +288,6 @@ struct struct_ice_media_stream
     uint32_t num_cand_pairs;
     ice_cand_pair_t ah_cand_pairs[ICE_MAX_CANDIDATE_PAIRS];
 
-    /** valid pairs */
-    ice_cand_pair_t ah_valid_pairs[ICE_MAX_CANDIDATE_PAIRS];
-
     /** previous selected pairs, used during media restart */
     ice_cand_pair_t ah_prev_sel_pair[ICE_MAX_COMPONENTS];
 

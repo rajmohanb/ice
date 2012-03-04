@@ -391,36 +391,6 @@ int32_t ice_utils_set_peer_media_params(
 
             x++;
         }
-
-        /** sec 9.2.3 Lite implementation on receiving remote offer */
-        if (peer_comp->num_remote_cands > 0)
-        {
-            int32_t count, i = 0;
-            ice_cand_pair_t *valid_pair;
-
-            for (count = 0; count < peer_comp->num_remote_cands; count++)
-            {
-                valid_pair = &media->ah_valid_pairs[i];
-
-                /** set remote candidate */
-                valid_pair->remote->transport.type = 
-                                        peer_comp->default_dest.host_type;
-                stun_memcpy(valid_pair->remote->transport.ip_addr, 
-                                        peer_comp->default_dest.ip_addr, 
-                                        ICE_IP_ADDR_MAX_LEN);
-                valid_pair->remote->transport.port = 
-                                        peer_comp->default_dest.port;
-
-                /** set local candidate */
-                valid_pair->local->transport.type = 
-                                    peer_comp->remote_cands[count].host_type;
-                stun_memcpy(valid_pair->local->transport.ip_addr, 
-                                    peer_comp->remote_cands[count].ip_addr, 
-                                    ICE_IP_ADDR_MAX_LEN);
-                valid_pair->local->transport.port = 
-                                    peer_comp->remote_cands[count].port;
-            }
-        }
     }
 
     /** copy the credentials */
@@ -1691,20 +1661,15 @@ bool_t ice_media_utils_have_nominated_list(ice_media_stream_t *media)
 
 int32_t ice_media_utils_copy_selected_pair(ice_media_stream_t *media)
 {
-    uint32_t i, j = 0;
+    uint32_t i;
     ice_cand_pair_t *valid_cp, *backup_cp;
 
-    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
     {
-        valid_cp = &media->ah_valid_pairs[i];
-        if (valid_cp->local == NULL) continue;
-
-        backup_cp = &media->ah_prev_sel_pair[j];
+        valid_cp = media->media_comps[i].np;
+        backup_cp = &media->ah_prev_sel_pair[i];
 
         stun_memcpy(backup_cp, valid_cp, sizeof(ice_cand_pair_t));
-
-        j++;
-        if(j >= ICE_MAX_COMPONENTS) break;
     }
 
     return STUN_OK;
@@ -1985,59 +1950,8 @@ int32_t ice_utils_determine_session_state(ice_session_t *session)
 }
 
 
-
 int32_t ice_utils_dual_lite_select_valid_pairs(ice_media_stream_t *media)
 {
-    int32_t comp_loop, i, comp_id;
-    int32_t rtp_vp_cnt, rtcp_vp_cnt, vp_index = 0;
-    ice_cand_pair_t *vp = &media->ah_valid_pairs[vp_index];
-
-    rtp_vp_cnt = rtcp_vp_cnt = 0;
-
-    /** determine the number of candidate pairs for each component */
-    comp_id = RTP_COMPONENT_ID;
-    for (comp_loop = 0; comp_loop < ICE_MAX_COMPONENTS; comp_loop++, comp_id++)
-    {
-        for(i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
-        {
-            ice_cand_pair_t *cp = &media->ah_cand_pairs[i];
-            if (!cp->local) continue;
-
-            if(cp->local->comp_id == comp_id)
-            {
-                if (comp_id == RTP_COMPONENT_ID)
-                    rtp_vp_cnt++;
-                else
-                    rtcp_vp_cnt++;
-
-                /** copy each of them to the valid pair list */
-                stun_memcpy(vp, cp, sizeof(ice_cand_pair_t));
-                vp_index++;
-                vp = &media->ah_valid_pairs[vp_index];
-            }
-        }
-        
-        if ((rtp_vp_cnt == 1) && (rtcp_vp_cnt == 1))
-        {
-            media->state = ICE_MEDIA_CC_COMPLETED;
-        }
-        else
-        {
-            /**
-             * if there is more than one pair per component, then select a pair
-             * based on local policy. Further, the media state should not move
-             * to COMPLETED. This is because both the ice lite parties might 
-             * have chosen different valid pair. To reconcile this, the 
-             * controlling agent must send an updated offer with the 
-             * remote-candidates attributes set to the chosen pair.
-             *
-             * The local policy here is left to the application. The stack will
-             * provide all the valid pairs per component to the application.
-             * But the state media stream will remains in RUNNING state.
-             */
-        }
-    }
-    
     return STUN_OK;
 }
 

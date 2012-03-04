@@ -673,6 +673,7 @@ int32_t ice_restart (ice_session_t *session, handle arg, handle *h_param)
             ICE_LOG(LOG_SEV_ERROR, 
                 "[ICE SESSION] restarting of media stream %d failed.", i);
         }
+        break;
     }
 
     return status;

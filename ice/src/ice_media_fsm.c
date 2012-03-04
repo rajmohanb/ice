@@ -857,14 +857,10 @@ int32_t ice_media_stream_restart(ice_media_stream_t *media, handle arg)
     int32_t status;
 
     /** 
-     * RFC 5245 sec 9.3.2 Procedures for Lite Implementation
-     * If ICE is restarting for a media stream, the agent MUST start a new
-     * Valid list for that media stream.  It MUST remember the pairs in the
-     * previous Valid list for each component of the media stream, called
-     * the previous selected pairs, and continue to send media there as
-     * described in Section 11.1.  The state of ICE processing for each
-     * media stream MUST change to Running, and the state of ICE processing
-     * MUST change to Running.
+     * RFC 5245 sec 9.3.1.1 ICE Restarts
+     * The agent must remember the highest priority nominated pairs in the
+     * valid list for each component of the media stream, called the
+     * previous selected pairs, prior to the restart.
      */
     status = ice_media_utils_copy_selected_pair(media);
 
@@ -872,11 +868,11 @@ int32_t ice_media_stream_restart(ice_media_stream_t *media, handle arg)
     {
         media->state = ICE_MEDIA_CC_RUNNING;
 
-        /** flush the valid list and the computed check list */
+        /** flush the valid and check lists, and then recompute check list */
         stun_memset(media->ah_cand_pairs, 0,
                 ICE_MAX_CANDIDATE_PAIRS * sizeof(ice_cand_pair_t));
-        stun_memset(media->ah_valid_pairs, 0,
-                ICE_MAX_CANDIDATE_PAIRS * sizeof(ice_cand_pair_t));
+        stun_memset(media->media_comps, 0, 
+                ICE_MAX_COMPONENTS * sizeof(ice_component_t));
     }
 
     return status;
