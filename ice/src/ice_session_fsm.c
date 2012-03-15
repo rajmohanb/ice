@@ -494,13 +494,6 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
         return STUN_INT_ERROR;
     }
 
-    if (event  == ICE_MEDIA_CC_MSG)
-    {
-        /**
-         * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
-         */
-    }
-
     /** 
      * for an ice agent, session becomes completed as soon 
      * as connectivity checks are done and nominated pairs are

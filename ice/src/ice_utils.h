@@ -282,6 +282,11 @@ bool_t ice_media_utils_did_all_checks_fail(ice_media_stream_t *media);
 int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media, 
             ice_rx_stun_pkt_t *stun_pkt, handle h_cc_inst, handle h_cc_dialog);
 
+int32_t ice_media_utils_group_and_unfreeze_pairs(ice_media_stream_t *media);
+
+int32_t ice_utils_unfreeze_checks_for_other_media_streams(
+                            ice_media_stream_t *cur_media, ice_cand_pair_t *cp);
+
 
 /******************************************************************************/
 

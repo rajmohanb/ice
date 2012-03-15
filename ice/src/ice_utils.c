@@ -2610,7 +2610,7 @@ int32_t ice_media_utils_update_cand_pair_states(
     int32_t i, status = STUN_INT_ERROR;
 
     /**
-     * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+     * RFC 5245 Sec 7.1.3.2.3 Updating Pair States
      * - The agent changes the states for all other Frozen pairs 
      *   for the same media stream and same foundation to Waiting.
      */
@@ -4089,7 +4089,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                         cp, ICE_EP_EVENT_CHECK_SUCCESS, &check_result);
 
                 /**
-                 * RFC 5245 7.1.2.2.1 Discovering Peer Reflexive Candidates
+                 * RFC 5245 7.1.3.2.1 Discovering Peer Reflexive Candidates
                  * search the mapped address in the received response 
                  * against the list local canidates.
                  */
@@ -4115,7 +4115,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                 }
 
                 /**
-                 * RFC 5245 7.1.2.2.2 Constructing a Valid pair
+                 * RFC 5245 7.1.3.2.2 Constructing a Valid pair
                  * Check if there exists a candidate pair in this media
                  * check list with mapped address as local address and 
                  * remote destination address of the connectivity check.
@@ -4173,23 +4173,8 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                     }
                 }
 
-                /** 
-                 * RFC 5245 10. KeepAlives
-                 * An agent MUST begin the keepalive processing once 
-                 * ICE has selected candidates for usage with media, 
-                 * or media begins to flow, whichever happens first.
-                 */
-                if (pair->nominated == true)
-                {
-                    ice_media_utils_update_nominated_pair_for_comp(media, pair);
-
-                    status = ice_utils_start_keep_alive_timer_for_comp(
-                                                media, pair->local->comp_id);
-                }
-
-
                 /**
-                 * RFC 5245 Sec 7.1.2.2.3 Updating Pair States
+                 * RFC 5245 Sec 7.1.3.2.3 Updating Pair States
                  * - The agent changes the states for all other Frozen
                  *   pairs for the same media stream and same foundation
                  *   to Waiting.
@@ -4202,6 +4187,20 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                             "the media failed - %d", status);
 
                     /** just fallthrough ... */
+                }
+
+                /** 
+                 * RFC 5245 10. KeepAlives
+                 * An agent MUST begin the keepalive processing once 
+                 * ICE has selected candidates for usage with media, 
+                 * or media begins to flow, whichever happens first.
+                 */
+                if (pair->nominated == true)
+                {
+                    ice_media_utils_update_nominated_pair_for_comp(media, pair);
+
+                    status = ice_utils_start_keep_alive_timer_for_comp(
+                                                media, pair->local->comp_id);
                 }
 
                 /**
@@ -4217,6 +4216,9 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                 if(ice_media_utils_have_nominated_list(media) == true)
                 {
                     media->state = ICE_MEDIA_CC_COMPLETED;
+
+                    /** unfreeze checks for other media streams */
+                    status = ice_utils_unfreeze_checks_for_other_media_streams(media, pair);
                 }
             }
             else
@@ -4224,7 +4226,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                 status = ice_cand_pair_fsm_inject_msg(
                         cp, ICE_CP_EVENT_CHECK_FAILED, &check_result);
 
-                /** RFC 5245 7.1.2.1 Failure Cases */
+                /** RFC 5245 7.1.3.1 Failure Cases */
                 if (check_result.error_code == STUN_ERROR_ROLE_CONFLICT)
                 {
                     status = ice_utils_handle_role_conflict_response(
@@ -4269,6 +4271,104 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
             "[ICE MEDIA] conn_check_session_inject_received_msg() "\
             "returned error %d\n", status);
         return status;
+    }
+
+    return status;
+}
+
+
+
+int32_t ice_media_utils_unfreeze_checks_with_same_foundation(
+        ice_media_stream_t *media, ice_cand_pair_t *cur_cp, bool_t *match)
+{
+    ice_cand_pair_t *cp;
+    int32_t i, status = STUN_OK;
+
+    /** RFC 5245 Sec 7.1.3.2.3 Updating Pair States */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+
+        if (cp == cur_cp) continue;
+        if (cp->state != ICE_CP_FROZEN) continue;
+
+        if ((stun_strncmp((char *)cp->local->foundation, 
+                          (char *)cur_cp->local->foundation, 
+                          ICE_FOUNDATION_MAX_LEN) == 0) &&
+            (stun_strncmp((char *)cp->remote->foundation, 
+                          (char *)cur_cp->remote->foundation,
+                          ICE_FOUNDATION_MAX_LEN) == 0))
+        {
+            /** foundation of these both candidate pairs match */
+            status = ice_cand_pair_fsm_inject_msg(
+                                    cp, ICE_CP_EVENT_UNFREEZE, NULL);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR,
+                        "[ICE] Unfreezing of the candidate pair failed");
+                continue;
+            }
+
+            *match = true;
+        }
+    }
+
+    return STUN_OK;
+}
+
+
+
+int32_t ice_media_utils_group_and_unfreeze_pairs(ice_media_stream_t *media)
+{
+    int32_t i, status;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+    }
+
+    return status;
+}
+
+
+
+int32_t ice_utils_unfreeze_checks_for_other_media_streams(
+                            ice_media_stream_t *cur_media, ice_cand_pair_t *cp)
+{
+    int32_t i, j, status = STUN_OK;
+    ice_media_stream_t *media;
+    ice_session_t *session = media->ice_session;
+    bool_t match = false;
+
+    for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+    {
+        media = &session->aps_media_streams[i];
+        if (!media) continue;
+        if (media == cur_media) continue;
+
+        /** either checklist is active or frozen */
+        if ((media->state == ICE_MEDIA_CC_RUNNING) || 
+                (media->state == ICE_MEDIA_NOMINATING) || 
+                (media->state == ICE_MEDIA_CC_COMPLETED) ||
+                (media->state == ICE_MEDIA_FROZEN))
+        {
+            for (j = 0; j < ICE_MAX_COMPONENTS; j++)
+            {
+                ice_media_utils_unfreeze_checks_with_same_foundation(
+                                media, cur_media->media_comps[j].np, &match);
+                if(match == true)
+                {
+                    media->state = ICE_MEDIA_CC_RUNNING;
+                    ICE_LOG(LOG_SEV_INFO, 
+                            "[ICE] Media unfreezed, moved into RUNNING");
+                }
+            }
+        }
+        
+        if (media->state == ICE_MEDIA_FROZEN)
+        {
+            ice_media_utils_group_and_unfreeze_pairs(media);
+        }
     }
 
     return status;
