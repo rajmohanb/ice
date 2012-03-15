@@ -4321,13 +4321,117 @@ int32_t ice_media_utils_unfreeze_checks_with_same_foundation(
 
 int32_t ice_media_utils_group_and_unfreeze_pairs(ice_media_stream_t *media)
 {
-    int32_t i, status;
+    int32_t status, i, j, group_count;
+    ice_foundation_pairs_t fnd_groups[ICE_MAX_CANDIDATE_PAIRS];
+    ice_foundation_pairs_t *ptr = NULL;
+    ice_cand_pair_t *cp;
+    bool_t fnd_match;
 
+    group_count = 0;
+    stun_memset(fnd_groups, 0, 
+            (sizeof(ice_foundation_pairs_t) * ICE_MAX_CANDIDATE_PAIRS));
+
+    /** group together all of the pairs with the same foundation */
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
+        fnd_match = false;
+
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+
+        for (j = 0; j < group_count; j++)
+        {
+            ptr = &fnd_groups[j];
+
+            if ((stun_strncmp((char *)cp->local->foundation, 
+                              (char *)ptr->local_fnd, 
+                              ICE_FOUNDATION_MAX_LEN) == 0) &&
+                (stun_strncmp((char *)cp->remote->foundation, 
+                              (char *)ptr->remote_fnd,
+                              ICE_FOUNDATION_MAX_LEN) == 0))
+            {
+                int k;
+
+                fnd_match = true;
+
+                for (k = 0; k < ICE_MAX_CANDIDATE_PAIRS; k++)
+                {
+                    if (ptr->pairs[k] == 0)
+                    {
+                        ptr->pairs[k] = cp;
+                        break;
+                    }
+
+                    if (k == ICE_MAX_CANDIDATE_PAIRS)
+                    {
+                        ICE_LOG(LOG_SEV_CRITICAL, "[ICE] Unable to add "\
+                                        "candidate pair to foundation list");
+                        return STUN_NO_RESOURCE;
+                    }
+                }
+            }
+        }
+
+        /** foundations did not match, add a new group */
+        if (fnd_match == false)
+        {
+            ptr = &fnd_groups[group_count];
+            group_count++;
+
+            stun_memcpy(ptr->local_fnd, 
+                    cp->local->foundation, ICE_FOUNDATION_MAX_LEN);
+            stun_memcpy(ptr->remote_fnd, 
+                    cp->remote->foundation, ICE_FOUNDATION_MAX_LEN);
+
+            ptr->pairs[0] = cp;
+        }
     }
 
-    return status;
+    /**
+     * for each group, set the state of the pair with the lowest 
+     * component ID to Waiting. If there is more than one such pair, 
+     * the one with the highest priority is used.
+     */
+    for (i = 0; i < group_count; i++)
+    {
+        int32_t lowest_compid = 0;
+        ice_cand_pair_t *chosen_cp = NULL;
+        
+        ptr = &fnd_groups[i];
+
+        for (j = 0; j < ICE_MAX_CANDIDATE_PAIRS; j++)
+        {
+            cp = ptr->pairs[j];
+            if (cp == NULL) continue;
+
+            if (cp->local->comp_id > lowest_compid)
+            {
+                lowest_compid = cp->local->comp_id;
+                chosen_cp = cp;
+            }
+            else if (cp->local->comp_id == lowest_compid)
+            {
+                if (cp->priority > chosen_cp->priority)
+                    chosen_cp = cp;
+            }
+        }
+
+        if (chosen_cp)
+        {
+            status = ice_cand_pair_fsm_inject_msg(
+                                    chosen_cp, ICE_CP_EVENT_UNFREEZE, NULL);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR,
+                        "[ICE] Unfreezing of the candidate pair failed");
+                return STUN_INT_ERROR;
+            }
+
+            media->state = ICE_MEDIA_CC_RUNNING;
+        }
+    }
+
+    return STUN_OK;
 }
 
 
@@ -4336,13 +4440,13 @@ int32_t ice_utils_unfreeze_checks_for_other_media_streams(
                             ice_media_stream_t *cur_media, ice_cand_pair_t *cp)
 {
     int32_t i, j, status = STUN_OK;
-    ice_media_stream_t *media;
-    ice_session_t *session = media->ice_session;
+    ice_media_stream_t *media = NULL;
+    ice_session_t *session = cur_media->ice_session;
     bool_t match = false;
 
     for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
     {
-        media = &session->aps_media_streams[i];
+        media = session->aps_media_streams[i];
         if (!media) continue;
         if (media == cur_media) continue;
 

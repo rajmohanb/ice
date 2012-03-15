@@ -25,6 +25,16 @@ extern "C" {
 #define ICE_SIZEOF_IPV6_ADDR    16      /** sizeof(struct in_addr) */
 #define ICE_SIZEOF_IPV4_ADDR    4       /** sizeof(struct in6_addr) */
 
+
+
+typedef struct
+{
+    u_char local_fnd[ICE_FOUNDATION_MAX_LEN];
+    u_char remote_fnd[ICE_FOUNDATION_MAX_LEN];
+    ice_cand_pair_t *pairs[ICE_MAX_CANDIDATE_PAIRS];
+} ice_foundation_pairs_t;
+
+
 uint64_t ice_utils_compute_candidate_priority(ice_candidate_t *cand);
 
 uint64_t ice_utils_compute_peer_reflexive_candidate_priority(
