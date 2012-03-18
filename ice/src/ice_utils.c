@@ -4201,6 +4201,30 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
 
                     status = ice_utils_start_keep_alive_timer_for_comp(
                                                 media, pair->local->comp_id);
+                    if (status != STUN_OK)
+                    {
+                        ICE_LOG(LOG_SEV_ERROR, 
+                                "[ICE] Starting of Keep Alive timer failed");
+                    }
+
+                    /**
+                     * If there is atleast one nominated pair in the valid list
+                     * for a media stream and the state of the checklist is 
+                     * running
+                     * - The agent must remove all waiting and frozen pairs in
+                     *   the check list and triggered queue for the same 
+                     *   component as the nominated pairs.
+                     */
+                    status = ice_media_utils_cease_checks_for_nominated_comp(
+                                                                   media, pair);
+                    if (status != STUN_OK)
+                    {
+                        ICE_LOG(LOG_SEV_ERROR, 
+                                "[ICE] Unable to cease other checks for the "\
+                                "same component as the nominated pair");
+
+                        /** its ok, we can live with it */
+                    }
                 }
 
                 /**
@@ -4476,6 +4500,89 @@ int32_t ice_utils_unfreeze_checks_for_other_media_streams(
     }
 
     return status;
+}
+
+
+
+int32_t ice_media_utils_cease_checks_for_nominated_comp(
+                            ice_media_stream_t *media, ice_cand_pair_t *nom_cp)
+{
+    int32_t i;
+    ice_cand_pair_t *cp = NULL;
+    ice_trigger_check_node_t *node, *temp;
+
+    node = media->trig_check_list;
+    temp = NULL;
+
+    /** 
+     * remove all waiting and frozen pairs in the triggered check queue for 
+     * the same component as the nominated pairs for that media stream.
+     */
+    while(node != NULL)
+    {
+        if (node->cp->local->comp_id == nom_cp->local->comp_id)
+        {
+            if ((node->cp->state == ICE_CP_FROZEN) || 
+                (node->cp->state == ICE_CP_WAITING))
+            {
+                if (node == media->trig_check_list)
+                {
+                    temp = node;
+                    node = node->next;
+                    stun_free(temp);
+                    temp = NULL;
+                    media->trig_check_list = node;
+                    continue;
+                }
+                else
+                {
+                    temp->next = node->next;
+                    stun_free(node);
+                    node = temp->next;
+                    continue;
+                }
+            }
+        }
+
+        temp = node;
+        node = node->next;
+    }
+
+
+    /** 
+     * remove all waiting and frozen pairs in the checklist for 
+     * the same component as the nominated pairs for that media stream.
+     */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+
+        if (cp->local->comp_id != nom_cp->local->comp_id) continue;
+
+        if ((cp->state == ICE_CP_FROZEN) || (cp->state == ICE_CP_WAITING))
+        {
+            /** remove the candidate pair */
+            cp->local = NULL;
+            cp->remote = NULL;
+            cp->state = ICE_CP_STATE_MAX;
+            cp->media = NULL;
+        }
+        else if (cp->state == ICE_CP_INPROGRESS)
+        {
+            /** 
+             * cease re-transmission if this pair priority is lower than 
+             * the lowest priority nominated pair for that component.
+             */
+            if (cp->priority < nom_cp->priority)
+            {
+                conn_check_cancel_session(
+                    media->ice_session->instance->h_cc_inst, cp->h_cc_session);
+            }
+        }
+    }
+
+    return STUN_OK;
 }
 
 

@@ -297,6 +297,9 @@ int32_t ice_media_utils_group_and_unfreeze_pairs(ice_media_stream_t *media);
 int32_t ice_utils_unfreeze_checks_for_other_media_streams(
                             ice_media_stream_t *cur_media, ice_cand_pair_t *cp);
 
+int32_t ice_media_utils_cease_checks_for_nominated_comp(
+                            ice_media_stream_t *media, ice_cand_pair_t *nom_cp);
+
 
 /******************************************************************************/
 
