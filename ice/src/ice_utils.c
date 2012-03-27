@@ -917,7 +917,7 @@ void ice_utils_dump_media_params(ice_media_params_t *media_params)
 
 
 int32_t ice_media_utils_get_next_connectivity_check_pair(
-        ice_media_stream_t *media, ice_cand_pair_t **pair)
+                    ice_media_stream_t *media, ice_cand_pair_t **pair)
 {
     int32_t status;
     uint32_t i, z = 99999;
@@ -2679,6 +2679,7 @@ ice_cand_pair_t *ice_utils_lookup_pair_in_checklist(
 int32_t ice_utils_add_to_triggered_check_queue(
                             ice_media_stream_t *media, ice_cand_pair_t *cp)
 {
+    int32_t status;
     ice_trigger_check_node_t *elem, *iter, *lag;
     
     iter = media->trig_check_list;
@@ -2717,6 +2718,12 @@ int32_t ice_utils_add_to_triggered_check_queue(
 
     ICE_LOG(LOG_SEV_INFO, 
             "[ICE MEDIA] Queued the candidate pair %p in the triggered Q", cp);
+
+    /** start the check list timer if stopped */
+    if (media->checklist_timer->timer_id == 0)
+    {
+        status = ice_media_utils_start_check_list_timer(media);
+    }
 
     return STUN_OK;
 }
