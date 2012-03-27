@@ -14,7 +14,7 @@
 #******************************************************************************/
 
 # build customization flags
-MB_ENABLE_ICE_DEBUG := y
+MB_ENABLE_ICE_DEBUG := n
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
@@ -33,7 +33,7 @@ ICE_APP_INCLUDE_PATH := .
 ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN -DMB_LOG_RX_TX_MSGS
 
 ifeq ($(strip $(MB_ENABLE_ICE_DEBUG)), y)
-ICE_APP_CFLAGS += -g -DDEBUG -DDEBUG1 -DMB_SUPPORT_3489 #-DDEBUG2
+ICE_APP_CFLAGS += -g -DDEBUG1 -DMB_SUPPORT_3489 #-DDEBUG2 -DDEBUG
 endif
 
 export ICE_APP_INCLUDE_PATH

@@ -42,9 +42,9 @@
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
 #else
-#define STUN_SRV_IP "10.1.71.4"
+#define STUN_SRV_IP "10.1.71.103"
 //#define STUN_SRV_IP "192.168.1.2"
-#define TURN_SRV_IP "192.168.1.2"
+#define TURN_SRV_IP "10.1.71.103"
 //#define TURN_SRV_IP "109.107.37.45"
 #endif
 
@@ -60,7 +60,7 @@
 #ifdef ICE_IPV6
 #define LOCAL_IP   "2001:db8:0:242::67"
 #else
-#define LOCAL_IP   "192.168.1.2"
+#define LOCAL_IP   "172.16.8.100"
 #endif
 
 #define LOCAL_ICE_RTP_HOST_PORT  44444
@@ -68,7 +68,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.56"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v0.57"
 #define ICE_VENDOR_NAME_LEN 25
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
