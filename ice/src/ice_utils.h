@@ -300,6 +300,10 @@ int32_t ice_utils_unfreeze_checks_for_other_media_streams(
 int32_t ice_media_utils_cease_checks_for_nominated_comp(
                             ice_media_stream_t *media, ice_cand_pair_t *nom_cp);
 
+int32_t ice_utils_process_binding_keepalive_response(
+                ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt);
+
+
 
 /******************************************************************************/
 

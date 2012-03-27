@@ -4587,6 +4587,49 @@ int32_t ice_media_utils_cease_checks_for_nominated_comp(
 
 
 
+int32_t ice_utils_process_binding_keepalive_response(
+                ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt)
+{
+    int32_t status;
+    handle h_bind_inst, h_bind_session;
+
+    h_bind_inst = media->ice_session->instance->h_bind_inst;
+
+    /** find session */
+    status = stun_binding_instance_find_session_for_received_msg(
+                            h_bind_inst, stun_pkt->h_msg, &h_bind_session);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_WARNING, 
+                "[ICE MEDIA] Unable to find a stun binding session for the "\
+                "received response message. Dropping the message");
+        stun_msg_destroy(stun_pkt->h_msg);
+        return status;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "[ICE] This is a stun binding refresh reponse");
+
+    /** inject received message */
+    status = stun_binding_session_inject_received_msg(
+                            h_bind_inst, h_bind_session, stun_pkt->h_msg);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_WARNING, 
+                "[ICE] STUN binding session returned failure: [%d]", status);
+    }
+
+    /**
+     * Even if the stun binding response is a failure, it is not treated as
+     * failure for the overall ice session here since the purpose of stun 
+     * binding transaction is to refresh the port bindings at the NATs which
+     * is served by the request and response messages.
+     */
+
+    return STUN_OK;
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

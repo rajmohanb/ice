@@ -283,7 +283,7 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_WARNING, 
-                "[ICE MEDIA] Unable to find a turn session for the "\
+                "[ICE MEDIA] Unable to find a stun/turn session for the "\
                 "received message. Dropping the message");
         return status;
     }
@@ -297,7 +297,7 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     {
         status = stun_binding_session_inject_received_msg(
                                 h_bind_inst, h_bind_session, stun_pkt->h_msg);
-        if (status == STUN_TERMINATED)
+        if ((status == STUN_TERMINATED) || (status == STUN_BINDING_DONE))
         {
             status = ice_utils_copy_stun_gathered_candidates(
                             media, h_bind_inst, h_bind_session, stun_pkt);
@@ -600,14 +600,18 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
         stun_msg_get_class(stun_pkt->h_msg, &msg_class);
 
-        if (msg_class != STUN_REQUEST)
+        if (msg_class == STUN_INDICATION)
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "[ICE MEDIA] Discarding the stray stun "\
-                    "response/indication message");
+                    "[ICE MEDIA] Ignoring the stun indication message");
 
             stun_msg_destroy(stun_pkt->h_msg);
             return STUN_OK;
+        }
+        else if (msg_class != STUN_REQUEST)
+        {
+            /** probably a stun binding keep alive response! check */
+            return ice_utils_process_binding_keepalive_response(media, stun_pkt);
         }
 
         /** create new incoming connectivity check dialog */
