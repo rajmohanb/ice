@@ -876,26 +876,29 @@ int32_t ice_remove_media_stream (ice_session_t *session,
     {
         ice_cand_pair_t *cp = &media->ah_cand_pairs[i];
         if (cp->local == NULL) continue;
-        if (cp->h_cc_session == NULL) continue;
-
-        status = conn_check_destroy_session(
+        
+        if (cp->h_cc_session != NULL)
+        {
+            status = conn_check_destroy_session(
                     session->instance->h_cc_inst, cp->h_cc_session);
 
-        if ((status == STUN_OK) && (cp->h_cc_cancel))
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "[ICE SESSION] Destroying of Connectivity Check "\
+                        "session failed %d", status);
+            }
+            else
+            {
+                cp->h_cc_session = NULL;
+            }
+        }
+
+        if (cp->h_cc_cancel != NULL)
         {
             status = conn_check_destroy_session(
                     session->instance->h_cc_inst, cp->h_cc_cancel);
-        }
-
-        if (status != STUN_OK)
-        {
-            ICE_LOG(LOG_SEV_ERROR, 
-                    "[ICE SESSION] Destroying of Connectivity Check session "\
-                    "failed %d", status);
-        }
-        else
-        {
-            cp->h_cc_session = NULL;
+            if (status == STUN_OK) cp->h_cc_cancel = NULL;
         }
     }
 
