@@ -142,10 +142,10 @@ typedef struct
 } stun_inet_addr_t;
 
 
-#define ICE_LOG app_log
+#define ICE_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
 
-void app_log(/** char *file_name, uint32_t line_num, */
-                stun_log_level_t level, char *format, ...);
+void app_log(stun_log_level_t level,
+        char *file_name, uint32_t line_num, char *format, ...);
 
 
 /******************************************************************************/

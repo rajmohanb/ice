@@ -2149,7 +2149,7 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
         if (status != STUN_OK)
         {
 #endif
-            app_log(LOG_SEV_ERROR, 
+            ICE_LOG(LOG_SEV_ERROR, 
                 "unable to get mapped address. Returned error: %d", status);
             return STUN_NOT_FOUND;
 #ifdef MB_SUPPORT_3489

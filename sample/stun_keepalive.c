@@ -34,6 +34,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <ctype.h>
+#include <sys/time.h>
 #include <msg_layer_api.h>
 #include <stun_enc_dec_api.h>
 #include <stun_txn_api.h>
@@ -51,14 +52,17 @@
 
 #define TRANSPORT_MTU_SIZE  1500
 
-#define LOCAL_IP   "192.168.1.2"
+#define LOCAL_IP   "172.16.8.101"
 #define LOCAL_STUN_HOST_PORT 33333
 
+#define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
 
 handle h_inst, h_session;
 static int sockfd_stun = 0;
 u_char *my_buf;
 bool_t o_done = false;
+stun_log_level_t g_log_sev = LOG_SEV_DEBUG;
+
 
 char *stun_retval[] =
 {
@@ -68,20 +72,54 @@ char *stun_retval[] =
     "STUN_INVALID_PARAMS",
     "STUN_NOT_FOUND",
     "STUN_TERMINATED",
-    "STUN_PARSE_FAILED",
+    "STUN_ENCODE_FAILED",
+    "STUN_DECODE_FAILED",
     "STUN_MEM_INSUF",
     "STUN_NOT_SUPPORTED",
     "STUN_TRANSPORT_FAIL",
     "STUN_VALIDATON_FAIL",
+    "STUN_NO_RESOURCE",
+    "STUN_MSG_NOT",
+    "STUN_BINDING_DONE",
+    "STUN_BINDING_CHANGED"
 };
 
 
-void app_log(stun_log_level_t level, char *format, ...)
+char *log_levels[] =
 {
-    char buff[150];
+    "LOG_SEV_CRITICAL",
+    "LOG_SEV_ERROR",
+    "LOG_SEV_WARNING",
+    "LOG_SEV_INFO",
+    "LOG_SEV_DEBUG",
+};
+
+
+void app_log(stun_log_level_t level,
+        char *file_name, uint32_t line_num, char *format, ...)
+{
+    char buff[500];
     va_list args;
+    int relative_time;
+    static struct timeval init = { 0, 0 };
+    struct timeval now;
+
+    if (level > g_log_sev) return;
+
+    if(init.tv_sec == 0 && init.tv_usec == 0)
+        gettimeofday(&init, NULL);
+
+    gettimeofday(&now, NULL);
+
+    relative_time = 1000 * (now.tv_sec - init.tv_sec);
+    if (now.tv_usec - init.tv_usec > 0)
+        relative_time = relative_time + ((now.tv_usec - init.tv_usec) / 1000);
+    else
+        relative_time = relative_time - 1 + ((now.tv_usec - init.tv_usec) / 1000);
+
     va_start(args, format );
-    sprintf(buff, "%s\n", format);
+    sprintf(buff, "| %s | %i msec <%s: %i> %s\n", 
+            log_levels[level], relative_time, file_name, line_num, format);
     vprintf(buff, args );
     va_end(args );
 }
@@ -92,14 +130,14 @@ void app_timer_expiry_cb (void *timer_id, void *arg)
     int32_t status;
     handle bind_session;
 
-    app_log (LOG_SEV_DEBUG, "in sample application timer callback");
+    APP_LOG (LOG_SEV_DEBUG, "in sample application timer callback");
 
     /** inject timer message */
     status = stun_binding_session_inject_timer_event(
                                         timer_id, arg, &bind_session);
     if (status == STUN_TERMINATED)
     {
-        app_log (LOG_SEV_INFO, 
+        APP_LOG (LOG_SEV_INFO, 
                 "stun_binding_session_inject_timer_event() returned "\
                 "failure: %s. STUN Binding session terminated due to timeout", 
                 stun_retval[status]);
@@ -159,7 +197,7 @@ bool app_initialize_stun_binding_layer(void)
     status = stun_binding_create_instance(&h_inst);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR,
+        APP_LOG (LOG_SEV_ERROR,
                 "stun_binding_create_instance() returned error: %s\n", 
                 stun_retval[status]);
         return false;
@@ -172,7 +210,7 @@ bool app_initialize_stun_binding_layer(void)
     status = stun_binding_instance_set_callbacks(h_inst, &app_cbs);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "stun_binding_instance_set_callbacks() returned error: %s\n", 
                 stun_retval[status]);
         return false;
@@ -247,14 +285,14 @@ int main (int argc, char *argv[])
 
     printf("listener: waiting to recvfrom...\n");
     
-    app_log(LOG_SEV_DEBUG, 
+    APP_LOG(LOG_SEV_DEBUG, 
             "Transport param for binding connection :-> %d", sockfd_stun);
 
     /** all ground work done, ready to use the stun binding apis */
 
     if (app_initialize_stun_binding_layer() == false)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "app_initialize_stun_binding_layer() returned error\n");
         return -1;
     }
@@ -263,13 +301,13 @@ int main (int argc, char *argv[])
 
     while ((o_error == false) && (count < 100))
     {
-        app_log (LOG_SEV_ERROR, "**************************************************************\n");
+        APP_LOG (LOG_SEV_ERROR, "**************************************************************\n");
 
         status = stun_binding_create_session(h_inst, 
                                     STUN_BIND_CLIENT_SESSION, &h_session);
         if (status != STUN_OK)
         {
-            app_log (LOG_SEV_ERROR, 
+            APP_LOG (LOG_SEV_ERROR, 
                     "stun_binding_create_session() returned error %d\n", 
                     stun_retval[status]);
             return -1;
@@ -279,7 +317,7 @@ int main (int argc, char *argv[])
                                         h_inst, h_session, (handle)sockfd_stun);
         if (status != STUN_OK)
         {
-            app_log (LOG_SEV_ERROR, 
+            APP_LOG (LOG_SEV_ERROR, 
                     "stun_binding_session_set_transport_param() returned error %d\n", 
                     stun_retval[status]);
             return -1;
@@ -289,7 +327,7 @@ int main (int argc, char *argv[])
                 h_inst, h_session, addr_type, (u_char *)STUN_SRV_IP, STUN_SRV_PORT);
         if (status != STUN_OK)
         {
-            app_log (LOG_SEV_ERROR, 
+            APP_LOG (LOG_SEV_ERROR, 
                     "stun_binding_session_set_stun_server() returned error %d\n", 
                     stun_retval[status]);
             return -1;
@@ -298,13 +336,13 @@ int main (int argc, char *argv[])
         status = stun_binding_session_send_message(h_inst, h_session, STUN_REQUEST);
         if (status != STUN_OK)
         {
-            app_log (LOG_SEV_ERROR, 
+            APP_LOG (LOG_SEV_ERROR, 
                     "stun_binding_session_send_message() returned error %s\n", 
                     stun_retval[status]);
             return -1;
         }
 
-        app_log (LOG_SEV_ERROR, "COUNT: %d\n", count);
+        APP_LOG (LOG_SEV_ERROR, "COUNT: %d\n", count);
         count++;
 
         /** if you have come so far, then the stun binding request has been sent */
@@ -322,7 +360,7 @@ int main (int argc, char *argv[])
         status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
         if (status != STUN_OK)
         {
-            app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", 
+            APP_LOG (LOG_SEV_ERROR, "stun_msg_decode() returned error %s\n", 
                     stun_retval[status]);
             return -1;
         }
@@ -331,7 +369,7 @@ int main (int argc, char *argv[])
                                             h_inst, h_rcvdmsg, &h_target);
         if (status == STUN_NOT_FOUND)
         {
-            app_log(LOG_SEV_ERROR, 
+            APP_LOG(LOG_SEV_ERROR, 
                     "No binding session found for received message on transport fd %d", sockfd_stun);
             o_error = true;
             stun_msg_destroy(h_rcvdmsg);
@@ -347,14 +385,14 @@ int main (int argc, char *argv[])
                                             h_inst, h_target, &mapped_addr);
                 if (status != STUN_OK)
                 {
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                         "unable to get xor mapped address. Returned error: %s", 
                         stun_retval[status]);
                     o_error = true;
                 }
                 else
                 {
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                             "\n\nXOR MAPPED ADDRESS and PORT : %s and %d\n\n", 
                             mapped_addr.ip_addr, mapped_addr.port);
                 }
@@ -363,14 +401,14 @@ int main (int argc, char *argv[])
                                             h_inst, h_target, &mapped_addr);
                 if (status != STUN_OK)
                 {
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                         "unable to get mapped address. Returned error: %s", 
                         stun_retval[status]);
                     o_error = true;
                 }
                 else
                 {
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                             "\n\nMAPPED ADDRESS and PORT : %s and %d\n\n", 
                             mapped_addr.ip_addr, mapped_addr.port);
                     sleep(1);
@@ -381,7 +419,7 @@ int main (int argc, char *argv[])
             }
             else if (status != STUN_OK)
             {
-                app_log (LOG_SEV_ERROR, 
+                APP_LOG (LOG_SEV_ERROR, 
                         "stun_binding_session_inject_received_msg() returned error: %s\n", 
                         stun_retval[status]);
                 o_error = true;
