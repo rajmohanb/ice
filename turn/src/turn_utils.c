@@ -67,25 +67,54 @@ ERROR_EXIT_PT1:
 
 
 
-int32_t turn_utils_create_indication(handle *h_msg)
-{
-    return STUN_OK;
-}
-
-
-
-int32_t turn_utils_create_response_msg(handle *h_inst)
-{
-    return STUN_OK;
-}
-
-
-
 int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg)
 {
     int32_t status;
     handle h_attr;
     uint32_t num, len;
+    u_char *realm;
+
+    /** realm */
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_REALM, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_realm_get_realm_length(h_attr, &len);
+    if (status != STUN_OK) return status;
+
+    /** 
+     * check if the realm attribute in the received response is 
+     * the same as the realm that has been provisioned.
+     */
+    if (len != stun_strlen((char *)session->cfg.realm))
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] Length of realm in the received response is not "\
+                "the same as the provisioned realm. Hence ignoring msg");
+        return STUN_VALIDATON_FAIL;
+    }
+    
+    realm = (u_char *) stun_calloc (1, len);
+    if (realm == NULL) return STUN_MEM_ERROR;
+   
+    status = stun_attr_realm_get_realm(h_attr, realm, &len);
+    if (status != STUN_OK)
+    {
+        stun_free(realm);
+        return status;
+    }
+
+    if (stun_memcmp(session->cfg.realm, realm, len) != 0)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[TURN] realm in the received response is not the same as "\
+                "the provisioned realm. Hence ignoring the received message");
+        stun_free(realm);
+        return STUN_VALIDATON_FAIL;
+    }
+
+    stun_free(realm);
 
     /** nonce */
     num = 1;
@@ -110,28 +139,6 @@ int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg)
                             session->nonce, &(session->nonce_len));
     if (status != STUN_OK) return status;
 
-    /** realm */
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_REALM, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_realm_get_realm_length(h_attr, &len);
-    if (status != STUN_OK) return status;
-
-    if (len > session->realm_len)
-    {
-        stun_free(session->realm);
-
-        session->realm = (u_char *) stun_calloc (1, len);
-        if (session->realm == NULL) return STUN_MEM_ERROR;
-    }
-   
-    session->realm_len = len;
-
-    status = stun_attr_realm_get_realm(h_attr, 
-                            session->realm, &(session->realm_len));
-    if (status != STUN_OK) return status;
 
     return STUN_OK;
 }
@@ -172,7 +179,7 @@ int32_t turn_utils_create_alloc_req_msg_with_credential(
     attr_count++;
 
     status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-                            session->realm, session->realm_len);
+            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
@@ -252,7 +259,7 @@ int32_t turn_utils_create_dealloc_req_msg(
     attr_count++;
 
     status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-                                session->realm, session->realm_len);
+            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
@@ -430,7 +437,7 @@ int32_t turn_utils_create_refresh_req_msg(
     attr_count++;
 
     status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-                            session->realm, session->realm_len);
+            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
@@ -763,7 +770,7 @@ int32_t turn_utils_create_permission_req_msg(
     attr_count++;
 
     status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-                            session->realm, session->realm_len);
+            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 
@@ -873,7 +880,7 @@ int32_t turn_utils_create_channel_bind_req_msg(turn_session_t *session,
     attr_count++;
 
     status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-                            session->realm, session->realm_len);
+            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
 

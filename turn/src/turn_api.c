@@ -260,7 +260,7 @@ int32_t turn_create_session(handle h_inst, handle *h_session)
     session->state = TURN_IDLE;
     session->channel_num = 1;
 
-    session->realm = session->nonce = NULL;
+    session->nonce = NULL;
     session->alloc_refresh_timer_params = 
                 session->perm_refresh_timer_params = NULL;
 
@@ -422,7 +422,6 @@ int32_t turn_clear_session(handle h_inst, handle h_session)
             stun_free(session->alloc_refresh_timer_params);
 
     if (session->nonce) stun_free(session->nonce);
-    if (session->realm) stun_free(session->realm);
 
     stun_free(session);
     instance->ah_session[i] = NULL;

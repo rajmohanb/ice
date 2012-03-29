@@ -28,7 +28,6 @@ typedef struct
 {
     uint32_t len;
     u_char *data;
-
     stun_inet_addr_t *dest;
 } turn_app_data_t;
 
@@ -138,10 +137,6 @@ typedef struct
     /** nonce */
     uint32_t nonce_len;
     u_char *nonce;
-
-    /** realm */
-    uint32_t realm_len;
-    u_char *realm;
 
     /** relayed address */
     stun_inet_addr_t relay_addr;

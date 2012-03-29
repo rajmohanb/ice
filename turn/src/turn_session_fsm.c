@@ -223,7 +223,6 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
      * note: 
      * split up the response based on 1xx, 2xx etc to split up this huge handler
      */
-
     status = stun_txn_instance_find_transaction(h_txn_inst, h_rcvdmsg, &h_txn);
     if (status != STUN_OK)
     {

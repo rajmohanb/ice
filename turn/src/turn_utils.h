@@ -25,10 +25,6 @@ extern "C" {
 int32_t turn_utils_create_request_msg(turn_session_t *session, 
                                     stun_method_type_t method, handle *h_msg);
 
-int32_t turn_utils_create_indication(handle *h_msg);
-
-int32_t turn_utils_create_response_msg(handle *h_inst);
-
 int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg);
 
 int32_t turn_utils_create_alloc_req_msg_with_credential(
