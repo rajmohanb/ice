@@ -294,13 +294,11 @@ int32_t ice_utils_get_local_media_params(
     if ((media_params->media_state == ICE_CC_RUNNING) ||
         (media_params->media_state == ICE_GATHERED))
     {
-        ICE_LOG(LOG_SEV_INFO, "Media in ICE_CC_RUNNING");
         status = ice_utils_get_media_params_in_running_state(
                                                     media, media_params);
     }
     else if (media_params->media_state == ICE_CC_COMPLETED)
     {
-        ICE_LOG(LOG_SEV_INFO, "Media in ICE_CC_COMPLETED");
         status = ice_utils_get_media_params_in_completed_state(
                                                     media, media_params);
     }

@@ -142,6 +142,7 @@ typedef struct
 } stun_inet_addr_t;
 
 
+/** use __TIME__ !!! */
 #define ICE_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
 
 void app_log(stun_log_level_t level,

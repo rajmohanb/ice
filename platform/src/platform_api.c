@@ -421,6 +421,7 @@ unsigned int platform_socket_sendto(int sock_fd,
     if (bytes == -1)
     {
         perror("sendto:");
+        ICE_LOG(LOG_SEV_ERROR, "[PLATFORM] Sending of message failed\n");
     }
     ICE_LOG(LOG_SEV_DEBUG, "[PLATFORM] sent %d bytes\n", bytes);
 
