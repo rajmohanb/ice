@@ -43,7 +43,13 @@ static ice_cand_pair_fsm_handler
     {
         ice_cp_ignore_msg,
         ice_cp_initiate_check,
-        ice_cp_ignore_msg,
+        /** 
+         * For scenarios where current conn check is in progress, and a remote 
+         * request is received. In this case, the agent cancels the current 
+         * check for this pair, and adds a new check to the triggered queue 
+         * and moves the state of the pair to waiting. explained in sec 7.2.1.4
+         */
+        ice_cp_check_succeeded,
         ice_cp_ignore_msg,
     },
     /** ICE_CP_INPROGRESS */

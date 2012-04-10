@@ -1463,6 +1463,13 @@ int main (int argc, char *argv[])
         return 0;
     }
 
+
+    if (verify_license() != 0)
+    {
+        printf("License expired. Please contact MindBricks\n");
+        return 0;
+    }
+
     printf("===================================================================\n");
 
     /** get local IP address */
@@ -1502,7 +1509,7 @@ int main (int argc, char *argv[])
                             demo_buf, TRANSPORT_MTU_SIZE, 0, address, &port);
             if (!bytes) continue;
 
-            printf("Reading data from fd_list[i]\n", fd_list[i]);
+            printf("Reading data from fd_list[i]: %d\n", fd_list[i]);
 
             if (fd_list[i] == demo_sockfds[0])
             {

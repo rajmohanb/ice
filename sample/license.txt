@@ -1,0 +1,7 @@
+# Evaluation License key for GenesysLab
+expiry-date 09-05-2112
+licensed-date 10-04-2012
+licensor MindBricks
+product ice_sdk
+licensee GenesysLab
+key 9726a96eab25651fc7bebba659978bad

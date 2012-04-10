@@ -305,7 +305,6 @@ int32_t ice_utils_get_local_media_params(
     else
     {
         /** do not fill any information */
-        ICE_LOG(LOG_SEV_ERROR, "TBD????????????????????");
     }
 
     media_params->num_comps = media->num_comp;
@@ -2423,12 +2422,16 @@ int32_t ice_utils_find_cand_pair_for_conn_check_session(
     int32_t i;
     ice_cand_pair_t *pair;
 
+    ICE_LOG(LOG_SEV_ERROR, "Searching for connectivity check session handle [%ld]", h_conn_check);
+
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
         pair = &media->ah_cand_pairs[i];
         if (!pair->local) continue;
 
-        if (pair->h_cc_session == h_conn_check)
+        ICE_LOG(LOG_SEV_ERROR, "[%d]: State: [%s] [%ld] [%ld] [%s:%d]", i, cand_pair_states[pair->state], pair->h_cc_session, pair->h_cc_cancel, pair->remote->transport.ip_addr, pair->remote->transport.port);
+
+        if ((pair->h_cc_session == h_conn_check) || (pair->h_cc_cancel == h_conn_check))
         {
             *cp = pair;
             return STUN_OK;
@@ -2718,7 +2721,7 @@ int32_t ice_utils_add_to_triggered_check_queue(
             "[ICE MEDIA] Queued the candidate pair %p in the triggered Q", cp);
 
     /** start the check list timer if stopped */
-    if (media->checklist_timer->timer_id == 0)
+    if ((media->checklist_timer) && (media->checklist_timer->timer_id == 0))
     {
         status = ice_media_utils_start_check_list_timer(media);
     }
@@ -4282,7 +4285,24 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                         "failed %d", status);
             }
 
-            cp->h_cc_session = NULL;
+            if (cp->h_cc_session == h_cc_dialog)
+            {
+                cp->h_cc_session = NULL;
+                if (cp->h_cc_cancel)
+                {
+                    conn_check_destroy_session(h_cc_inst, cp->h_cc_cancel);
+                    cp->h_cc_cancel = NULL;
+                }
+            }
+            else if (cp->h_cc_cancel == h_cc_dialog)
+            {
+                cp->h_cc_cancel = NULL;
+                if (cp->h_cc_session)
+                {
+                    conn_check_destroy_session(h_cc_inst, cp->h_cc_session);
+                    cp->h_cc_session = NULL;
+                }
+            }
 
             ice_media_utils_dump_cand_pair_stats(media);
         }

@@ -535,7 +535,7 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     /** as soon as we have sent out the first conn check, move the state */
     media->state = ICE_MEDIA_CC_RUNNING;
 
-    /** allocate memory for conn checka timer params */
+    /** allocate memory for conn check timer params */
     media->checklist_timer = (ice_timer_params_t *) 
                 stun_calloc (1, sizeof(ice_timer_params_t));
     if (media->checklist_timer == NULL)
