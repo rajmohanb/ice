@@ -70,7 +70,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.57"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v1.00"
 #define ICE_VENDOR_NAME_LEN 25
 
 #define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
@@ -86,7 +86,7 @@ static handle g_audio = NULL;
 static char g_localip[128] = {0};
 static char g_stunip[128] = {0};
 static bool g_use_aggressive_nomination = false;
-static stun_log_level_t g_loglevel = LOG_SEV_INFO;
+static stun_log_level_t g_loglevel = LOG_SEV_WARNING;
 static char g_logfile[50] = "stdout";
 
 bool g_demo_exit = false;
@@ -582,22 +582,20 @@ void ice_sample_print_valid_list(handle h_inst, handle h_session)
         return;
     }
 
-    APP_LOG (LOG_SEV_INFO, "Number of media %d\n", valid_list.num_media);
+    printf ("Number of media %d\n", valid_list.num_media);
     for (i = 0; i < valid_list.num_media; i++)
     {
         valid_media = &valid_list.media_list[i];
 
-        APP_LOG (LOG_SEV_INFO,
-                "Number of Nominated pairs %d\n", valid_media->num_valid);
-        APP_LOG (LOG_SEV_INFO, "NOMINATED LIST\n");
+        printf("Number of Nominated pairs %d\n", valid_media->num_valid);
+        printf("NOMINATED LIST\n");
 
         for (j = 0; j < valid_media->num_valid; j++)
         {
             pair = &valid_media->pairs[j];
-            APP_LOG (LOG_SEV_INFO,
-                    "comp id: %d local: %s:%d peer: %s:%d", 
-                    pair->comp_id, pair->local.ip_addr, pair->local.port,
-                    pair->peer.ip_addr, pair->peer.port);
+            printf("comp id: %d local: %s:%d peer: %s:%d\n", 
+                   pair->comp_id, pair->local.ip_addr, pair->local.port,
+                   pair->peer.ip_addr, pair->peer.port);
         }
     }
 
@@ -615,13 +613,10 @@ void app_media_state_change_handler(handle h_inst,
         case ICE_CC_FAILED:
         case ICE_CC_COMPLETED:
         {
-            APP_LOG (LOG_SEV_INFO,
-                    "************************************************************\n");
-            APP_LOG (LOG_SEV_INFO,
-                    "--- ICE session %p Media handle %p state changed to %s\n", 
+            printf("************************************************************\n");
+            printf("--- ICE session %p Media handle %p state changed to %s\n", 
                     h_session, h_media, states[state]);
-            APP_LOG (LOG_SEV_INFO,
-                    "************************************************************\n");
+            printf("************************************************************\n");
         }
         break;
 
@@ -639,20 +634,16 @@ void app_session_state_change_handler(handle h_inst,
 
     if ((state >= ICE_GATHERED) && (state <= ICE_CC_FAILED))
     {
-        APP_LOG (LOG_SEV_INFO,
-                "************************************************************\n");
-        APP_LOG (LOG_SEV_INFO,
-                "--- ICE session %p state changed to %s\n", h_session, states[state]);
-        APP_LOG (LOG_SEV_INFO,
-                "************************************************************\n");
+        printf("************************************************************\n");
+        printf("--- ICE session %p state changed to %s\n", h_session, states[state]);
+        printf("************************************************************\n");
     }
 
     switch(state)
     {
         case ICE_GATHERED:
         
-            APP_LOG (LOG_SEV_INFO,
-                    "ICE candidates gathering completed successfully");
+            printf("ICE candidates gathering completed successfully\n");
             //encode_session(h_inst, h_session);
             break;
 
@@ -663,10 +654,8 @@ void app_session_state_change_handler(handle h_inst,
         {
             static int val = 1;
             if (val) {
-                APP_LOG (LOG_SEV_INFO,
-                        "\n\n\nICE negotiation completed, alert the local user\n");
-                APP_LOG (LOG_SEV_CRITICAL,
-                        " ----------------------------- SIP 180 RINGING -------------------------->\n");
+                printf("\n\n\nICE negotiation completed, alert the local user\n");
+                printf(" ----------------------------- SIP 180 RINGING -------------------------->\n");
 
                 ice_sample_print_valid_list(h_inst, h_session);
 
@@ -679,7 +668,7 @@ void app_session_state_change_handler(handle h_inst,
 
         case ICE_CC_FAILED:
         {
-            APP_LOG (LOG_SEV_INFO, "ICE session failed, destroying session");
+            printf("ICE session failed, destroying session\n");
 
             status = ice_destroy_session(h_inst, h_session);
             if(status != STUN_OK)
@@ -1006,21 +995,21 @@ void app_start_connectivity_checks(void)
 {
     int32_t status;
 
-    APP_LOG (LOG_SEV_ERROR, "Forming connectivity check lists ...\n");
+    APP_LOG (LOG_SEV_WARNING, "Forming connectivity check lists ...");
     status = ice_session_form_check_lists(g_inst, g_session);
     if (status != STUN_OK)
     {
         APP_LOG (LOG_SEV_ERROR,
-                "ice_session_form_check_lists() returned error %d\n", status);
+                "ice_session_form_check_lists() returned error %d", status);
         return;
     }
 
-    APP_LOG (LOG_SEV_ERROR, "Starting ICE connectivity checks ...\n");
+    APP_LOG (LOG_SEV_WARNING, "Starting ICE connectivity checks ...");
     status = ice_session_start_connectivity_checks(g_inst, g_session);
     if (status != STUN_OK)
     {
         APP_LOG (LOG_SEV_ERROR,
-                "ice_session_start_connectivity_checks() returned error %d\n", 
+                "ice_session_start_connectivity_checks() returned error %d", 
                 status);
         return;
     }
@@ -1450,6 +1439,7 @@ int main (int argc, char *argv[])
     unsigned int bytes, port;
     ice_rx_stun_pkt_t pkt;
     int i, act_fd, fd_list[20];
+    bool console_input = true;
 
     if (argc < 3)
     {
@@ -1469,6 +1459,9 @@ int main (int argc, char *argv[])
         printf("License expired. Please contact MindBricks\n");
         return 0;
     }
+
+    printf ("MindBricks Technologies\n");
+    printf ("Evaluation License\n");
 
     printf("===================================================================\n");
 
@@ -1498,18 +1491,21 @@ int main (int argc, char *argv[])
 
     while (g_demo_exit == false)
     {
-        ice_agent_demo_menu();
+        if (console_input == true) ice_agent_demo_menu();
+        console_input = false;
 
         act_fd = platform_socket_listen(demo_sockfds, 
                                                 demo_sockfds_count, fd_list);
 
         for (i = 0; i < act_fd; i++)
         {
-            bytes = platform_socket_recvfrom(fd_list[i], 
+            /** avoid reading from console */
+            if (fd_list[i] != demo_sockfds[0])
+            {
+                bytes = platform_socket_recvfrom(fd_list[i], 
                             demo_buf, TRANSPORT_MTU_SIZE, 0, address, &port);
-            if (!bytes) continue;
-
-            printf("Reading data from fd_list[i]: %d\n", fd_list[i]);
+                if (!bytes) continue;
+            }
 
             if (fd_list[i] == demo_sockfds[0])
             {
@@ -1521,6 +1517,8 @@ int main (int argc, char *argv[])
                 fgets(choice, sizeof(choice), stdin);
 
                 ice_agent_handle_user_choice(choice);
+
+                console_input = true;
             }
             else if (fd_list[i] == demo_sockfds[1])
             {

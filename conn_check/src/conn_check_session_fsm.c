@@ -339,7 +339,7 @@ int32_t cc_timeout (conn_check_session_t *session, handle h_txn)
      * stun transaction related to this 
      * session has timed out and terminated.
      */
-    ICE_LOG(LOG_SEV_ERROR, 
+    ICE_LOG(LOG_SEV_WARNING, 
             "[CONN CHECK] stun txn terminated due to timeout");
 
     status = stun_destroy_txn(h_txn_inst, h_txn, false, false);

@@ -792,7 +792,7 @@ int32_t ice_media_utils_initialize_cand_pairs(ice_media_stream_t *media)
                     waiting_pair->state = ICE_CP_WAITING;
 
 #ifdef DEBUG1
-                    ICE_LOG(LOG_SEV_CRITICAL, "value i:%d and j:%d", i, j);
+                    ICE_LOG(LOG_SEV_DEBUG, "value i:%d and j:%d", i, j);
                     ICE_LOG(LOG_SEV_DEBUG, 
                             "Waiting pair found for comp id %d foundation %s:%s", 
                             inner->local->comp_id, outer->local->foundation, 
@@ -815,11 +815,11 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
     s_char nom_status[16], valid_status[16], candtype[16];
     ice_cand_pair_t *pair;
 
-    ICE_LOG (LOG_SEV_DEBUG, 
+    ICE_LOG (LOG_SEV_WARNING, 
             "===============================================================");
 
-    ICE_LOG (LOG_SEV_DEBUG, 
-            "\ncount: [comp_id] source --> dest state [ priority foundation ]\n");
+    ICE_LOG (LOG_SEV_WARNING, 
+            "count: [comp_id] source --> dest state [ priority foundation ]");
 
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
@@ -853,8 +853,8 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
 
 
         count++;
-        ICE_LOG (LOG_SEV_INFO, 
-                "%d: [%d] %s:%d --> %s:%d %s [%s] [%s] [ %lld %s:%s ] [%s]\n", 
+        ICE_LOG (LOG_SEV_WARNING, 
+                "%d: [%d] %s:%d --> %s:%d %s [%s] [%s] [ %lld %s:%s ] [%s]", 
                 count, pair->local->comp_id, pair->local->transport.ip_addr, 
                 pair->local->transport.port, pair->remote->transport.ip_addr, 
                 pair->remote->transport.port, cand_pair_states[pair->state], 
@@ -862,9 +862,9 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
                 pair->local->foundation, pair->remote->foundation, candtype);
     }
 
-    ICE_LOG (LOG_SEV_DEBUG, "Total %d valid pairs for this media\n", count);
+    ICE_LOG (LOG_SEV_WARNING, "Total %d valid pairs for this media", count);
 
-    ICE_LOG (LOG_SEV_DEBUG, "===============================================================");
+    ICE_LOG (LOG_SEV_WARNING, "===============================================================");
 
     return;
 }
@@ -1031,7 +1031,7 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     media = pair->media;
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
-    ICE_LOG (LOG_SEV_ERROR, 
+    ICE_LOG (LOG_SEV_WARNING, 
             " Check: [%d] %s:%d --> %s:%d %s ", pair->local->comp_id, 
             pair->local->transport.ip_addr, pair->local->transport.port,
             pair->remote->transport.ip_addr, pair->remote->transport.port, 
@@ -2422,14 +2422,18 @@ int32_t ice_utils_find_cand_pair_for_conn_check_session(
     int32_t i;
     ice_cand_pair_t *pair;
 
-    ICE_LOG(LOG_SEV_ERROR, "Searching for connectivity check session handle [%ld]", h_conn_check);
+    ICE_LOG(LOG_SEV_INFO, "Searching for "\
+            "connectivity check session handle [%ld]", h_conn_check);
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
     {
         pair = &media->ah_cand_pairs[i];
         if (!pair->local) continue;
 
-        ICE_LOG(LOG_SEV_ERROR, "[%d]: State: [%s] [%ld] [%ld] [%s:%d]", i, cand_pair_states[pair->state], pair->h_cc_session, pair->h_cc_cancel, pair->remote->transport.ip_addr, pair->remote->transport.port);
+        ICE_LOG(LOG_SEV_INFO, "[%d]: State: [%s] [%ld] [%ld] [%s:%d]", 
+                i, cand_pair_states[pair->state], pair->h_cc_session, 
+                pair->h_cc_cancel, pair->remote->transport.ip_addr, 
+                pair->remote->transport.port);
 
         if ((pair->h_cc_session == h_conn_check) || (pair->h_cc_cancel == h_conn_check))
         {
@@ -2850,7 +2854,7 @@ int32_t ice_utils_process_pending_ic_checks(ice_media_stream_t *media)
                 continue;
             }
 
-            ICE_LOG(LOG_SEV_ERROR,
+            ICE_LOG(LOG_SEV_WARNING,
                     "[ICE] Added a new remote peer reflexive candidate");
         }
 
@@ -4190,7 +4194,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                 status = ice_media_utils_update_cand_pair_states(media, cp);
                 if (status != STUN_OK)
                 {
-                    ICE_LOG(LOG_SEV_ERROR,
+                    ICE_LOG(LOG_SEV_WARNING,
                             "[ICE] Updating the candidate pair states of "\
                             "the media failed - %d", status);
 

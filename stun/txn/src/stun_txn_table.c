@@ -132,7 +132,7 @@ int32_t stun_txn_table_find_txn(handle h_table, handle h_msg, handle *h_txn)
         if (stun_memcmp(txn_id, node->trans_id, STUN_TXN_ID_BYTES) == 0)
         {
             *h_txn = node->h_txn;
-            ICE_LOG (LOG_SEV_INFO, "[STUN TXN] Table entry match found");
+            ICE_LOG (LOG_SEV_DEBUG, "[STUN TXN] Table entry match found");
             return STUN_OK;
         }
 
