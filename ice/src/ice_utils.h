@@ -303,6 +303,11 @@ int32_t ice_media_utils_cease_checks_for_nominated_comp(
 int32_t ice_utils_process_binding_keepalive_response(
                 ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt);
 
+bool_t ice_media_utils_have_valid_list_for_all_components(
+                                            ice_media_stream_t *media);
+
+int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media);
+
 
 
 /******************************************************************************/

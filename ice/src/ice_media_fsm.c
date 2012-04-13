@@ -747,8 +747,7 @@ int32_t ice_media_stream_checklist_timer_expiry(
 int32_t ice_media_stream_evaluate_valid_pairs(
                                     ice_media_stream_t *media, handle arg)
 {
-    int32_t count, status;
-    ice_cand_pair_t *np;
+    int32_t status;
 
     ICE_LOG(LOG_SEV_INFO,
             "Nomination timer expired. Time to evaluate the candidate pairs "\
@@ -781,67 +780,7 @@ int32_t ice_media_stream_evaluate_valid_pairs(
     }
 
     /** This media has atleast one nominated pair for each of it's components */
-
-    for (count = 0; count < media->num_comp; count++)
-    {
-        np = ice_utils_select_nominated_cand_pair(media, (count + 1));
-        
-        /** 
-         * no need for return value check since we have already verified 
-         * availability of the nominated pair for each component 
-         */
-
-        /*
-         * When the controlling agent selects the valid pair, it repeats the
-         * check that produced this valid pair (by enqueuing the pair that
-         * generated the check into the triggered check queue), this time with
-         * the USE-CANDIDATE attribute.
-         */
-
-        ICE_LOG(LOG_SEV_INFO,
-                "[ICE MEDIA] Candidate pair %p current state %d", 
-                np, np->state);
-
-        np->check_nom_status = true;
-
-        status = ice_utils_add_to_triggered_check_queue(media, np);
-        if (status != STUN_OK)
-        {
-            ICE_LOG(LOG_SEV_ERROR,
-                    "[ICE MEDIA] Adding of nominated candidate pair %p for "\
-                    "component %d to triggered list for media %p failed", 
-                    np, (count + 1), media);
-            
-            media->state = ICE_MEDIA_CC_FAILED;
-
-            return STUN_INT_ERROR;
-        }
-
-        ICE_LOG(LOG_SEV_INFO,
-                "[ICE MEDIA] Added nominated candidate pair %p for component "\
-                "%d to triggered list for media %p", np, (count + 1), media);
-    }
-
-    /** 
-     * make sure the checklist timer is running. If stopped, 
-     * then restart it so that the nominated triggered checks
-     * that we have added above are processed 
-     */
-    if (media->checklist_timer->timer_id == 0)
-    {
-        status = ice_media_utils_start_check_list_timer(media);
-    }
-
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_INFO,
-                "[ICE MEDIA] Unable to start the checklist timer after adding"\
-                " the nominated pairs to triggered queue for media %p", media);
-    }
-    else
-    {
-        media->state = ICE_MEDIA_NOMINATING;
-    }
+    status = ice_media_utils_initiate_nomination(media);
 
     return status;
 }

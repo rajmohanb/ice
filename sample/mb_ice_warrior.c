@@ -41,11 +41,8 @@
 
 
 #ifdef ICE_IPV6
-#define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
 #else
-#define STUN_SRV_IP "10.1.71.103"
-//#define STUN_SRV_IP "192.168.1.2"
 #define TURN_SRV_IP "10.1.71.101"
 //#define TURN_SRV_IP "109.107.37.45"
 #endif
@@ -59,14 +56,8 @@
 
 #define TRANSPORT_MTU_SIZE  1500
 
-#ifdef ICE_IPV6
-#define LOCAL_IP   "2001:db8:0:242::67"
-#else
-#define LOCAL_IP   "172.16.8.101"
-#endif
-
-#define LOCAL_ICE_RTP_HOST_PORT  44444
-#define LOCAL_ICE_RTCP_HOST_PORT 44445
+#define ICE_MEDIA_PORT_RANGE_MIN    33000
+#define ICE_MEDIA_PORT_RANGE_MAX    65535
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
@@ -75,6 +66,8 @@
 
 #define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
 
+
+int verify_license (void);
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
 /** globals used by the test application */
@@ -97,6 +90,7 @@ static int demo_sockfds_count = 0;
 
 u_char *demo_buf;
 
+struct timeval start, end;
 
 /*++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -248,7 +242,7 @@ int32_t app_stop_timer (handle timer_id)
 void app_rx_data(handle h_inst, handle h_session, 
             handle h_media, uint32_t comp_id, void *data, uint32_t data_len)
 {
-    printf("Data returned for COMP ID: [%d] %s\n", comp_id, data);
+    printf("Data returned for COMP ID: [%d] %s\n", comp_id, (char *)data);
     return;
 }
 
@@ -606,6 +600,40 @@ void ice_sample_print_valid_list(handle h_inst, handle h_session)
 void app_media_state_change_handler(handle h_inst, 
                                     handle h_session, handle h_media, ice_state_t state)
 {
+    if ((state == ICE_CC_COMPLETED) || (state == ICE_CC_FAILED))
+    {
+        int sec, usec;
+
+        if(gettimeofday(&end, NULL) != 0)
+        {
+            APP_LOG (LOG_SEV_WARNING, 
+                    "Timing connectivity check - getting time failed");
+            /** its ok, we can continue */
+        }
+        else
+        {
+            sec = (end.tv_sec - start.tv_sec);
+            if (end.tv_usec < start.tv_usec)
+            {
+                sec -= 1;
+                usec = (end.tv_usec + 1000000) - start.tv_usec;
+            }
+            else
+                usec = end.tv_usec - start.tv_usec;
+        }
+
+        printf("\nNegotiation Started: %d sec %d usec\n", 
+                (int)start.tv_sec, (int)start.tv_usec);
+        printf("Negotiation Ended: %d sec %d usec\n", 
+                (int)end.tv_sec, (int)end.tv_usec);
+
+        if (state == ICE_CC_COMPLETED)
+            printf("ICE Negotiation COMPLETED. Duration: [%d] sec [%03d] msec\n", sec, usec);
+        else if (state == ICE_CC_FAILED)
+            printf("ICE Negotiation FAILED. Duration: [%d] sec [%03d] msec\n", sec, usec);
+
+    }
+
     switch(state)
     {
         case ICE_GATHERED:
@@ -861,9 +889,30 @@ void app_create_ice_session(void)
 }
 
 
+int app_get_random_media_port(void)
+{
+    int rand_port;
+   
+    platform_get_random_data((unsigned char *)&rand_port, sizeof(rand_port));
+
+    srand(rand_port);
+
+    // assuming random to be between 0 & RAND_MAX */
+    do
+    {
+        int temp = rand();
+        rand_port = temp%ICE_MEDIA_PORT_RANGE_MAX;
+        printf("rand returned %d rand_port %d\n", temp, rand_port);
+    } while((rand_port <= ICE_MEDIA_PORT_RANGE_MIN) || 
+            (rand_port > ICE_MEDIA_PORT_RANGE_MAX));
+
+    return rand_port;
+}
+
+
 void app_add_media(void)
 {
-    int32_t status;
+    int32_t status, rtp_port, rtcp_port;
     struct sockaddr_in local_addr;
     ice_api_media_stream_t media;
 
@@ -874,6 +923,7 @@ void app_add_media(void)
     }
 
     memset(&media, 0, sizeof(media));
+    rtp_port = rtcp_port = 0;
 
     demo_sockfds[2] = platform_create_socket(AF_INET, SOCK_DGRAM, 0);
     if (demo_sockfds[2] == -1) return;
@@ -881,14 +931,18 @@ void app_add_media(void)
 
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
-    local_addr.sin_port = htons(LOCAL_ICE_RTP_HOST_PORT);
+    
+    rtp_port = app_get_random_media_port();
+    printf("using port %d for RTP\n", rtp_port);
+    local_addr.sin_port = htons(rtp_port);
     local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     status = platform_bind_socket(demo_sockfds[2], 
             (struct sockaddr *)&local_addr, sizeof(local_addr));
     if (status == -1)
     {
-        APP_LOG (LOG_SEV_ERROR,
-                "binding to port failed... perhaps port already being used?\n");
+        APP_LOG (LOG_SEV_ERROR, 
+                "binding to port [%d] failed... perhapsa"\
+               " port already being used?", rtp_port);
         return;
     }
 
@@ -898,14 +952,18 @@ void app_add_media(void)
 
     memset(&local_addr, 0, sizeof(local_addr));
     local_addr.sin_family = AF_INET;
-    local_addr.sin_port = htons(LOCAL_ICE_RTCP_HOST_PORT);
+
+    rtcp_port = app_get_random_media_port();
+    printf("Using port %d for RTCP\n", rtcp_port);
+    local_addr.sin_port = htons(rtcp_port);
     local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     status = platform_bind_socket(demo_sockfds[3], 
                 (struct sockaddr *) &local_addr, sizeof(local_addr));
     if (status == -1)
     {
         APP_LOG (LOG_SEV_ERROR,
-                "binding to port failed... perhaps port already being used?\n");
+                "binding to port [%d] failed... "\
+                "perhaps port already being used?", rtcp_port);
         return;
     }
 
@@ -917,7 +975,7 @@ void app_add_media(void)
     media.host_cands[0].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
     strcpy((char *)media.host_cands[0].addr.ip_addr, g_localip);
-    media.host_cands[0].addr.port = LOCAL_ICE_RTP_HOST_PORT;
+    media.host_cands[0].addr.port = rtp_port;
     media.host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[0].comp_id = RTP_COMPONENT_ID;
     media.host_cands[0].transport_param = (handle)demo_sockfds[2];
@@ -932,7 +990,7 @@ void app_add_media(void)
     media.host_cands[1].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
     strcpy((char *)media.host_cands[1].addr.ip_addr, g_localip);
-    media.host_cands[1].addr.port = LOCAL_ICE_RTCP_HOST_PORT;
+    media.host_cands[1].addr.port = rtcp_port;
     media.host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media.host_cands[1].transport_param = (handle)demo_sockfds[3];
@@ -996,6 +1054,14 @@ void app_start_connectivity_checks(void)
     int32_t status;
 
     APP_LOG (LOG_SEV_WARNING, "Forming connectivity check lists ...");
+
+    if(gettimeofday(&start, NULL) != 0)
+    {
+        APP_LOG (LOG_SEV_WARNING, 
+                "Timing connectivity check - getting time failed");
+        /** its ok, we can continue */
+    }
+
     status = ice_session_form_check_lists(g_inst, g_session);
     if (status != STUN_OK)
     {
@@ -1374,7 +1440,7 @@ void ice_agent_get_local_ipv4_address (char *address, int addrlen)
 }
 
 
-static void mb_ice_warrior_usage()
+static void mb_ice_warrior_usage(void)
 {
     puts("MINDBRICKS ICE WARRIOR - Field application ");
     puts("Copyright (C) 2009-2012, MindBricks Technologies ");

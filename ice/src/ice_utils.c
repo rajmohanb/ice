@@ -4256,6 +4256,22 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                     /** unfreeze checks for other media streams */
                     status = ice_utils_unfreeze_checks_for_other_media_streams(media, pair);
                 }
+
+                /**
+                 * Once there is a valid pair for every component of the media
+                 * stream and the agent is in CONTROLLING mode and regular
+                 * nomination is being used, then proceed with nomination.
+                 */
+                if ((media->state == ICE_MEDIA_CC_RUNNING) && 
+                        (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING) && 
+                        (media->ice_session->instance->nomination_mode == ICE_NOMINATION_TYPE_REGULAR))
+                    if(ice_media_utils_have_valid_list_for_all_components(media) == true)
+                    {
+                        ice_media_utils_initiate_nomination(media);
+
+                        /** cancel nomination timer */
+                        ice_media_utils_stop_nomination_timer(media);
+                    }
             }
             else
             {
@@ -4653,6 +4669,140 @@ int32_t ice_utils_process_binding_keepalive_response(
      * binding transaction is to refresh the port bindings at the NATs which
      * is served by the request and response messages.
      */
+
+    return STUN_OK;
+}
+
+
+
+bool_t ice_media_utils_have_valid_list_for_all_components(ice_media_stream_t *media)
+{
+    uint32_t i;
+    bool_t rtp_valid, rtcp_valid;
+    ice_cand_pair_t *cp;
+
+    rtp_valid = rtcp_valid = false;
+    
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE MEDIA] Checking for valid candidate pairs in "\
+            "the media %p.", media);
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+        if (cp->valid_pair == false) continue;
+
+        if (cp->local->comp_id == RTP_COMPONENT_ID)
+            rtp_valid = true;
+        else if (cp->local->comp_id == RTCP_COMPONENT_ID)
+            rtcp_valid = true;
+    }
+
+    if (rtp_valid == true)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "RTP is validated");
+    }
+
+    if (rtcp_valid == true)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "RTCP is validated");
+    }
+
+    if ((rtp_valid == true) && (media->num_peer_comp == 1))
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And valid candidate pair is available for each of the "\
+                "component", media, media->num_peer_comp);
+        return true;
+    }
+
+    if ((rtp_valid == true) && (rtcp_valid == true))
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And valid candidate pairs are available for each of "\
+                "the components", media, media->num_peer_comp);
+        return true;
+    }
+    else 
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Number of components for this media %p is %d. "\
+                "And valid candidate pairs are NOT YET available for "\
+                "each of the components", media, media->num_peer_comp);
+        return false;
+    }
+}
+
+
+
+int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media)
+{
+    int32_t count, status;
+    ice_cand_pair_t *np;
+
+    for (count = 0; count < media->num_comp; count++)
+    {
+        np = ice_utils_select_nominated_cand_pair(media, (count + 1));
+        
+        /** 
+         * no need for return value check since we have already verified 
+         * availability of the validated pair for each component 
+         */
+
+        /*
+         * When the controlling agent selects the valid pair, it repeats the
+         * check that produced this valid pair (by enqueuing the pair that
+         * generated the check into the triggered check queue), this time with
+         * the USE-CANDIDATE attribute.
+         */
+
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Candidate pair %p current state %d", 
+                np, np->state);
+
+        np->check_nom_status = true;
+
+        status = ice_utils_add_to_triggered_check_queue(media, np);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE MEDIA] Adding of nominating candidate pair %p for "\
+                    "component %d to triggered list for media %p failed", 
+                    np, (count + 1), media);
+            
+            media->state = ICE_MEDIA_CC_FAILED;
+
+            return STUN_INT_ERROR;
+        }
+
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Added nominating candidate pair %p for component "\
+                "%d to triggered list for media %p", np, (count + 1), media);
+    }
+
+    /** 
+     * make sure the checklist timer is running. If stopped, 
+     * then restart it so that the nominated triggered checks
+     * that we have added above, are processed 
+     */
+    if (media->checklist_timer->timer_id == 0)
+    {
+        status = ice_media_utils_start_check_list_timer(media);
+    }
+
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_INFO,
+                "[ICE MEDIA] Unable to start the checklist timer after adding"\
+                " the nominated pairs to triggered queue for media %p", media);
+    }
+    else
+    {
+        media->state = ICE_MEDIA_NOMINATING;
+    }
 
     return STUN_OK;
 }
