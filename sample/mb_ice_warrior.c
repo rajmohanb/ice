@@ -39,20 +39,8 @@
 #include <stun_txn_api.h>
 #include "ice_api.h"
 
-
-#ifdef ICE_IPV6
-#define TURN_SRV_IP "2001:db8:0:242::67"
-#else
-#define TURN_SRV_IP "10.1.71.101"
-//#define TURN_SRV_IP "109.107.37.45"
-#endif
-
 #define STUN_SRV_PORT 3478
 #define TURN_SRV_PORT 3478
-
-#define TURN_USERNAME   "outgoing"
-#define TURN_PASSWORD   "password"
-#define TURN_DOMAIN     "domain.org"
 
 #define TRANSPORT_MTU_SIZE  1500
 
@@ -61,7 +49,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v1.00"
+#define ICE_VENDOR_NAME "MindBricks ICE Agent v1.00"
 #define ICE_VENDOR_NAME_LEN 25
 
 #define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
@@ -78,6 +66,10 @@ static handle g_audio = NULL;
 /* list of options configurable via command line */
 static char g_localip[128] = {0};
 static char g_stunip[128] = {0};
+static char g_turnip[128] = {0};
+static char g_turn_username[128] = {0};
+static char g_turn_pwd[128] = {0};
+static char g_turn_domain[128] = {0};
 static bool g_use_aggressive_nomination = false;
 static stun_log_level_t g_loglevel = LOG_SEV_WARNING;
 static char g_logfile[50] = "stdout";
@@ -273,10 +265,6 @@ static void encode_session(handle h_inst, handle h_session)
     {
         media_desc = &session_desc.media[media_count];
 
-        //printf ("------------------------------------------------------------------\n");
-        //printf ("Media handle %p\n", media_desc->h_media);
-        //printf ("Media state: %s\n\n", states[media_desc->media_state]);
-
         /* Write the a=ice-ufrag and a=ice-pwd attributes */
         printf("a=ice-ufrag:%.*s\na=ice-pwd:%.*s\n",
            strlen(media_desc->ice_ufrag),
@@ -288,7 +276,6 @@ static void encode_session(handle h_inst, handle h_session)
         {
             media_comp = &media_desc->comps[comp_count];
 
-            //printf ("Media component ID: %d\n", media_comp->comp_id);
             /** log the default candidate for each component */
             if (media_comp->comp_id == RTP_COMPONENT_ID)
             {
@@ -672,7 +659,6 @@ void app_session_state_change_handler(handle h_inst,
         case ICE_GATHERED:
         
             printf("ICE candidates gathering completed successfully\n");
-            //encode_session(h_inst, h_session);
             break;
 
         case ICE_CC_RUNNING:
@@ -855,33 +841,42 @@ void app_create_ice_session(void)
         g_session = NULL;
     }
 
-    turn_cfg.server.host_type = STUN_INET_ADDR_IPV4;
-    stun_strncpy((char *)&turn_cfg.server.ip_addr, TURN_SRV_IP, ICE_IP_ADDR_MAX_LEN - 1);
-    turn_cfg.server.port = TURN_SRV_PORT; 
-
-    stun_strncpy((char *)&turn_cfg.username, TURN_USERNAME, TURN_MAX_USERNAME_LEN - 1);
-    stun_strncpy((char *)&turn_cfg.credential, TURN_PASSWORD, TURN_MAX_PASSWORD_LEN - 1);
-    stun_strncpy((char *)&turn_cfg.realm, TURN_DOMAIN, TURN_MAX_REALM_LEN - 1);
-
-    status = ice_session_set_relay_server_cfg(g_inst, g_session, &turn_cfg);
-    if (status != STUN_OK)
+    if (g_turnip[0] && g_turn_username[0] && g_turn_pwd[0] && g_turn_domain[0])
     {
-        APP_LOG (LOG_SEV_ERROR,
-                "ice_session_set_relay_server_cfg() returned error %d\n", status);
-        return;
+        turn_cfg.server.host_type = STUN_INET_ADDR_IPV4;
+        stun_strncpy((char *)&turn_cfg.server.ip_addr, g_turnip, ICE_IP_ADDR_MAX_LEN - 1);
+        turn_cfg.server.port = TURN_SRV_PORT; 
+
+        stun_strncpy((char *)&turn_cfg.username, g_turn_username, TURN_MAX_USERNAME_LEN - 1);
+        stun_strncpy((char *)&turn_cfg.credential, g_turn_pwd, TURN_MAX_PASSWORD_LEN - 1);
+        stun_strncpy((char *)&turn_cfg.realm, g_turn_domain, TURN_MAX_REALM_LEN - 1);
+
+        status = ice_session_set_relay_server_cfg(g_inst, g_session, &turn_cfg);
+        if (status != STUN_OK)
+        {
+            APP_LOG (LOG_SEV_ERROR,
+                    "ice_session_set_relay_server_cfg() returned error %d\n", status);
+            return;
+        }
+
+        printf("Configured the TURN server information\n");
     }
 
-
-    stun_cfg.server.host_type = STUN_INET_ADDR_IPV4;
-    stun_strncpy((char *)&stun_cfg.server.ip_addr, g_stunip, ICE_IP_ADDR_MAX_LEN - 1);
-    stun_cfg.server.port = STUN_SRV_PORT; 
-
-    status = ice_session_set_stun_server_cfg(g_inst, g_session, &stun_cfg);
-    if (status != STUN_OK)
+    if (g_stunip[0])
     {
-        APP_LOG (LOG_SEV_ERROR,
-                "ice_session_set_stun_server_cfg() returned error %d\n", status);
-        return;
+        stun_cfg.server.host_type = STUN_INET_ADDR_IPV4;
+        stun_strncpy((char *)&stun_cfg.server.ip_addr, g_stunip, ICE_IP_ADDR_MAX_LEN - 1);
+        stun_cfg.server.port = STUN_SRV_PORT; 
+
+        status = ice_session_set_stun_server_cfg(g_inst, g_session, &stun_cfg);
+        if (status != STUN_OK)
+        {
+            APP_LOG (LOG_SEV_ERROR,
+                    "ice_session_set_stun_server_cfg() returned error %d\n", status);
+            return;
+        }
+        
+        printf("Configured the STUN server information\n");
     }
 
     APP_LOG (LOG_SEV_INFO, "ICE session created successfully");
@@ -1022,7 +1017,8 @@ void app_add_media(void)
 
 void app_gather_ice_candidates(void)
 {
-    int32_t status = ice_session_gather_candidates(g_inst, g_session, false);
+    int32_t status = ice_session_gather_candidates(
+                    g_inst, g_session, ((g_turnip[0] != 0)?true:false));
 
     if (status != STUN_OK)
     {
@@ -1451,12 +1447,18 @@ static void mb_ice_warrior_usage(void)
     puts(" -ll [level] => acceptble level levels");
     puts("        0 = critical, 1 = error, 2 = warning, 3 = info, 4 = debug");
     puts(" -lf [filename] => file to which log is to be redirected");
-    puts("");
-    puts("STUN related options:");
-    puts(" -s [STUN IP] => STUN Server STUN Server IP address (not domain).");
     puts(" -A => Use aggressive nomination. By default, regular nomination is used");
     puts("");
-    puts("Example: mb_ice_warrior -s 202.43.66.200 ");
+    puts("STUN related options:");
+    puts(" -s [STUN IP] => STUN Server IP address (not domain).");
+    puts("");
+    puts("TURN related options:");
+    puts(" -t [TURN IP] => TURN Server IP address (not domain).");
+    puts(" -u [user name] => username for TURN server allocation");
+    puts(" -p [password] => password for TURN server allocation");
+    puts(" -d [Domain] => Domain name for TURN server allocation");
+    puts("");
+    puts("Example: ./mb_ice_warrior -s 202.43.66.200 ");
     puts("");
 }
 
@@ -1484,6 +1486,22 @@ int32_t ice_agent_parse_user_args(int argc, char *argv[])
         else if ((len == 3) && (strncmp(argv[argc-1], "-lf", 3) == 0))
         {
             strcpy(g_logfile, argv[argc]);
+        }
+        else if ((len == 2) && (strncmp(argv[argc-1], "-t", 2) == 0))
+        {
+            strcpy(g_turnip, argv[argc]);
+        }
+        else if ((len == 2) && (strncmp(argv[argc-1], "-u", 2) == 0))
+        {
+            strcpy(g_turn_username, argv[argc]);
+        }
+        else if ((len == 2) && (strncmp(argv[argc-1], "-p", 2) == 0))
+        {
+            strcpy(g_turn_pwd, argv[argc]);
+        }
+        else if ((len == 2) && (strncmp(argv[argc-1], "-d", 2) == 0))
+        {
+            strcpy(g_turn_domain, argv[argc]);
         }
         else
         {
@@ -1542,7 +1560,18 @@ int main (int argc, char *argv[])
         printf("Using Regular nomination\n");
     printf("Log level: %d\n", g_loglevel);
     printf("Log file: %s\n", g_logfile);
-    printf("STUN server: %s\n", g_stunip);
+    if (g_stunip[0]) printf("STUN server: %s\n", g_stunip);
+    if (g_turnip[0]) printf("TURN server: %s\n", g_turnip);
+    if (g_turn_username[0]) printf("TURN username: %s\n", g_turn_username);
+    if (g_turn_domain[0]) printf("TURN domain: %s\n", g_turn_domain);
+    if (g_turn_pwd[0]) printf("TURN password: %s\n", g_turn_pwd);
+
+    if (((g_stunip[0]) && (g_turnip[0])) || ((!g_stunip[0]) && (!g_turnip[0])))
+    {
+        printf("Please specify only one of either STUN or TURN IP address\n");
+        return 0;
+    }
+
 
     printf("===================================================================\n\n");
 

@@ -412,7 +412,8 @@ unsigned int platform_socket_sendto(int sock_fd,
 #endif
     if (bytes != 1) {
         perror("inet_pton:");
-        ICE_LOG (LOG_SEV_ERROR, "inet_pton() failed %d\n", bytes);
+        ICE_LOG (LOG_SEV_ERROR, 
+                "%s: inet_pton() failed %d\n", dest_ipaddr, bytes);
         return 0;
     }
 
