@@ -45,7 +45,7 @@
 #else
 #define STUN_SRV_IP "10.1.71.103"
 //#define STUN_SRV_IP "192.168.1.2"
-#define TURN_SRV_IP "10.1.71.103"
+#define TURN_SRV_IP "10.1.71.101"
 //#define TURN_SRV_IP "109.107.37.45"
 #endif
 
@@ -175,7 +175,6 @@ void app_timer_expiry_cb (void *timer_id, void *arg)
                 (u_char *)&timer_event, sizeof(timer_event), 0, 
                 AF_INET, DEMO_AGENT_TIMER_PORT, LOCAL_IP);
 #if 0
-
     /** 
      * The following should be enabled only when the system timer 
      * callback calls the ICE timer API directly in the signal 
@@ -222,12 +221,14 @@ int32_t app_nwk_send_msg (u_char *buf, uint32_t buf_len,
     return sent_bytes;
 }
 
+
 handle app_start_timer (uint32_t duration, handle arg)
 {
     timer_expiry_callback timer_cb = app_timer_expiry_cb;
 
     return platform_start_timer(duration, timer_cb, arg);
 }
+
 
 int32_t app_stop_timer (handle timer_id)
 {
@@ -924,6 +925,7 @@ void app_add_media(void)
     media.host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[0].comp_id = RTP_COMPONENT_ID;
     media.host_cands[0].transport_param = (handle)demo_sockfds[2];
+    media.host_cands[0].local_pref = LOCAL_PREF_IPV4;
 
     APP_LOG(LOG_SEV_DEBUG,
             "Transport param for component ID %d :-> %d", 
@@ -939,6 +941,7 @@ void app_add_media(void)
     media.host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media.host_cands[1].transport_param = (handle)demo_sockfds[3];
+    media.host_cands[1].local_pref = LOCAL_PREF_IPV4;
 
     APP_LOG(LOG_SEV_DEBUG,
             "Transport param for component ID %d :-> %d", 
@@ -1213,6 +1216,11 @@ int32_t ice_agent_demo_init(void)
     int32_t status;
     struct sockaddr_in local_addr;
 
+    /**
+     * Allocate memory for the buffer which will be used for receiving the
+     * data over the network. Once the message is received, it is passed
+     * on to the ICE stack.
+     */
     demo_buf = (unsigned char *) platform_calloc (1, TRANSPORT_MTU_SIZE);
     if (demo_buf == NULL)
     {

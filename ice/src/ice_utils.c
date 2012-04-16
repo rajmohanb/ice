@@ -2082,6 +2082,7 @@ int32_t ice_utils_copy_turn_gathered_candidates(
         return STUN_INT_ERROR;
     }
 
+#ifndef MB_IGNORE_SRFLEX_CANDIDATES
     status = ice_utils_get_free_local_candidate(media, &cand);
     if (status == STUN_NO_RESOURCE) return status;
 
@@ -2089,6 +2090,7 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     ice_utils_copy_gathered_candidate_info(cand, 
                             &alloc_info.mapped_addr, ICE_CAND_TYPE_SRFLX, 
                             comp_id, base_cand, false);
+#endif
 
     status = ice_utils_get_free_local_candidate(media, &cand);
     if (status == STUN_NO_RESOURCE) return status;

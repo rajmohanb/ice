@@ -974,6 +974,7 @@ void app_add_media(void)
     media.host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[0].comp_id = RTP_COMPONENT_ID;
     media.host_cands[0].transport_param = (handle)demo_sockfds[2];
+    media.host_cands[0].local_pref = LOCAL_PREF_IPV4;
 
     APP_LOG(LOG_SEV_DEBUG,
             "Transport param for component ID %d :-> %d", 
@@ -989,6 +990,7 @@ void app_add_media(void)
     media.host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media.host_cands[1].transport_param = (handle)demo_sockfds[3];
+    media.host_cands[1].local_pref = LOCAL_PREF_IPV4;
 
     APP_LOG(LOG_SEV_DEBUG,
             "Transport param for component ID %d :-> %d", 
