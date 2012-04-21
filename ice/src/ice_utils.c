@@ -1557,7 +1557,7 @@ ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
 
 
 ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
-                ice_media_stream_t *media, handle transport_param)
+        ice_media_stream_t *media, handle transport_param, bool_t relayed_msg)
 {
     uint32_t i;
     ice_candidate_t *cand;
@@ -1569,7 +1569,10 @@ ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
 
         if (cand->transport_param == transport_param)
         {
-            return cand;
+            if (relayed_msg == false) return cand;
+
+            /** relayed check is true */
+            if (cand->type == ICE_CAND_TYPE_RELAYED) return cand;
         }
     }
 
@@ -1579,10 +1582,10 @@ ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
 
 
 handle ice_utils_get_turn_session_for_transport_param(
-                    ice_media_stream_t *media, handle transport_param)
+        ice_media_stream_t *media, handle transport_param, bool_t relayed_msg)
 {
-    ice_candidate_t *cand = 
-        ice_utils_get_local_cand_for_transport_param(media, transport_param);
+    ice_candidate_t *cand = ice_utils_get_local_cand_for_transport_param(
+                                        media, transport_param, relayed_msg);
 
     if(cand == NULL) return cand;
 
@@ -2082,7 +2085,6 @@ int32_t ice_utils_copy_turn_gathered_candidates(
         return STUN_INT_ERROR;
     }
 
-#ifndef MB_IGNORE_SRFLEX_CANDIDATES
     status = ice_utils_get_free_local_candidate(media, &cand);
     if (status == STUN_NO_RESOURCE) return status;
 
@@ -2090,7 +2092,6 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     ice_utils_copy_gathered_candidate_info(cand, 
                             &alloc_info.mapped_addr, ICE_CAND_TYPE_SRFLX, 
                             comp_id, base_cand, false);
-#endif
 
     status = ice_utils_get_free_local_candidate(media, &cand);
     if (status == STUN_NO_RESOURCE) return status;
@@ -2112,6 +2113,7 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     ice_utils_copy_gathered_candidate_info(cand, 
                             &alloc_info.relay_addr, ICE_CAND_TYPE_RELAYED, 
                             comp_id, base_cand, true);
+    cand->base = cand;
 
     /**
      * Sec 4.1.4 of RFC 5245 - choosing default candidates
@@ -4808,6 +4810,47 @@ int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media)
 
     return STUN_OK;
 }
+
+
+#ifdef MB_IGNORE_SRFLEX_CONN_CHECKS
+int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
+                                            ice_media_stream_t *media)
+{
+    uint32_t i;
+    ice_cand_pair_t *pair;
+
+    /**
+     * It is assumed that the pruning has already been done by now, 
+     * and that the local server reflexive candidates have already 
+     * been phased out. Run through the list and for each pair where 
+     * the peer/remote candidate is server reflexive, remove the check.
+     */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        pair = &media->ah_cand_pairs[i];
+        if (!pair->local) continue;
+        if (!pair->remote) continue;
+
+        if (pair->remote->type == ICE_CAND_TYPE_SRFLX)
+        {
+            stun_memset(pair, 0, sizeof(ice_cand_pair_t));
+            ICE_LOG(LOG_SEV_DEBUG, 
+                    "MB_IGNORE_SRFLEX_CONN_CHECKS is defined. Removed "\
+                    "candidate pair where the peer candidate is Server "\
+                    "Reflxive");
+        }
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "MB_IGNORE_SRFLEX_CONN_CHECKS is defined. List of candidate "\
+            "pair connectivity checks after conn checks with the peer "\
+            "candidates of type Server Reflxive are removed");
+    ice_media_utils_dump_cand_pair_stats(media);
+
+    return STUN_OK;
+}
+#endif
+
 
 
 

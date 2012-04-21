@@ -264,7 +264,7 @@ int32_t process_alloc_resp (turn_session_t *session, handle h_rcvdmsg)
                                             h_error_code_attr, &error_code);
         if (status != STUN_OK) goto ERROR_EXIT_PT1;
 
-        ICE_LOG (LOG_SEV_INFO, 
+        ICE_LOG (LOG_SEV_WARNING, 
                 "[TURN] Received ALLOCATE error response with error code %d", 
                 error_code);
 

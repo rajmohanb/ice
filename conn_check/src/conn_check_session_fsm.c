@@ -228,7 +228,6 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         return STUN_VALIDATON_FAIL;
     }
 
-
     /**
      * RFC 5245 sec 7.1.2 - Processing the response
      */
@@ -267,7 +266,12 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
     {
         /** not symmetric */
         session->cc_succeeded = false;
+        session->state = CC_OG_TERMINATED;
         status = STUN_TERMINATED;
+
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Dropping message since the IP addresses of the "\
+                "response is not symmetric with the sent request");
 
         goto ERROR_EXIT_PT;
     }
@@ -304,7 +308,9 @@ int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg)
         if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
     else
+    {
         goto ERROR_EXIT_PT;
+    }
 
     if (txn_terminated == true)
     {

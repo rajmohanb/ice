@@ -654,7 +654,8 @@ void ice_handle_app_data(handle h_turn_inst,
         ice_candidate_t *cand = NULL;
         ice_instance_t *inst = (ice_instance_t *) media->ice_session->instance;
 
-        cand = ice_utils_get_local_cand_for_transport_param(media, transport_param);
+        cand = ice_utils_get_local_cand_for_transport_param(
+                                            media, transport_param, false);
 
         if (cand == NULL)
         {
@@ -672,10 +673,9 @@ void ice_handle_app_data(handle h_turn_inst,
 
     /*
      * so, this is a stun message. Determine the media and ice session for 
-     * turn session. 
-     * decode the message 
-     * if the method type is BINDING, then determine the conn check session 
-     * and inject the message into the conn check session.
+     * turn session.  decode the message. if the method type is BINDING, 
+     * then determine the conn check session and inject the message into 
+     * the conn check session.
      */
     status = stun_msg_decode(data, data_len, true, &h_msg);
     if (status != STUN_OK)
@@ -701,6 +701,7 @@ void ice_handle_app_data(handle h_turn_inst,
     pkt.h_msg = h_msg;
     pkt.transport_param = transport_param;
     stun_memcpy(&pkt.src, src, sizeof(stun_inet_addr_t));
+    pkt.relayed_check = true;
 
     ice_session_fsm_inject_msg(media->ice_session, ICE_MSG, (handle)&pkt, NULL);
 
@@ -1440,6 +1441,8 @@ int32_t ice_session_inject_received_msg(handle h_inst,
     }
 
     if (status != STUN_OK) return status;
+
+    stun_pkt->relayed_check = false;
 
     return ice_session_fsm_inject_msg(session, event, (handle)stun_pkt, NULL);
 }

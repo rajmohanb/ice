@@ -262,7 +262,7 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
                 "[ICE MEDIA] **** Received indication message ****\n");
 
         h_turn_dialog = ice_utils_get_turn_session_for_transport_param(
-                                            media, stun_pkt->transport_param);
+                media, stun_pkt->transport_param, stun_pkt->relayed_check);
         if (h_turn_dialog == NULL) status = STUN_INVALID_PARAMS;
     }
     else if (method == STUN_METHOD_BINDING)
@@ -462,6 +462,8 @@ int32_t ice_media_stream_form_checklist(
     if (status != STUN_OK) return status;
 
 #ifdef DEBUG
+    ICE_LOG (LOG_SEV_DEBUG, 
+            "Final List of candidate pairs for connectivity checks");
     ice_media_utils_dump_cand_pair_stats(media);
 #endif
 
@@ -508,6 +510,11 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
             return status;
         }
     }
+
+#ifdef MB_IGNORE_SRFLEX_CONN_CHECKS
+    status = ice_media_utils_ignore_server_reflexive_conn_checks(media);
+    if (status != STUN_OK) return status;
+#endif
 
     /** 
      * The checklist for this media is now active. The initial check 
@@ -632,7 +639,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             conn_check_result_t check_result;
 
             status = conn_check_session_get_check_result(
-                                h_cc_inst, media->h_cc_svr_session, &check_result);
+                            h_cc_inst, media->h_cc_svr_session, &check_result);
             if (status != STUN_OK) return status;
 
     
@@ -640,7 +647,7 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             ice_utils_check_for_role_change(media, &check_result);
 
             local = ice_utils_get_local_cand_for_transport_param(
-                                            media, stun_pkt->transport_param);
+                    media, stun_pkt->transport_param, stun_pkt->relayed_check);
 
             /**
              * RFC 5245 sec 7.2 STUN Server Procedures

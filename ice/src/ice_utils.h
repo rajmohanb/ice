@@ -91,10 +91,10 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
 void ice_utils_dump_media_params(ice_media_params_t *media_params);
 
 ice_candidate_t *ice_utils_get_local_cand_for_transport_param(
-                ice_media_stream_t *media, handle transport_param);
+        ice_media_stream_t *media, handle transport_param, bool_t relayed_msg);
 
 handle ice_utils_get_turn_session_for_transport_param(
-                    ice_media_stream_t *media, handle transport_param);
+        ice_media_stream_t *media, handle transport_param, bool_t relayed_msg);
 
 ice_candidate_t *ice_utils_get_peer_cand_for_pkt_src(
                     ice_media_stream_t *media, stun_inet_addr_t *src);
@@ -307,6 +307,12 @@ bool_t ice_media_utils_have_valid_list_for_all_components(
                                             ice_media_stream_t *media);
 
 int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media);
+
+#ifdef MB_IGNORE_SRFLEX_CONN_CHECKS
+int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
+                                            ice_media_stream_t *media);
+#endif
+
 
 
 

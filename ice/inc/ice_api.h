@@ -88,6 +88,9 @@ typedef struct
     /** source address of stun packet */
     stun_inet_addr_t src;
 
+    /** whether message is relayed - application should always set it false */
+    bool_t relayed_check;
+
 } ice_rx_stun_pkt_t;
 
 

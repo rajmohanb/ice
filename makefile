@@ -29,8 +29,9 @@ ICE_APP_INCLUDE_PATH := .
 # additional flags may include flags related to debugging among others. If
 # the target platform architecture is big endian, then add the flag - 
 # -DIS_LITTLE_ENDIAN, else add -DIS_BIG_ENDIAN
-# MB_LOG_RX_TX_MSGS - enables logging of outgoing stun messages
-ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN -DMB_LOG_RX_TX_MSGS -DMB_IGNORE_SRFLEX_CANDIDATES
+# -DMB_LOG_RX_TX_MSGS - enables logging of outgoing stun messages
+# -DMB_IGNORE_SRFLEX_CONN_CHECKS - ignore conn checks with server reflex cands
+ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN -DMB_LOG_RX_TX_MSGS
 
 ifeq ($(strip $(MB_ENABLE_ICE_DEBUG)), y)
 ICE_APP_CFLAGS += -g -DDEBUG1 -DMB_SUPPORT_3489 #-DDEBUG2 -DDEBUG
