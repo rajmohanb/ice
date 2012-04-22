@@ -374,7 +374,10 @@ unsigned int platform_create_socket(int domain, int type, int protocol)
 
 unsigned int platform_bind_socket(int sockfd, struct sockaddr *addr, int addrlen)
 {
-    return bind(sockfd, addr, addrlen);
+    int ret = bind(sockfd, addr, addrlen);
+    if (ret != 0)
+       perror("Bind:"); 
+    return ret;
 }
 
 unsigned int platform_socket_send(int sock_fd, 

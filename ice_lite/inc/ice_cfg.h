@@ -29,18 +29,12 @@ extern "C" {
 #define ICE_CHECK_LIST_MAX_SIZE     100
 #define ICE_CANDIDATES_MAX_SIZE     10
 
-#define TURN_SVR_IP_ADDR_MAX_LEN    16
 #define STUN_SVR_IP_ADDR_MAX_LEN    16
 
 #define ICE_MAX_CONCURRENT_SESSIONS 4
 #define ICE_MAX_CANDIDATE_PAIRS     18
 
-#define TURN_SERVER_DEFAULT_PORT 3478
 #define STUN_SERVER_DEFAULT_PORT 3478
-
-#define TURN_MAX_USERNAME_LEN   128
-#define TURN_MAX_PASSWORD_LEN   128
-#define TURN_MAX_REALM_LEN      64
 
 #define SOFTWARE_CLIENT_NAME_LEN 100
 
@@ -74,10 +68,6 @@ extern "C" {
 /** component id */
 #define RTP_COMPONENT_ID        1
 #define RTCP_COMPONENT_ID       2
-
-/** Ta and RTO values for gathering */
-#define TA_VAL_FOR_GATHERING    20 /* ms */
-#define RTO_VAL_FOR_GATHERING   100
 
 /** Ta and RTO values for connectivity checks */
 #define TA_VAL_FOR_CHECKS       20
