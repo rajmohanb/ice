@@ -44,7 +44,6 @@
 #ifdef TEST_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #else
-//#define STUN_SRV_IP "192.168.1.2"
 #define STUN_SRV_IP "208.97.25.20" // NO xor mapped addr
 //#define STUN_SRV_IP "64.34.202.155" // YES xor mapped addr
 #endif

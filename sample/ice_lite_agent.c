@@ -42,9 +42,6 @@
 //#define ICE_TEST_RFC3484
 
 
-//#define STUN_SRV_IP "198.65.166.165"
-//#define STUN_SRV_IP "75.101.138.128"
-//#define STUN_SRV_IP "216.146.46.55"
 #ifdef ICE_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #else
@@ -214,10 +211,6 @@ static void encode_session(handle h_inst, handle h_session)
     {
         media_desc = &session_desc.media[media_count];
 
-        //printf ("------------------------------------------------------------------\n");
-        //printf ("Media handle %p\n", media_desc->h_media);
-        //printf ("Media state: %s\n\n", states[media_desc->media_state]);
-
         /* Write the a=ice-ufrag and a=ice-pwd attributes */
         printf("a=ice-ufrag:%.*s\na=ice-pwd:%.*s\n",
            strlen(media_desc->ice_ufrag),
@@ -229,7 +222,6 @@ static void encode_session(handle h_inst, handle h_session)
         {
             media_comp = &media_desc->comps[comp_count];
 
-            //printf ("Media component ID: %d\n", media_comp->comp_id);
             /** log the default candidate for each component */
             if (media_comp->comp_id == RTP_COMPONENT_ID)
             {

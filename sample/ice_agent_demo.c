@@ -69,7 +69,7 @@
 
 #define DEMO_AGENT_TIMER_PORT    23456
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.57"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v1.0"
 #define ICE_VENDOR_NAME_LEN 25
 
 #define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
@@ -272,10 +272,6 @@ static void encode_session(handle h_inst, handle h_session)
     {
         media_desc = &session_desc.media[media_count];
 
-        //printf ("------------------------------------------------------------------\n");
-        //printf ("Media handle %p\n", media_desc->h_media);
-        //printf ("Media state: %s\n\n", states[media_desc->media_state]);
-
         /* Write the a=ice-ufrag and a=ice-pwd attributes */
         printf("a=ice-ufrag:%.*s\na=ice-pwd:%.*s\n",
            strlen(media_desc->ice_ufrag),
@@ -287,7 +283,6 @@ static void encode_session(handle h_inst, handle h_session)
         {
             media_comp = &media_desc->comps[comp_count];
 
-            //printf ("Media component ID: %d\n", media_comp->comp_id);
             /** log the default candidate for each component */
             if (media_comp->comp_id == RTP_COMPONENT_ID)
             {

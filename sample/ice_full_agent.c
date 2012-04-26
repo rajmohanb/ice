@@ -40,9 +40,6 @@
 //#define ICE_IPV6
 
 
-//#define STUN_SRV_IP "198.65.166.165"
-//#define STUN_SRV_IP "75.101.138.128"
-//#define STUN_SRV_IP "216.146.46.55"
 #ifdef ICE_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
@@ -69,7 +66,7 @@
 #define LOCAL_ICE_RTP_HOST_PORT 44444
 #define LOCAL_ICE_RTCP_HOST_PORT 44445
 
-#define ICE_VENDOR_NAME "MindBricks ICE agent v0.5"
+#define ICE_VENDOR_NAME "MindBricks ICE agent v1.0"
 #define ICE_VENDOR_NAME_LEN 25
 
 #define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
@@ -224,10 +221,6 @@ static void encode_session(handle h_inst, handle h_session)
     {
         media_desc = &session_desc.media[media_count];
 
-        //printf ("------------------------------------------------------------------\n");
-        //printf ("Media handle %p\n", media_desc->h_media);
-        //printf ("Media state: %s\n\n", states[media_desc->media_state]);
-
         /* Write the a=ice-ufrag and a=ice-pwd attributes */
         printf("a=ice-ufrag:%.*s\na=ice-pwd:%.*s\n",
            strlen(media_desc->ice_ufrag),
@@ -239,7 +232,6 @@ static void encode_session(handle h_inst, handle h_session)
         {
             media_comp = &media_desc->comps[comp_count];
 
-            //printf ("Media component ID: %d\n", media_comp->comp_id);
             /** log the default candidate for each component */
             if (media_comp->comp_id == RTP_COMPONENT_ID)
             {
@@ -787,23 +779,6 @@ int main (int argc, char *argv[])
         return -1;
     }
 
-#if 0
-    sockfd_ice[0] = ice_lite_sample_create_host_candidate(LOCAL_ICE_RTP_HOST_PORT);
-    if (sockfd_ice[0] == 0)
-    {
-        APP_LOG (LOG_SEV_ERROR, "Creation of local host candidate failed\n");
-        return -1;
-    }
-
-    sockfd_ice[1] = ice_lite_sample_create_host_candidate(LOCAL_ICE_RTCP_HOST_PORT);
-    if (sockfd_ice[1] == 0)
-    {
-        APP_LOG (LOG_SEV_ERROR, "Creation of local host candidate failed\n");
-        return -1;
-    }
-#endif
-
-    //-------------------------------------
     sockfd_ice[0] = platform_create_socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd_ice[0] == -1) return STUN_INT_ERROR;
 
@@ -835,8 +810,6 @@ int main (int argc, char *argv[])
                 "binding to port failed... perhaps port already being used?\n");
         return 0;
     }
-
-    //-------------------------------------
 
     num_fds = 2;
 
@@ -967,22 +940,6 @@ start_listen:
         }
     }
 
-
-#if 0
-    APP_LOG (LOG_SEV_ERROR, "OKKKK lets destroy the session now");
-    status = ice_destroy_session(h_inst, h_session);
-    if (status != STUN_OK)
-    {
-        APP_LOG (LOG_SEV_ERROR, 
-                "ice_destroy_session() returned error %d\n", status);
-        return -1;
-    }
-#endif
-
-#if 0
-    g_gather_done = false;
-    goto start_listen;
-#endif
 
     ice_input_remote_sdp(h_inst, h_session, h_audio);
  
