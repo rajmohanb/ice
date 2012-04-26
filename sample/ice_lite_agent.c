@@ -38,7 +38,7 @@
 #include "ice_api.h"
 
 
-//#define ICE_IPV6
+#define ICE_IPV6
 //#define ICE_TEST_RFC3484
 
 
@@ -768,7 +768,8 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     int32_t status;
     struct sockaddr_in local_addr;
 
-    media->num_comp = 0;
+    media->num_comps = 0;
+    media->num_cands = 0;
 
     /** set the credentials for this media stream */
     strcpy(media->ice_ufrag, "ufrag");
@@ -802,8 +803,11 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     media->host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media->host_cands[0].comp_id = RTP_COMPONENT_ID;
     media->host_cands[0].transport_param = (handle)temp_sockfd;
+    media->host_cands[0].local_pref = 65535;
+    media->host_cands[0].default_cand = true;
 
-    media->num_comp++;
+    media->num_cands++;
+    media->num_comps++;
 
     APP_LOG(LOG_SEV_DEBUG, 
             "Transport param for component ID %d :-> %d", 
@@ -839,8 +843,11 @@ bool app_create_new_media(ice_api_media_stream_t *media, int32_t rtp_port, int32
     media->host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media->host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media->host_cands[1].transport_param = (handle)temp_sockfd;
+    media->host_cands[1].local_pref = 65535;
+    media->host_cands[1].default_cand = true;
 
-    media->num_comp++;
+    media->num_cands++;
+    media->num_comps++;
 
     APP_LOG(LOG_SEV_DEBUG, 
             "Transport param for component ID %d :-> %d", 

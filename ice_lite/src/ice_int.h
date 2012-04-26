@@ -83,6 +83,10 @@ typedef struct tag_ice_candidate
 {
     ice_transport_t transport;
     ice_cand_type_t type;
+
+    /** local preference provided by the ICE agent */
+    uint32_t local_pref;
+
     uint32_t priority;
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t comp_id;
@@ -167,8 +171,7 @@ typedef struct
     /** pointer back to the parent ICE session */
     ice_session_t *ice_session; 
 
-    uint32_t num_comp;
-    uint32_t num_comp_gathered;
+    uint32_t num_comps;
 
     /** count of peer components */
     uint32_t num_peer_comp;

@@ -131,21 +131,34 @@ typedef struct
     stun_inet_addr_t addr;
     ice_transport_type_t protocol;
 
+    /** 
+     * local preference for this candidate as defined in ICE RFC 4.1.2.1. 
+     * It must be an integer from 0 to 65535 inclusive. If the device is 
+     * multi-homed only, then set the value as per preference. Otherwise, 
+     * if a single IP address, then set it to 65535.
+     */
+    uint32_t local_pref;
+
+    /** whether default candidate for the component */
+    bool_t default_cand;
+
     /** component id */
     uint32_t comp_id;
 
     /** application transport handle */
     handle transport_param;
 
-} ice_media_host_comp_t;
+} ice_media_host_cand_t;
 
 
 typedef struct
 {
+    uint32_t num_comps;
+
     /** 
-     * number of media components associated with this media stream
+     * number of host candidates associated with this media stream
      */
-    uint32_t num_comp;
+    uint32_t num_cands;
 
     /**
      * ice user name fragment and password
@@ -156,7 +169,7 @@ typedef struct
     /**
      * component details for this media stream
      */
-    ice_media_host_comp_t host_cands[ICE_MAX_COMPONENTS];
+    ice_media_host_cand_t host_cands[ICE_MEDIA_MAX_HOST_CANDS];
 
 } ice_api_media_stream_t;
 

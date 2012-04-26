@@ -151,9 +151,12 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
     } else if (status == STUN_OK)
     {
+        ICE_LOG (LOG_SEV_WARNING, "Discarding stray STUN message\n");
     }
     else
     {
+        ICE_LOG (LOG_SEV_WARNING, 
+                "Injecting received msg returned error %d\n", status);
     }
 
     return STUN_OK;
