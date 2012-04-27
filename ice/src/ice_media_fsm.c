@@ -511,11 +511,6 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
         }
     }
 
-#ifdef MB_IGNORE_SRFLEX_CONN_CHECKS
-    status = ice_media_utils_ignore_server_reflexive_conn_checks(media);
-    if (status != STUN_OK) return status;
-#endif
-
     /** 
      * The checklist for this media is now active. The initial check 
      * is always an ordinary check and is sent out immediately after 
