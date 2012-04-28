@@ -308,6 +308,10 @@ bool_t ice_media_utils_have_valid_list_for_all_components(
 
 int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media);
 
+#ifdef MB_IGNORE_SRFLEX_CONN_CHECKS
+int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
+                                            ice_media_stream_t *media);
+#endif
 
 
 

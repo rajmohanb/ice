@@ -4812,6 +4812,47 @@ int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media)
 }
 
 
+#ifdef MB_IGNORE_SRFLEX_CONN_CHECKS
+int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
+                                            ice_media_stream_t *media)
+{
+    uint32_t i;
+    ice_cand_pair_t *pair;
+
+    /**
+     * It is assumed that the pruning has already been done by now, 
+     * and that the local server reflexive candidates have already 
+     * been phased out. Run through the list and for each pair where 
+     * the peer/remote candidate is server reflexive, remove the check.
+     */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        pair = &media->ah_cand_pairs[i];
+        if (!pair->local) continue;
+        if (!pair->remote) continue;
+
+        if (pair->remote->type == ICE_CAND_TYPE_SRFLX)
+        {
+            stun_memset(pair, 0, sizeof(ice_cand_pair_t));
+            ICE_LOG(LOG_SEV_DEBUG, 
+                    "MB_IGNORE_SRFLEX_CONN_CHECKS is defined. Removed "\
+                    "candidate pair where the peer candidate is Server "\
+                    "Reflxive");
+        }
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "MB_IGNORE_SRFLEX_CONN_CHECKS is defined. List of candidate "\
+            "pair connectivity checks after conn checks with the peer "\
+            "candidates of type Server Reflxive are removed");
+    ice_media_utils_dump_cand_pair_stats(media);
+
+    return STUN_OK;
+}
+#endif
+
+
+
 
 /******************************************************************************/
 
