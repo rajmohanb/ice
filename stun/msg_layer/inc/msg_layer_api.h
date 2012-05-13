@@ -111,12 +111,10 @@ typedef enum {
 } stun_addr_family_type_t;
 
 
-typedef enum {
-    STUN_TRANSPORT_TCP = 6,
-    STUN_TRANSPORT_UDP = 17,
-    STUN_TRANSPORT_SCTP = 132,
-    STUN_TRANSPORT_MAX,
-} stun_transport_protocol_type_t;
+/** standard well defined IP protocol types */
+#define STUN_TRANSPORT_TCP              6
+#define STUN_TRANSPORT_UDP              17
+#define STUN_TRANSPORT_SCTP             132
 
 
 /** list of stun error codes reason phrase */
@@ -313,7 +311,10 @@ int32_t stun_attr_nonce_get_nonce(
 /* ========================================================================== */
 
 int32_t stun_attr_requested_transport_set_protocol(
-                        handle h_attr, stun_transport_protocol_type_t proto);
+                                        handle h_attr, uint32_t proto);
+
+int32_t stun_attr_requested_transport_get_protocol(
+                                        handle h_attr, uint32_t *proto);
 
 /* ========================================================================== */
 

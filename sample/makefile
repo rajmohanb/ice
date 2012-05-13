@@ -23,8 +23,9 @@ ICE_LITE_AGENT_DUAL_STACK := ice_lite_agent_dual_stack
 STUN_KEEPALIVE := stun_keepalive
 ICE_AGENT_DEMO := ice_agent_demo
 MB_ICE_WARRIOR := mb_ice_warrior
+GEN_LIC_KEY := gen_lic_key
 TARGET := all
-SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c ice_agent_demo.c mb_ice_warrior.c verify_key.c stun_keepalive_refresh.c ice_lite_agent_dual_stack.c
+SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c ice_agent_demo.c mb_ice_warrior.c verify_key.c stun_keepalive_refresh.c ice_lite_agent_dual_stack.c gen_key.c
 
 # Include header file path
 INCLUDE :=-I ../ -I ../binding/inc -I ../stun/msg_layer/inc -I ../ \
@@ -64,7 +65,8 @@ OBJ:=$(SRC:c=o)
 	@echo [CC] 	$< ...
 	$(CC) $(CFLAGS) -o $*.o $<
 
-$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK)
+#$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR)
+$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) $(GEN_LIC_KEY)
 
 $(ICE_LITE_AGENT) :
 	@echo "Creating ice lite sample... " $(TARGET) 
@@ -103,10 +105,15 @@ $(STUN_KEEPALIVE):
 	$(CC) stun_keepalive.o -o $(STUN_KEEPALIVE) $(STUN_BIND_LIBRARY)
 	#$(CC) stun_keepalive.o -o $(STUN_KEEPALIVE)  -Wl,-Map,keep_alive.map $(STUN_BIND_LIBRARY)
 
+$(GEN_LIC_KEY):
+	@echo "Creating license key generator ... " $(TARGET)
+	$(CC) $(CFLAGS) -o gen_lic_key.o gen_lic_key.c
+	$(CC) gen_lic_key.o -o $(GEN_LIC_KEY) -lssl -lcrypto
+
 clean_obj:
 	rm -rf $(OBJ)
 
 clean:
 	@echo "Removing all sample ... "
-	rm -rf $(ICE_LITE_AGENT) $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) $(OBJ)
+	rm -rf $(ICE_LITE_AGENT) $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) $(GEN_LIC_KEY) $(OBJ)
 

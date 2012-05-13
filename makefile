@@ -14,7 +14,7 @@
 #******************************************************************************/
 
 # build customization flags
-MB_ENABLE_ICE_DEBUG := n
+MB_ENABLE_ICE_DEBUG := y
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
@@ -52,6 +52,7 @@ full:
 	make -C binding/src/
 	make -C platform/src/
 	make -C ice_lite/src/
+	make -C turns/src/
 
 lite:
 	make -C stun/enc_dec/src/
@@ -73,4 +74,5 @@ clean:
 	make -C ice_lite/src/ clean
 	make -C binding/src/ clean
 	make -C platform/src/ clean
+	make -C turns/src/ clean
 

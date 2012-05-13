@@ -134,6 +134,12 @@ typedef enum
 } stun_inet_addr_type_t;
 
 
+typedef enum {
+    ICE_TRANSPORT_UDP = 0,
+    ICE_TRANSPORT_TCP,
+} stun_transport_protocol_type_t;
+
+
 typedef struct 
 {
     stun_inet_addr_type_t   host_type;

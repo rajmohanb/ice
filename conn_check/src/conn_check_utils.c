@@ -709,7 +709,7 @@ int32_t conn_check_utils_send_error_resp(
                                         session->h_resp, h_unknown_attr, num);
     }
 
-    /** send the message to perr */
+    /** send the message to peer */
     status = stun_txn_send_stun_message(
                         h_txn_inst, session->h_txn, session->h_resp);
     if (status != STUN_OK)

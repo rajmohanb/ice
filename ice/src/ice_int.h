@@ -93,7 +93,7 @@ typedef struct
     stun_inet_addr_type_t type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
     uint32_t port;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
 } ice_transport_t;
 
 
