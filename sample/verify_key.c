@@ -129,7 +129,7 @@ int verify_license (void)
     sscanf(initdate, "%d-%d-%d", &dd, &mm, &yyyy);
 
     if (((now->tm_year + 1900) < yyyy) || 
-            ((now->tm_mon+1) < mm) || (now->tm_mday < dd))
+            ((now->tm_mon+1) < mm) || ((now->tm_mday < dd) && ((now->tm_mon+1) <= mm)))
     {
         printf("License start date invalid. License expired\n");
         return -1;
