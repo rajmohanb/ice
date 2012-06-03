@@ -25,6 +25,7 @@ extern "C" {
 #include "stun_txn_api.h"
 #include "turns_api.h"
 #include "turns_int.h"
+#include "turns_alloc_fsm.h"
 #include "turns_utils.h"
 #include "turns_table.h"
 
@@ -229,8 +230,8 @@ int32_t turns_instance_set_event_callbacks(
 
 
 
-int32_t turns_instance_set_server_software_name(handle h_inst, 
-                                                    char *client, uint32_t len)
+int32_t turns_instance_set_server_software_name(
+                    handle h_inst, char *client, uint32_t len)
 {
     turns_instance_t *instance;
 
@@ -244,6 +245,26 @@ int32_t turns_instance_set_server_software_name(handle h_inst,
 
     instance->client_name_len = len;
     stun_memcpy(instance->client_name, (u_char *)client, len);
+
+    return STUN_OK;
+}
+
+
+
+int32_t turns_instance_set_realm(handle h_inst, char *realm, uint32_t len)
+{
+    turns_instance_t *instance;
+
+    if ((h_inst == NULL) || (realm == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    instance = (turns_instance_t *) h_inst;
+
+    instance->realm = (char *) stun_calloc (1, len);
+    if (instance->realm == NULL) return STUN_MEM_ERROR;
+
+    instance->realm_len = len;
+    stun_memcpy(instance->realm, realm, len);
 
     return STUN_OK;
 }
@@ -289,7 +310,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
 {
     int32_t status;
     turns_instance_t *instance = (turns_instance_t *)h_inst;
-    turns_allocation_t *context = NULL;
+    turns_allocation_t *alloc_ctxt = NULL;
     stun_method_type_t method;
     stun_msg_type_t msg_type;
 
@@ -301,12 +322,16 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
      * server-reflexive address, the server transport address and the transport 
      * protocol.
      */
-    status = turns_table_find_node(instance->h_table, stun_pkt, &context);
+    status = turns_table_find_node(instance->h_table, stun_pkt, &alloc_ctxt);
 
     /** if found, then inject into the allocation fsm */
     if (status == STUN_OK)
     {
+        /** TODO: inject into the turns allocation fsm */
         printf("TURN allocation context found.\n");
+
+        status = turns_allocation_fsm_inject_msg(
+                            alloc_ctxt, TURNS_ALLOC_REQ, stun_pkt);
         return STUN_OK;
     }
 
@@ -323,19 +348,61 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
 
     if((method == STUN_METHOD_ALLOCATE) && (msg_type == STUN_REQUEST))
     {
-        uint32_t error_code = 0;
-        turns_new_allocation_params_t *params;
+        handle h_resp;
+        //uint32_t error_code = 0;
+        //turns_new_allocation_params_t *params;
 
         printf("This is a NEW allocate request.\n");
 
-        /** TODO
-         * If this is a new Allocate request and does not contain any auth
-         * params, then challenge the request by sending 401.
-         * should we create the context before sending 401? Then what if we
-         * never receive any response OR the client never successfully 
-         * authenticates? This can be a security issue or DDOS stuff?
+        /** Note/TODO later
+         * Right now, the allocation context is being created when the initial
+         * request without credential is received. However, this will make
+         * our server vulnerable to DDOS kind of attacks where someone can
+         * keep pumping-in initial allocate requests without ever authenticating
+         * the allocation and thus depleting the server resources. And making
+         * the server to be unusable even for genuine allocation requests from
+         * user. Typically we should
+         * - do not club the alloc pool for these initial requests  with the
+         *   approved pool of allocations.
+         * - in addition to separartion of pools, there should be a limit for
+         *   the number of of unapproved/authenticated allocation contexts.
          */
 
+        /** create a new allocation context */
+        alloc_ctxt = turns_utils_create_allocation_context(instance, stun_pkt);
+        if (alloc_ctxt == NULL)
+        {
+            printf("Creation of new allocation context failed: [%d]\n", status);
+            return STUN_MEM_ERROR;
+        }
+
+        /** add the new allocation to the table/pool */
+        status = turns_table_add_node(instance->h_table, alloc_ctxt);
+        if (status != STUN_OK) return status;
+
+        /** 
+         * For any new allocation, the server needs to challenge the request.
+         * And in the 401 challenge reponse, the server generates a new
+         * nonce string and adds a realm and sends back to the client. The 
+         * client must re-send the allocate request but this time the request 
+         * must include the authentication parameters and message-integrity 
+         * as per long-term credential mechanism.
+         *
+         * Note:
+         * Right now we generate a 401 even if the allocate request contains
+         * long-term credential related attributes like username, realm and
+         * nonce because these are not the valid values for the server.
+         *
+         * TODO
+         * Now that we have created an allocation context even when sending
+         * a 401 challenge, then what if we never receive any response OR 
+         * the client never successfully authenticates? This can be a 
+         * security issue or DDOS stuff? Probably we must time out the 
+         * allocation by having some timer so that resources do not get
+         * held up perpetually.
+         */
+
+#if 0
         params = (turns_new_allocation_params_t *) 
                 stun_calloc (1, sizeof(turns_new_allocation_params_t));
         if (params == NULL) return STUN_MEM_ERROR;
@@ -346,7 +413,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
         {
             if (error_code > 0)
             {
-                handle h_resp;
+#endif
 #if 0
                 handle h_txn;
 
@@ -364,7 +431,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
 #endif
 
                 status = turns_utils_create_error_response(
-                                        stun_pkt->h_msg, error_code, &h_resp);
+                        alloc_ctxt, stun_pkt->h_msg, 401, &h_resp);
                 // TODO check status? remove txn? graceful exit?
                 if(status != STUN_OK) return status;
 
@@ -372,6 +439,11 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
                 instance->nwk_send_cb(h_resp, 
                         stun_pkt->src.host_type, stun_pkt->src.ip_addr, 
                         stun_pkt->src.port, stun_pkt->transport_param, NULL);
+
+                printf("turns: sent error response with error code: 401\n");
+                
+                alloc_ctxt->state = TSALLOC_CHALLENGED;
+#if 0
             }
 
             stun_free(params);
@@ -384,6 +456,11 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
             stun_free(params);
             return status;
         }
+#endif
+    }
+    else
+    {
+        printf("Ignoring a stray STUN/TURN message\n");
     }
     
     return status;

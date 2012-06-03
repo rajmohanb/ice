@@ -27,9 +27,13 @@ extern "C" {
 #include <pthread.h>
 
 #include <stun_base.h>
+#include <stun_enc_dec_api.h>
 #include <turns_api.h>
 #include <ice_server.h>
 
+
+/** need to move the realm into configuration */
+#define ICE_SERVER_REALM    "mindbricks.com"
 
 char *log_levels[] =
 {
@@ -114,27 +118,50 @@ int32_t ice_server_network_send_msg(handle h_msg,
         stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
         uint32_t port, handle transport_param, handle app_param)
 {
-    int sent_bytes = 0;
-#if 0
-    int sock_fd = (int) param;
+    int32_t status, sent_bytes = 0;
+    int ret, sock_fd = (int) transport_param;
+    static char buf[1500];
+    uint32_t buf_len = 1500;
+    struct sockaddr dest;
+
+    /** encode the message */
+    status = stun_msg_encode(h_msg, NULL, (uint8_t *)buf, &buf_len);
+    if (status != STUN_OK)
+    {
+        printf ("Sending of STUN message failed\n");
+        return STUN_TRANSPORT_FAIL;
+    }
 
     if (ip_addr_type == STUN_INET_ADDR_IPV4)
     {
-        sent_bytes = platform_socket_sendto(sock_fd, buf, 
-                            buf_len, 0, AF_INET, port, (char *)ip_addr);
+        dest.sa_family = AF_INET;
+        ((struct sockaddr_in *)&dest)->sin_port = htons(port);
+        ret = inet_pton(AF_INET, (char *)ip_addr, 
+                    &(((struct sockaddr_in *)&dest)->sin_addr));
+        if (ret != 1)
+        {
+            printf("inet_pton failed\n");
+            return sent_bytes;
+        }
     }
     else if (ip_addr_type == STUN_INET_ADDR_IPV6)
     {
-        sent_bytes = platform_socket_sendto(sock_fd, buf, 
-                            buf_len, 0, AF_INET6, port, (char *)ip_addr);
+        dest.sa_family = AF_INET6;
+        ((struct sockaddr_in6 *)&dest)->sin6_port = htons(port);
+        ret = inet_pton(AF_INET, (char *)ip_addr, 
+                    &(((struct sockaddr_in6 *)&dest)->sin6_addr));
+        if (ret != 1) return sent_bytes;
     }
     else
     {
         app_log (LOG_SEV_INFO, __FILE__, __LINE__,
                 "[ICE AGENT DEMO] Invalid IP address family type. "\
                 "Sending of STUN message failed");
+        return sent_bytes;
     }
-#endif
+
+    sent_bytes = sendto(sock_fd, buf, buf_len, 0, &dest, sizeof(dest));
+    if (sent_bytes == -1) perror("sendto");
 
     return sent_bytes;
 }
@@ -159,7 +186,7 @@ int32_t ice_server_stop_timer (handle timer_id)
 
 int32_t ice_server_new_allocation_request(handle h_alloc)
 {
-    printf("[][][][][][][][] NOW ALLOCATION REQUEST RECEIVED [][][][][][][][]\n");
+    printf("[][][][][][][][] NEW ALLOCATION REQUEST RECEIVED [][][][][][][][]\n");
 
     /**
      * this callback routine must not consume too much time since it is 
@@ -188,6 +215,11 @@ int32_t iceserver_init_turns(void)
 
     status = turns_instance_set_server_software_name(
             g_mb_server.h_turns_inst, MB_ICE_SERVER, strlen(MB_ICE_SERVER));
+    if (status != STUN_OK) goto MB_ERROR_EXIT;
+
+    /** set the realm */
+    status = turns_instance_set_realm(g_mb_server.h_turns_inst, 
+                            ICE_SERVER_REALM, strlen(ICE_SERVER_REALM));
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     /** set up os callbacks */

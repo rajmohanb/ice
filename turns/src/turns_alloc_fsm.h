@@ -23,38 +23,12 @@ extern "C" {
 /******************************************************************************/
 
 
-int32_t send_alloc_req (turn_session_t *session, handle h_msg);
+int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg);
 
-int32_t process_alloc_resp (turn_session_t *session, handle h_msg);
+int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg);
 
-int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg);
-
-int32_t send_perm_req (turn_session_t *session, handle h_msg);
-
-int32_t process_perm_resp (turn_session_t *session, handle h_msg);
-
-int32_t turn_init_dealloc (turn_session_t *session, handle h_msg);
-
-int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg);
-
-int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg);
-
-int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg);
-
-int32_t turn_send_ind(turn_session_t *session, handle h_msg);
-
-int32_t turn_data_ind(turn_session_t *session, handle h_msg);
-
-int32_t turn_refresh_permission (turn_session_t *session, handle h_msg);
-
-int32_t turn_refresh_channel_binding (turn_session_t *session, handle h_msg);
-
-int32_t turn_refresh_nat_binding (turn_session_t *session, handle h_msg);
-
-int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
-
-int32_t turn_session_fsm_inject_msg(turn_session_t *session, 
-                                    turn_event_t event, handle h_msg);
+int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc, 
+                                    turns_alloc_event_t event, handle h_msg);
 
 
 /******************************************************************************/

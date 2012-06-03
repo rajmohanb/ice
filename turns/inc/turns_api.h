@@ -33,6 +33,8 @@ extern "C" {
 #define TURN_PERM_REFRESH_DURATION      300 /** seconds */
 #define TURN_KEEP_ALIVE_DURATION        15  /** seconds */
 
+#define TURNS_SERVER_NONCE_LEN          64
+
 /******************************************************************************/
 
 
@@ -159,8 +161,12 @@ int32_t turns_instance_set_event_callbacks(
                         handle h_inst, turns_event_callbacks_t *event_cbs);
 
 
-int32_t turns_instance_set_server_software_name(handle h_inst, 
-                                                    char *client, uint32_t len);
+int32_t turns_instance_set_server_software_name(
+                        handle h_inst, char *client, uint32_t len);
+
+
+int32_t turns_instance_set_realm(handle h_inst, char *realm, uint32_t len);
+
 
 
 int32_t turns_destroy_instance(handle h_inst);

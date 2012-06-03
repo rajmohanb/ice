@@ -33,14 +33,16 @@ extern "C" {
 bool_t turns_utils_host_compare (u_char *host1, 
                     u_char *host2, stun_inet_addr_type_t addr_type);
 
-int32_t turns_utils_extract_info_from_alloc_request(handle h_msg, 
-                turns_new_allocation_params_t *params, uint32_t *error_code);
+int32_t turns_utils_verify_info_from_alloc_request(
+                turns_allocation_t *alloc, handle h_msg, uint32_t *error_code);
 
-int32_t turns_utils_notify_new_alloc_request_to_app(
-        turns_instance_t *instance, turns_new_allocation_params_t *params);
+int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc);
 
-int32_t turns_utils_create_error_response(handle h_req, 
-                                    uint32_t error_code, handle *h_errmsg);
+int32_t turns_utils_create_error_response(turns_allocation_t *ctxt, 
+                    handle h_req, uint32_t error_code, handle *h_errmsg);
+
+turns_allocation_t *turns_utils_create_allocation_context(
+        turns_instance_t *instance, turns_rx_stun_pkt_t *stun_pkt);
 
 #if 0
 int32_t turn_utils_create_request_msg(turn_session_t *session, 

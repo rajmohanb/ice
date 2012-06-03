@@ -44,27 +44,25 @@ typedef struct {
     turn_timer_type_t type;
     handle timer_id;
     handle arg;
-} turn_timer_params_t;
+} turns_timer_params_t;
+
+
+typedef enum
+{
+    TSALLOC_CHALLENGED = 0,
+    TSALLOC_PENDING,
+    TSALLOC_CREATED,
+    TSALLOC_STATE_MAX,
+} turns_alloc_state_t;
 
 
 typedef enum 
 {
-    TURN_ALLOC_REQ = 0,
-    TURN_ALLOC_RESP,
-    TURN_CREATE_PERM_REQ,
-    TURN_CREATE_PERM_RESP,
-    TURN_REFRESH_REQ,
-    TURN_REFRESH_RESP,
-    TURN_SEND_IND,
-    TURN_DATA_IND,
-    TURN_TXN_TIMEOUT,
-    TURN_DEALLOC_REQ,
-    TURN_ALLOC_REFRESH_EXPIRY,
-    TURN_PERM_REFRESH_EXPIRY,
-    TURN_CHNL_REFRESH_EXPIRY,
-    TURN_KEEP_ALIVE_EXPIRY,
-    TURN_EVENT_MAX,
-} turn_event_t;
+    TURNS_ALLOC_REQ = 0,
+    TURNS_ALLOC_APPROVED,
+    TURNS_ALLOC_REJECTED,
+    TURNS_ALLOC_EVENT_MAX,
+} turns_alloc_event_t;
 
 
 typedef struct
@@ -78,7 +76,7 @@ typedef struct
 
     /** handle to refresh permission by using channel bind */
     handle   h_perm_chnl_refresh;
-    turn_timer_params_t *perm_chnl_refresh_timer_params;
+    turns_timer_params_t *perm_chnl_refresh_timer_params;
 
     handle h_chnl_txn;
     handle h_chnl_req;
@@ -99,6 +97,10 @@ typedef struct
     uint32_t client_name_len;
     u_char *client_name;
 
+    /** realm */
+    uint32_t realm_len;
+    char *realm;
+
     /** timer and socker callbacks */
     turns_nwk_send_cb nwk_send_cb;
     turns_start_timer_cb start_timer_cb;
@@ -115,7 +117,7 @@ typedef struct
 {
     turns_instance_t *instance;
 
-    //turn_session_state_t state;
+    turns_alloc_state_t state;
 
     /******/ 
 
@@ -130,15 +132,30 @@ typedef struct
     
     /******/ 
 
+    /** nonce */
+    u_char nonce[TURNS_SERVER_NONCE_LEN];
+
+    /** username */
+    uint32_t username_len;
+    u_char *username;
+
+    /** requested transport */
+    stun_transport_protocol_type_t req_tport;
+
+    /** 
+     * allocation expiry time in seconds. initially when the allocation 
+     * context is created this might hold the lifetime requested by the
+     * client, but gets overwritten by the server application decided value.
+     */
+    uint32_t lifetime;
+
+    /******/ 
+
     handle app_param;
 
     handle h_txn;
     handle h_req;
     handle h_resp;
-
-    /** nonce */
-    uint32_t nonce_len;
-    u_char *nonce;
 
     /** relayed address */
     stun_inet_addr_t relay_addr;
@@ -146,12 +163,10 @@ typedef struct
     /** server reflexive mapped address */
     stun_inet_addr_t mapped_addr;
 
-    /** allocation expiry time in seconds */
-    uint32_t lifetime;
 
     /** handle to allocation refresh timer */
     handle   h_alloc_refresh;
-    turn_timer_params_t *alloc_refresh_timer_params;
+    turns_timer_params_t *alloc_refresh_timer_params;
 
     /** permission creation/refresh mode */
     //turn_perm_method_t perm_method;
@@ -161,7 +176,7 @@ typedef struct
 
     /** permission refresh timer */
     handle   h_perm_refresh;
-    turn_timer_params_t *perm_refresh_timer_params;
+    turns_timer_params_t *perm_refresh_timer_params;
 
     handle h_perm_txn;
     handle h_perm_req;
@@ -169,11 +184,17 @@ typedef struct
 
     /** Keep-Alive timer and related stuff */
     handle   h_keep_alive;
-    turn_timer_params_t *keep_alive_timer_params;
+    turns_timer_params_t *keep_alive_timer_params;
 
     uint16_t channel_num;
 
 } turns_allocation_t;
+
+
+
+typedef int32_t (*turns_alloc_fsm_handler) 
+            (turns_allocation_t *alloc, handle h_msg);
+
 
 
 /******************************************************************************/

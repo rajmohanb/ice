@@ -13,7 +13,7 @@
 #                                                                              #
 #******************************************************************************/
 
-# Makefile for creating sample application programs
+# Makefile for creating mindbricks ice server
 
 ICE_LIB_DEST_PATH := /root/ICE/lib
 
@@ -32,12 +32,12 @@ TURNS_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_turns.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
 	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
 
-CFLAGS += -g -Wall -Wstrict-prototypes -c $(INCLUDE) -DLINUX
+CFLAGS += -g -Wall -Wstrict-prototypes -c -DLINUX -DMB_ENABLE_ICE -DMB_ENABLE_TURN $(INCLUDE)
 
 OBJ:=$(SRC:c=o)
 
 .c.o :
-	@echo [CC] 	$< ...
+	echo [CC] 	$< ...
 	$(CC) $(CFLAGS) -o $*.o $<
 
 $(TARGET) : clean $(ICE_SERVER)

@@ -59,6 +59,7 @@ extern "C" {
 #define STUN_ATTR_CHANNEL_NUM_LEN       4
 #define STUN_ATTR_LIFETIME_LEN          4
 #define STUN_ATTR_EVEN_PORT_LEN         1
+#define STUN_ATTR_REQ_TRANSPORT_LEN     4
 #endif
     
 

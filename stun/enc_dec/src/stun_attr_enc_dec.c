@@ -2357,6 +2357,36 @@ int32_t stun_attr_encode_requested_transport(stun_attr_hdr_t *attr,
 int32_t stun_attr_decode_requested_transport(u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
 {
+    stun_req_transport_attr_t *tport;
+    uint16_t val16;
+    u_char *pkt = *buf;
+
+    tport = (stun_req_transport_attr_t *) 
+                stun_calloc (1, sizeof(stun_req_transport_attr_t));
+    if (tport == NULL) return STUN_MEM_ERROR;
+
+    tport->hdr.type = STUN_ATTR_REQUESTED_TRANSPORT;
+
+    stun_memcpy(&val16, pkt, sizeof(uint16_t));
+    tport->hdr.length = ntohs(val16);
+    pkt += 2;
+
+    /** handle malformed/incomplete/corrupted messages */
+    if ((tport->hdr.length != STUN_ATTR_REQ_TRANSPORT_LEN) ||
+        ((buf_end - pkt) < STUN_ATTR_REQ_TRANSPORT_LEN))
+    {
+        stun_free(tport);
+        return STUN_DECODE_FAILED;
+    }
+
+    tport->protocol = *pkt;
+
+    /** move past padded bytes (1+3) */
+    pkt += 4;
+
+    *attr = (stun_attr_hdr_t *) tport;
+    *buf = pkt;
+
     return STUN_OK;
 }
 

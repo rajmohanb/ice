@@ -166,7 +166,7 @@ int32_t turns_table_add_node(handle h_table, turns_allocation_t *alloc)
 
     node->prev = NULL;
     node->next = table->head;
-    table->head->prev = node;
+    if(table->head) table->head->prev = node;
     node->context = (handle)alloc;
     table->head = node;
 

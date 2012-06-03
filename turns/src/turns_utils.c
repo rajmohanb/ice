@@ -31,6 +31,52 @@ extern "C" {
 
 
 
+bool_t turns_generate_nonce_value(char *data, unsigned int len)
+{
+    /** TODO: 
+     * need to revisit later, probably use 
+     * /dev/urandom but will suffice for now
+     */
+    int i;
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    for (i = 0; i < len; ++i)
+    {
+        *data = alphanum[rand() % (sizeof(alphanum) - 1)];
+        data++;
+    }
+
+    //s[len] = 0;
+
+#if 0
+    static int fd = 0;
+
+    if (fd == 0)
+    {
+        fd = open(DEV_RANDOM_FILE, O_RDONLY );
+
+        if( fd == -1 ) {
+            return false;
+        }
+    }
+
+    read(fd, data, len);
+#ifdef PLATFORM_DEBUG
+    for ( i = 0; i < len; i++) {
+        printf( "%x", data[i]);
+    }
+    printf("\n");
+#endif
+#endif
+    
+    return true;
+}
+
+
+
 bool_t turns_utils_host_compare (u_char *host1, 
                     u_char *host2, stun_inet_addr_type_t addr_type)
 {
@@ -85,12 +131,13 @@ bool_t turns_utils_host_compare (u_char *host1,
 
 
 
-int32_t turns_utils_extract_info_from_alloc_request(handle h_msg, 
-                turns_new_allocation_params_t *params, uint32_t *error_code)
+int32_t turns_utils_verify_info_from_alloc_request(
+                turns_allocation_t *alloc, handle h_msg, uint32_t *error_code)
 {
-    uint32_t num, protocol, resp_code;
+    uint32_t num, protocol, resp_code, len;
     int32_t status;
     handle h_attr;
+    u_char *realm, *nonce, *username;
 
     *error_code = 0;
     resp_code = 0;
@@ -105,23 +152,36 @@ int32_t turns_utils_extract_info_from_alloc_request(handle h_msg,
     }
     else if (status != STUN_OK) return status;
 
-    status = stun_attr_username_get_username_length(
-                                    h_attr, &(params->username_len));
+    status = stun_attr_username_get_username_length(h_attr, &len);
     if (status != STUN_OK)
     {
         *error_code = 400;
         return status;
     }
 
-    params->username = (u_char *) stun_calloc(1, params->username_len);
-    if(params->username == NULL) return STUN_MEM_ERROR;
+    username = (u_char *) stun_calloc(1, len);
+    if(username == NULL) return STUN_MEM_ERROR;
 
-    status = stun_attr_username_get_username(h_attr, 
-                    params->username, &(params->username_len));
+    status = stun_attr_username_get_username(h_attr, username, &len);
     if (status != STUN_OK)
     {
         resp_code = 400;
         goto MB_ERROR_EXIT1;
+    }
+
+    if (alloc->state == TSALLOC_CHALLENGED)
+    {
+        /**
+         * at this time, we do not have any information on the username. so
+         * just copy what the client has provided and pass on to the server app.
+         */
+        alloc->username = username;
+        alloc->username_len = len;
+        username = NULL;
+    }
+    else
+    {
+        /** TODO - need to verify against what is stored in the allocation */
     }
 
     num = 1;
@@ -134,26 +194,33 @@ int32_t turns_utils_extract_info_from_alloc_request(handle h_msg,
     }
     else if (status != STUN_OK) goto MB_ERROR_EXIT1;
 
-    status = stun_attr_realm_get_realm_length(
-                                    h_attr, &(params->realm_len));
+    status = stun_attr_realm_get_realm_length(h_attr, &len);
     if (status != STUN_OK)
     {
         resp_code = 400;
         goto MB_ERROR_EXIT1;
     }
 
-    params->realm = (u_char *) stun_calloc(1, params->realm_len);
-    if(params->realm == NULL)
+    realm = (u_char *) stun_calloc(1, len);
+    if(realm == NULL)
     {
         status = STUN_MEM_ERROR;
         goto MB_ERROR_EXIT1;
     }
 
-    status = stun_attr_realm_get_realm(h_attr, 
-                            params->realm, &(params->realm_len));
+    status = stun_attr_realm_get_realm(h_attr, realm, &len);
     if (status != STUN_OK)
     {
         resp_code = 400;
+        goto MB_ERROR_EXIT2;
+    }
+
+    /** verify that the realm is valid */
+    if ((len != alloc->instance->realm_len) || 
+            (stun_strncmp((char *)realm, alloc->instance->realm, len) != 0))
+    {
+        /** realm mismatch */
+        resp_code = 401;
         goto MB_ERROR_EXIT2;
     }
 
@@ -167,13 +234,15 @@ int32_t turns_utils_extract_info_from_alloc_request(handle h_msg,
         goto MB_ERROR_EXIT2;
     }
 
+    /** TODO - need to verify NONCE, MESSAGE INTEGRITY and FINGERPRINT */
+
     status = stun_attr_requested_transport_get_protocol(h_attr, &protocol);
     if (status != STUN_OK) goto MB_ERROR_EXIT2;
 
     /** RFC 5766 supports UDP only */
     if(protocol == STUN_TRANSPORT_UDP)
     {
-        params->protocol = ICE_TRANSPORT_UDP;
+        alloc->req_tport = ICE_TRANSPORT_UDP;
     }
     //else if (protocol == STUN_TRANSPORT_TCP)
     //    params->protocol = ICE_TRANSPORT_TCP;
@@ -188,12 +257,12 @@ int32_t turns_utils_extract_info_from_alloc_request(handle h_msg,
                     STUN_ATTR_LIFETIME, &h_attr, &num);
     if (status == STUN_NOT_FOUND)
     {
-        params->lifetime = 0;
+        alloc->lifetime = 0;
         status = STUN_OK;
     }
     else if (status == STUN_OK)
     {
-        status = stun_attr_lifetime_get_duration(h_attr, &(params->lifetime));
+        status = stun_attr_lifetime_get_duration(h_attr, &(alloc->lifetime));
         if (status != STUN_OK) goto MB_ERROR_EXIT2;
     }
     else
@@ -204,38 +273,52 @@ int32_t turns_utils_extract_info_from_alloc_request(handle h_msg,
     return status;
 
 MB_ERROR_EXIT2:
-    stun_free(params->realm);
+    stun_free(realm);
 MB_ERROR_EXIT1:
-    stun_free(params->username);
+    if(username) stun_free(username);
     *error_code = resp_code;
     return status;
 }
 
 
 
-int32_t turns_utils_notify_new_alloc_request_to_app(
-        turns_instance_t *instance, turns_new_allocation_params_t *params)
+int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc)
 {
-    /** TODO - 
-     * validate the request. What to validate?
-     * - long term validation will be done by the application?
-     * - validate fingerprint
-     * - lifetime decided by application or turns module?
-     */
+    turns_new_allocation_params_t *params;
+
+    params = (turns_new_allocation_params_t *) 
+        stun_calloc(1, sizeof(turns_new_allocation_params_t));
+    if (params == NULL) return STUN_MEM_ERROR;
+
+    params->username = (u_char *) stun_calloc(1, alloc->username_len);
+    if (params->username == NULL) return STUN_MEM_ERROR;
+
+    stun_memcpy(params->username, alloc->username, alloc->username_len);
+    params->username_len = alloc->username_len;
+
+    params->realm = (u_char *) stun_calloc(1, alloc->instance->realm_len);
+    if (params->realm == NULL) return STUN_MEM_ERROR;
+
+    stun_memcpy(params->realm, 
+            alloc->instance->realm, alloc->instance->realm_len);
+    params->realm_len = alloc->instance->realm_len;
+
+    params->lifetime = alloc->lifetime;
+    params->protocol = alloc->req_tport;
 
     /** notify the application for approval */
-    instance->new_alloc_cb(NULL, params);
+    alloc->instance->new_alloc_cb(NULL, params);
 
     return STUN_OK;
 }
 
 
 
-int32_t turns_utils_create_error_response(handle h_req, 
-                                    uint32_t error_code, handle *h_errmsg)
+int32_t turns_utils_create_error_response(turns_allocation_t *ctxt, 
+                            handle h_req, uint32_t error_code, handle *h_errmsg)
 {
     int32_t status;
-    handle h_error_code, h_resp;
+    handle h_error_code, h_resp, h_software;
 
     status = stun_msg_create_resp_from_req(h_req, STUN_ERROR_RESP, &h_resp);
     if (status != STUN_OK)
@@ -260,15 +343,13 @@ int32_t turns_utils_create_error_response(handle h_req,
         goto ERROR_EXIT_PT2;
     }
 
-#if 0
     status = stun_attr_error_code_set_error_reason(
-                                    h_error_code, reason, strlen(reason));
+                                    h_error_code, "Unauthorized", strlen("Unauthorized"));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "setting error code reason value failed");
         goto ERROR_EXIT_PT2;
     }
-#endif
 
     status = stun_msg_add_attribute(h_resp, h_error_code);
     if (status != STUN_OK)
@@ -297,6 +378,58 @@ int32_t turns_utils_create_error_response(handle h_req,
         status = stun_msg_utils_add_unknown_attributes(
                                                 h_resp, h_unknown_attr, num);
     }
+    else if (error_code == 401)
+    {
+        handle h_realm, h_nonce;
+
+        status = stun_attr_create(STUN_ATTR_REALM, &h_realm);
+        if (status != STUN_OK) return status;
+        /** TODO: handle graceful exit */
+
+        status = stun_attr_realm_set_realm(h_realm, 
+                (uint8_t *)ctxt->instance->realm, ctxt->instance->realm_len);
+        if (status != STUN_OK) return status;
+        /** TODO: handle graceful exit */
+
+        status = stun_msg_add_attribute(h_resp, h_realm);
+        if (status != STUN_OK) return status;
+
+        status = stun_attr_create(STUN_ATTR_NONCE, &h_nonce);
+        if (status != STUN_OK) return status;
+        /** TODO: handle graceful exit */
+
+        status = stun_attr_nonce_set_nonce(h_nonce, 
+                            ctxt->nonce, TURNS_SERVER_NONCE_LEN);
+        if (status != STUN_OK) return status;
+        /** TODO: handle graceful exit */
+
+        status = stun_msg_add_attribute(h_resp, h_nonce);
+        if (status != STUN_OK) return status;
+    }
+
+    status = stun_attr_create(STUN_ATTR_SOFTWARE, &h_software);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Creating the software attribute failed");
+        goto ERROR_EXIT_PT1;
+    }
+
+    status = stun_attr_software_set_value(h_software, 
+                            ctxt->instance->client_name, 
+                            ctxt->instance->client_name_len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "setting software attribute value failed");
+        goto ERROR_EXIT_PT2;
+    }
+
+    status = stun_msg_add_attribute(h_resp, h_software);
+    if (status != STUN_OK)
+    { 
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Adding of software attribute to response message failed");
+        goto ERROR_EXIT_PT2;
+    }
 
     *h_errmsg = h_resp;
     return STUN_OK;
@@ -308,6 +441,41 @@ ERROR_EXIT_PT1:
     *h_errmsg = NULL;
 
     return status;
+}
+
+
+
+turns_allocation_t *turns_utils_create_allocation_context(
+        turns_instance_t *instance, turns_rx_stun_pkt_t *stun_pkt)
+{
+    turns_allocation_t *new_ctxt;
+
+    new_ctxt = (turns_allocation_t *) 
+            stun_calloc (1, sizeof(turns_allocation_t));
+    if (new_ctxt == NULL) return new_ctxt;
+
+    new_ctxt->instance = instance;
+
+    new_ctxt->protocol = stun_pkt->protocol;
+    new_ctxt->transport_param = stun_pkt->transport_param;
+    stun_memcpy(&new_ctxt->client_addr, 
+                    &stun_pkt->src, sizeof(stun_inet_addr_t));
+
+    /** Note : TODO
+     * - Can we generate the nonce here for the allocation? so that every time
+     *   an allocation is created, the nonce is automatically generated.
+     * - in case we generate the nonce here, then we can also start the nonce
+     *   stale timer here after above step for expiring the nonce. 
+     */
+    /** generate random nonce */
+    turns_generate_nonce_value((char *)new_ctxt->nonce, TURNS_SERVER_NONCE_LEN);
+
+    /** TODO - should we start the nonce stale timer here now? */
+
+    /** Initialize to some default state? */
+    // new_ctxt->state = 
+
+    return new_ctxt;
 }
 
 
