@@ -1440,10 +1440,10 @@ void ice_agent_get_local_ipv4_address (char *address, int addrlen)
 
 static void mb_ice_warrior_usage(void)
 {
-    puts("MINDBRICKS ICE WARRIOR - Field application ");
+    puts("MINDBRICKS NAT WARRIOR - Field application ");
     puts("Copyright (C) 2009-2012, MindBricks Technologies ");
     puts("Rajmohan Banavi (rajmohan@mindbricks.com) ");
-    puts("Usage: mb_ice_warrior [options]");
+    puts("Usage: mb_nat_warrior [options]");
     puts("");
     puts("General options:");
     puts(" -ll [level] => acceptble level levels");
@@ -1460,7 +1460,7 @@ static void mb_ice_warrior_usage(void)
     puts(" -p [password] => password for TURN server allocation");
     puts(" -d [Domain] => Domain name for TURN server allocation");
     puts("");
-    puts("Example: ./mb_ice_warrior -s 202.43.66.200 ");
+    puts("Example: ./mb_nat_warrior -s 202.43.66.200 ");
     puts("");
 }
 

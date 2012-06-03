@@ -22,7 +22,7 @@ ICE_LITE_AGENT := ice_lite_agent
 ICE_LITE_AGENT_DUAL_STACK := ice_lite_agent_dual_stack
 STUN_KEEPALIVE := stun_keepalive
 ICE_AGENT_DEMO := ice_agent_demo
-MB_ICE_WARRIOR := mb_ice_warrior
+MB_ICE_WARRIOR := mb_nat_warrior
 TARGET := all
 SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c ice_agent_demo.c mb_ice_warrior.c verify_key.c stun_keepalive_refresh.c ice_lite_agent_dual_stack.c
 
