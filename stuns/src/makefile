@@ -13,45 +13,32 @@
 #                                                                              #
 #******************************************************************************/
 
-# Makefile for creating mindbricks ice server
+# Makefile for creating turn library
 
-ICE_LIB_DEST_PATH := /root/ICE/lib
+# turn library file name
+LIB := lib_stuns.a
 
-ICE_SERVER := mb_ice_server
-TARGET := all
-SRC := ice_server.c iceserver_transport.c iceserver_user.c
+# turn source files
+SRC = stuns_api.c stuns_utils.c #stuns_table.c stuns_alloc_fsm.c
 
-# Include header file path
-INCLUDE :=-I . -I ../stuns/inc -I ../turns/inc -I ../binding/inc \
-	-I ../stun/msg_layer/inc -I ../ \
-	-I ../stun/enc_dec/inc -I ../stun/txn/inc -I ../inc -I ../
+# Include header files
+INCLUDE := -I. -I ../../ -I ../inc -I ../../stun/txn/inc \
+	-I ../../stun/msg_layer/inc -I $(ICE_APP_INCLUDE_PATH)
 
-ICE_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_turns.a \
-	$(ICE_LIB_DEST_PATH)/lib_stuns.a \
-	$(ICE_LIB_DEST_PATH)/lib_stun_encdec.a \
-	$(ICE_LIB_DEST_PATH)/lib_stun_txn.a \
-	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
-	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
+CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) \
+		  -DMB_ENABLE_ICE $(INCLUDE)
 
-CFLAGS += -g -Wall -Wstrict-prototypes -c -DLINUX -DMB_ENABLE_ICE -DMB_ENABLE_TURN $(INCLUDE)
-
-OBJ:=$(SRC:c=o)
+OBJS:=$(SRC:c=o)
 
 .c.o :
-	echo [CC] 	$< ...
+	@echo "[CC] " $< ...
 	$(CC) $(CFLAGS) -o $*.o $<
 
-$(TARGET) : clean $(ICE_SERVER)
-
-$(ICE_SERVER) : $(OBJ)
-	@echo "Creating mindbricks ice server ... " $(TARGET) 
-	$(CC) $(CFLAGS) $(INCLUDE) -o ice_server.o ice_server.c
-	$(CC) $(OBJ) -o $(ICE_SERVER) $(ICE_LIBRARY)
-
-clean_obj:
-	rm -rf $(OBJ)
+archive:$(OBJS)
+	@echo "Building library " $(LIB)
+	@$(AR) $(ARFLAGS) $(LIB) $(OBJS) 
+	@mv $(LIB) $(ICE_LIB_DEST_PATH)
 
 clean:
-	@echo "Removing all objects and binaries ... "
-	rm -rf $(ICE_SERVER) $(OBJ)
-
+	@echo "Cleaning library " $(LIB)
+	@rm -rf *.o $(ICE_LIB_DEST_PATH)/$(LIB)

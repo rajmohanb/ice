@@ -34,7 +34,7 @@ ICE_APP_INCLUDE_PATH := .
 ICE_APP_CFLAGS := -DIS_LITTLE_ENDIAN -DMB_LOG_RX_TX_MSGS
 
 ifeq ($(strip $(MB_ENABLE_ICE_DEBUG)), y)
-ICE_APP_CFLAGS += -g -DDEBUG1 -DMB_SUPPORT_3489 #-DDEBUG2 -DDEBUG
+ICE_APP_CFLAGS += -g -DDEBUG1 -DMB_SUPPORT_3489 -DDEBUG #-DDEBUG2
 endif
 
 export ICE_APP_INCLUDE_PATH
@@ -53,6 +53,7 @@ full:
 	make -C platform/src/
 	make -C ice_lite/src/
 	make -C turns/src/
+	make -C stuns/src/
 
 lite:
 	make -C stun/enc_dec/src/
@@ -75,4 +76,5 @@ clean:
 	make -C binding/src/ clean
 	make -C platform/src/ clean
 	make -C turns/src/ clean
+	make -C stuns/src/ clean
 

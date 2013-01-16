@@ -4853,6 +4853,33 @@ int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
 
 
 
+int32_t ice_utils_compute_turn_hmac_key(
+            ice_session_t *session, u_char *key, uint32_t *key_len)
+{
+    stun_MD5_CTX ctx;
+
+    if (*key_len < 16) return STUN_MEM_INSUF;
+
+    /** calculate the hmac key for long-term authentication */
+    stun_MD5_Init(&ctx);
+    stun_MD5_Update(&ctx, session->turn_cfg.username, 
+                    stun_strlen((char *)session->turn_cfg.username));
+    stun_MD5_Update(&ctx, ":", 1);
+
+    stun_MD5_Update(&ctx, session->turn_cfg.realm, 
+                    stun_strlen((char *)session->turn_cfg.realm));
+    stun_MD5_Update(&ctx, ":", 1);
+
+    stun_MD5_Update(&ctx, session->turn_cfg.credential, 
+                    stun_strlen((char *)session->turn_cfg.credential));
+
+    stun_MD5_Final(key, &ctx);
+    *key_len = 16;
+
+    return STUN_OK;
+}
+
+
 
 /******************************************************************************/
 

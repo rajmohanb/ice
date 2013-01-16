@@ -24,22 +24,7 @@ extern "C" {
 
 
 
-typedef struct turns_alloc_node {
-    struct turns_alloc_node *next;
-    struct turns_alloc_node *prev;
-    handle context;
-} turns_alloc_node_t;
-
-
-
-typedef struct {
-    uint32_t count;
-    turns_alloc_node_t *head;
-} turns_alloc_table_t;
-
-
-
-int32_t turns_create_table(handle *h_table);
+int32_t turns_create_table(uint32_t max_allocs, handle *h_table);
 
 
 int32_t turns_destroy_table(handle h_table);
@@ -49,13 +34,20 @@ int32_t turns_table_does_node_exist(handle h_table, turns_allocation_t *alloc);
 
 
 int32_t turns_table_find_node(handle h_table, 
-                    turns_rx_stun_pkt_t *pkt, turns_allocation_t **alloc);
+        stun_inet_addr_t *src, handle transport_param, 
+        stun_transport_protocol_type_t protocol, turns_allocation_t **alloc);
 
 
-int32_t turns_table_add_node(handle h_table, turns_allocation_t *alloc);
+turns_allocation_t *turns_table_create_allocation(handle h_table);
 
 
-int32_t turns_txn_table_remove_node(handle h_table, turns_allocation_t *alloc);
+int32_t turns_table_delete_allocation(
+                    handle h_table, turns_allocation_t *alloc);
+
+
+int32_t turns_table_find_node_for_relayed_transport_address(
+        handle h_table, handle transport_param,
+        stun_transport_protocol_type_t protocol, turns_allocation_t **alloc);
 
 
 

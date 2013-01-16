@@ -30,88 +30,130 @@ extern "C" {
 
 
 
+bool_t turns_generate_nonce_value(char *data, unsigned int len);
+
+
 bool_t turns_utils_host_compare (u_char *host1, 
                     u_char *host2, stun_inet_addr_type_t addr_type);
+
 
 int32_t turns_utils_verify_info_from_alloc_request(
                 turns_allocation_t *alloc, handle h_msg, uint32_t *error_code);
 
+
 int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc);
+
+
+int32_t turns_utils_create_success_response(
+                turns_allocation_t *ctxt, handle h_req, handle *h_msg);
+
 
 int32_t turns_utils_create_error_response(turns_allocation_t *ctxt, 
                     handle h_req, uint32_t error_code, handle *h_errmsg);
 
-turns_allocation_t *turns_utils_create_allocation_context(
-        turns_instance_t *instance, turns_rx_stun_pkt_t *stun_pkt);
 
-#if 0
-int32_t turn_utils_create_request_msg(turn_session_t *session, 
-                                    stun_method_type_t method, handle *h_msg);
+int32_t turns_utils_init_allocation_context(
+        turns_instance_t *instance, turns_allocation_t *context, 
+        turns_rx_stun_pkt_t *stun_pkt);
 
-int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg);
 
-int32_t turn_utils_create_alloc_req_msg_with_credential(
-                            turn_session_t *session, handle *h_newmsg);
+int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc);
 
-int32_t turn_utils_create_dealloc_req_msg(
-                            turn_session_t *session, handle *h_newmsg);
 
-int32_t turn_utils_get_app_data_for_current_state(
-                                turn_session_t *session, handle *data);
+int32_t turns_utils_setup_allocation(turns_allocation_t *context);
 
-int32_t turn_utils_extract_data_from_alloc_resp(
-                                turn_session_t *session, handle h_msg);
 
-int32_t turn_utils_extract_data_from_refresh_resp(
-                                turn_session_t *session, handle h_msg);
+int32_t turns_utils_start_alloc_timer(turns_allocation_t *alloc);
 
-int32_t turn_utils_create_refresh_req_msg(
-                            turn_session_t *session, handle *h_newmsg);
 
-int32_t turn_utils_create_permission_req_msg(
-                            turn_session_t *session, handle *h_newmsg);
+int32_t turns_utils_stop_alloc_timer(turns_allocation_t *alloc);
 
-int32_t turn_utils_create_channel_bind_req_msg(turn_session_t *session, 
-                                    turn_permission_t *perm, handle *h_newmsg);
 
-int32_t turn_utils_create_send_ind_msg(
-        turn_session_t *session, turn_app_data_t *data, handle *h_newmsg);
+int32_t turns_utils_start_permission_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm);
 
-int32_t turn_utils_process_data_indication(
-                                turn_session_t *session, handle h_msg);
 
-int32_t turn_session_utils_notify_state_change_event(turn_session_t *session);
+int32_t turns_utils_stop_permission_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm);
 
-int32_t turn_utils_start_alloc_refresh_timer(
-                                turn_session_t *session, uint32_t duration);
 
-int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session);
+int32_t turns_utils_start_channel_binding_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm);
 
-int32_t turn_utils_start_perm_refresh_timer(
-                                turn_session_t *session, uint32_t duration);
 
-int32_t turn_utils_stop_perm_refresh_timer(turn_session_t *session);
+int32_t turns_utils_stop_channel_binding_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm);
 
-int32_t turn_utils_start_keep_alive_timer(
-                                turn_session_t *session, uint32_t duration);
 
-int32_t turn_utils_stop_keep_alive_timer(turn_session_t *session);
+int32_t turns_utils_verify_request(
+                turns_allocation_t *alloc, handle h_msg, uint32_t *error_code);
 
-int32_t turn_table_validate_session_handle(handle h_inst, handle h_session);
 
-void turn_utils_free_all_session_timers(turn_session_t *session);
+int32_t turns_utils_start_nonce_stale_timer(turns_allocation_t *alloc);
 
-void turn_utils_delete_all_permissions(turn_session_t *session);
 
-int32_t turn_utils_send_create_permission_req(turn_session_t *session);
+int32_t turns_utils_stop_nonce_stale_timer(turns_allocation_t *alloc);
 
-int32_t turn_utils_send_channel_bind_request (
-                            turn_session_t *session, turn_permission_t *perm);
 
-int32_t turn_utils_validate_integrity_for_rcvd_msg(
-                                    turn_session_t *session, handle h_rcvdmsg);
-#endif
+int32_t turns_utils_verify_info_from_refresh_request(
+                turns_allocation_t *alloc, handle h_msg, uint32_t *error_code);
 
+
+int32_t turns_utils_handle_create_permission_request(
+                                turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_utils_refresh_permission(
+                turns_allocation_t *alloc, turns_permission_t *perm);
+
+
+int32_t turns_utils_install_permission(turns_allocation_t *alloc, 
+                                    uint16_t channel, stun_inet_addr_t *addr);
+
+
+int32_t turns_utils_uninstall_permission(
+                turns_allocation_t *alloc, turns_permission_t *perm);
+
+
+int32_t turns_utils_handle_channel_bind_request(
+                                turns_allocation_t *alloc, handle h_msg);
+
+
+turns_permission_t *turns_utils_validate_allocation_channel_binding(
+                                        turns_allocation_t *alloc, handle arg);
+
+
+turns_permission_t *turns_utils_validate_permission_handle(
+                                        turns_allocation_t *alloc, handle arg);
+
+
+turns_permission_t *turns_utils_search_for_permission(
+                        turns_allocation_t *alloc, stun_inet_addr_t addr);
+
+
+int32_t turns_utils_install_channel_binding(
+        turns_allocation_t *alloc, turns_permission_t *perm, uint16_t channel);
+
+
+int32_t turns_utils_refresh_channel_binding(
+                turns_allocation_t *alloc, turns_permission_t *perm);
+
+
+int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_utils_forward_channel_data(
+                    turns_allocation_t *alloc, turns_rx_channel_data_t *data);
+
+
+int32_t turns_utils_forward_udp_data_using_channeldata_msg(
+                        turns_allocation_t *alloc, turns_permission_t *perm, 
+                        turns_rx_channel_data_t *data);
+
+
+int32_t turns_utils_forward_udp_data_using_data_ind(
+                        turns_allocation_t *alloc, turns_permission_t *perm, 
+                        turns_rx_channel_data_t *data);
 
 
 

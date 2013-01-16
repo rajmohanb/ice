@@ -29,6 +29,7 @@ extern "C" {
 #include <stun_base.h>
 #include <stun_enc_dec_api.h>
 #include <turns_api.h>
+#include <stuns_api.h>
 #include <ice_server.h>
 
 
@@ -49,7 +50,7 @@ char *log_levels[] =
 mb_ice_server_t g_mb_server = {0};
 stun_log_level_t g_loglevel = LOG_SEV_WARNING;
 
-void *mb_iceserver_decision_thread(void *arg);
+void *mb_iceserver_decision_thread(void);
 
 
 void app_log(stun_log_level_t level,
@@ -85,47 +86,94 @@ void app_log(stun_log_level_t level,
 
 void ice_server_timer_expiry_cb (void *timer_id, void *arg)
 {
-#if 0
-    static int32_t sock = 0;
-    ice_demo_timer_event_t timer_event;
+    ssize_t bytes = 0;
+    mb_ice_server_timer_event_t timer_event;
 
-    APP_LOG (LOG_SEV_DEBUG,
-            "[ICE_AGENT_DEMO] in sample application timer callback %d %p", timer_id, arg);
-
-    if (sock == 0)
-    {
-        sock = platform_create_socket(AF_INET, SOCK_DGRAM, 0);
-        if(sock == -1)
-        {
-            APP_LOG(LOG_SEV_CRITICAL, "[ICE AGENT DEMO] Timer event socket creation failed");
-            return;
-        }
-    }
+    printf("[MB ICE SERVER] in sample application timer callback %d %p\n", 
+            timer_id, arg);
 
     timer_event.timer_id = timer_id;
     timer_event.arg = arg;
 
-    platform_socket_sendto(sock, 
-                (u_char *)&timer_event, sizeof(timer_event), 0, 
-                AF_INET, ICE_SERVER_INTERNAL_TIMER_PORT, g_localip);
-#endif
+    bytes = send(g_mb_server.timer_sockpair[1], 
+            (u_char *)&timer_event, sizeof(timer_event), 0);
+    if (bytes == -1)
+        printf("Error: Sending of timer event failed\n");
     
     return;
 }
 
 
+
+int32_t ice_server_network_send_data(u_char *data, 
+        uint32_t data_len, stun_inet_addr_type_t ip_addr_type, 
+        u_char *ip_addr, uint32_t port, handle transport_param, u_char *key)
+{
+    int32_t status, sent_bytes = 0;
+    int ret, sock_fd = (int) transport_param;
+    struct sockaddr dest;
+
+    if (ip_addr_type == STUN_INET_ADDR_IPV4)
+    {
+        dest.sa_family = AF_INET;
+        ((struct sockaddr_in *)&dest)->sin_port = htons(port);
+        ret = inet_pton(AF_INET, (char *)ip_addr, 
+                    &(((struct sockaddr_in *)&dest)->sin_addr));
+        if (ret != 1)
+        {
+            printf("inet_pton failed\n");
+            return sent_bytes;
+        }
+    }
+    else if (ip_addr_type == STUN_INET_ADDR_IPV6)
+    {
+        dest.sa_family = AF_INET6;
+        ((struct sockaddr_in6 *)&dest)->sin6_port = htons(port);
+        ret = inet_pton(AF_INET, (char *)ip_addr, 
+                    &(((struct sockaddr_in6 *)&dest)->sin6_addr));
+        if (ret != 1) return sent_bytes;
+    }
+    else
+    {
+        app_log (LOG_SEV_INFO, __FILE__, __LINE__,
+                "[ICE AGENT DEMO] Invalid IP address family type. "\
+                "Sending of STUN message failed");
+        return sent_bytes;
+    }
+
+    sent_bytes = sendto(sock_fd, data, data_len, 0, &dest, sizeof(dest));
+    if (sent_bytes == -1) perror("sendto");
+
+    return sent_bytes;
+}
+
+
+
 int32_t ice_server_network_send_msg(handle h_msg, 
         stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
-        uint32_t port, handle transport_param, handle app_param)
+        uint32_t port, handle transport_param, u_char *key)
 {
     int32_t status, sent_bytes = 0;
     int ret, sock_fd = (int) transport_param;
     static char buf[1500];
     uint32_t buf_len = 1500;
     struct sockaddr dest;
+    stun_auth_params_t auth;
+
+    stun_memset(&auth, 0, sizeof(auth));
+
+    if (key)
+    {
+        /** 
+         * long term auth key length is always 16 
+         * since it is always md5 derived.
+         */
+        auth.key_len = 16;
+        stun_memcpy(&auth.key, key, auth.key_len);
+    }
 
     /** encode the message */
-    status = stun_msg_encode(h_msg, NULL, (uint8_t *)buf, &buf_len);
+    status = stun_msg_encode(h_msg, &auth, (uint8_t *)buf, &buf_len);
     if (status != STUN_OK)
     {
         printf ("Sending of STUN message failed\n");
@@ -167,16 +215,47 @@ int32_t ice_server_network_send_msg(handle h_msg,
 }
 
 
+int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
+{
+    int i;
+    printf("Now need to listen on this socket as well: %d\n", sock_fd);
+
+    /** add it to the list */
+    for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+        if (g_mb_server.relay_sockets[i] == 0)
+            g_mb_server.relay_sockets[i] = sock_fd;
+
+    FD_SET(sock_fd, &g_mb_server.master_rfds);
+    if (g_mb_server.max_fd < sock_fd) g_mb_server.max_fd = sock_fd;
+
+    /** need to wake up the waiting pselect */
+
+    return STUN_OK;
+}
+
+
 handle ice_server_start_timer (uint32_t duration, handle arg)
 {
+    handle timer_id = NULL;
+
     timer_expiry_callback timer_cb = ice_server_timer_expiry_cb;
 
-    return platform_start_timer(duration, timer_cb, arg);
+    printf("ice_server: starting timer for duration %d "\
+            "Argument is %p\n", duration, arg);
+
+    timer_id = platform_start_timer(duration, timer_cb, arg);
+
+    printf("timer id returned is %p\n", timer_id);
+
+    return timer_id;
 }
+
 
 
 int32_t ice_server_stop_timer (handle timer_id)
 {
+    printf("ice_server: stopping timer %p\n", timer_id);
+
     if (platform_stop_timer(timer_id) == true)
         return STUN_OK;
     else
@@ -184,14 +263,34 @@ int32_t ice_server_stop_timer (handle timer_id)
 }
 
 
-int32_t ice_server_new_allocation_request(handle h_alloc)
+int32_t ice_server_new_allocation_request(
+                handle h_alloc, turns_new_allocation_params_t *alloc_req)
 {
-    printf("[][][][][][][][] NEW ALLOCATION REQUEST RECEIVED [][][][][][][][]\n");
+    int size, bytes = 0;
+    mb_ice_server_new_alloc_t data;
 
+    printf("[][][][][][][] NEW ALLOCATION REQUEST RECEIVED [][][][][][][]\n");
+
+    memset(&data, 0, sizeof(data));
+
+    /** 
+     * This is messy! passing data between processes - 
+     * need to find an elegant solution 
+     */
+    memcpy(data.username, alloc_req->username, alloc_req->username_len);
+    memcpy(data.realm, alloc_req->realm, alloc_req->realm_len);
+    data.lifetime = alloc_req->lifetime;
+    data.protocol = alloc_req->protocol;
+    data.blob = alloc_req->blob;
+    
     /**
      * this callback routine must not consume too much time since it is 
-     * running in the context of the main listener thread.
+     * running in the context of the main socket listener thread. So post
+     * this allocation request message to the slave thread that will
+     * decide whether the allocation is to be approved or not.
      */
+    bytes = send(g_mb_server.thread_sockpair[0], &data, sizeof(data), 0);
+    printf ("Sent [%d] bytes to decision process\n", bytes);
 
     return STUN_OK;
 }
@@ -210,7 +309,7 @@ int32_t iceserver_init_turns(void)
     turns_event_callbacks_t event_cbs;
 
     /** initialize the turns module */
-    status = turns_create_instance(&(g_mb_server.h_turns_inst));
+    status = turns_create_instance(25, 1, &(g_mb_server.h_turns_inst));
     if (status != STUN_OK) return status;
 
     status = turns_instance_set_server_software_name(
@@ -223,7 +322,9 @@ int32_t iceserver_init_turns(void)
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     /** set up os callbacks */
-    osa_cbs.nwk_cb = ice_server_network_send_msg;
+    osa_cbs.nwk_stun_cb = ice_server_network_send_msg;
+    osa_cbs.nwk_data_cb = ice_server_network_send_data;
+    osa_cbs.new_socket_cb = ice_server_add_socket;
     osa_cbs.start_timer_cb = ice_server_start_timer;
     osa_cbs.stop_timer_cb = ice_server_stop_timer;
     
@@ -239,10 +340,44 @@ int32_t iceserver_init_turns(void)
                         g_mb_server.h_turns_inst, &event_cbs);
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
+    status = turns_instance_set_nonce_stale_timer_value(
+                    g_mb_server.h_turns_inst, MB_ICE_SERVER_NONCE_EXPIRY);
+    if (status != STUN_OK) goto MB_ERROR_EXIT;
+
     return status;
 
 MB_ERROR_EXIT:
     status = turns_destroy_instance(g_mb_server.h_turns_inst);
+    return status;
+}
+
+
+int32_t iceserver_init_stuns(void)
+{
+    int32_t status;
+    stuns_osa_callbacks_t osa_cbs;
+
+    /** init the stuns module */
+    status = stuns_create_instance(&(g_mb_server.h_stuns_inst));
+    if (status != STUN_OK) return status;
+
+    status = stuns_instance_set_server_software_name(
+            g_mb_server.h_stuns_inst, MB_ICE_SERVER, strlen(MB_ICE_SERVER));
+    if (status != STUN_OK) goto MB_ERROR_EXIT;
+
+    /** set up os callbacks */
+    osa_cbs.nwk_cb = ice_server_network_send_msg;
+    osa_cbs.start_timer_cb = ice_server_start_timer;
+    osa_cbs.stop_timer_cb = ice_server_stop_timer;
+    
+    status = stuns_instance_set_osa_callbacks(
+                        g_mb_server.h_stuns_inst, &osa_cbs);
+    if (status != STUN_OK) goto MB_ERROR_EXIT;
+
+    return status;
+
+MB_ERROR_EXIT:
+    status = stuns_destroy_instance(g_mb_server.h_stuns_inst);
     return status;
 }
 
@@ -263,45 +398,54 @@ void ice_server_run(void)
 
 int32_t iceserver_init(void)
 {
-    int s;
-    struct sockaddr_un local;
-    char *ptr;
+    g_mb_server.max_fd = 0;
+    FD_ZERO(&g_mb_server.master_rfds);
+    memset(g_mb_server.relay_sockets, 0, 
+                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
-    memset(&local, 0, sizeof(struct sockaddr_un));
 
-    strcpy(local.sun_path, "/tmp/");
-    ptr = local.sun_path + strlen("/tmp/");
-    if (platform_get_random_data((u_char *)ptr, 20) != true)
+    /** for comm between the approval process and main signaling process */
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.thread_sockpair) == -1)
     {
-        printf("error! unable to get random data\n");
+        perror ("process socketpair");
+        printf ("process socketpair() returned error\n");
         return STUN_INT_ERROR;
     }
 
-    s = socket(AF_UNIX, SOCK_DGRAM, 0);
-    if (s == -1) return STUN_INT_ERROR;
-
-    local.sun_family = AF_UNIX;
-    unlink(local.sun_path);
-
-    if (bind(s, (struct sockaddr *)&local, 
-                sizeof(local.sun_path) + sizeof(local.sun_family)) == -1)
-    {
-        printf("Binding to unix domain socket failed\n");
-        return STUN_INT_ERROR;
-    }
+    printf("Added decision process socket: %d to fd_set\n", 
+                                        g_mb_server.thread_sockpair[0]);
+    /** add internal socket used for communication with the decision process */
+    FD_SET(g_mb_server.thread_sockpair[0], &g_mb_server.master_rfds);
+    if (g_mb_server.max_fd < g_mb_server.thread_sockpair[0])
+        g_mb_server.max_fd = g_mb_server.thread_sockpair[0];
 
     /** 
-     * spin off a thread whose responsibility is to approve or deny any new 
-     * allocation requests based on the set policies and quotas. This thread
-     * is the point for enforcement of the local allocation policy.
+     * for comm between the timer thread and the main signaling 
+     * thread to notify about the timer expiry 
+     * TODO: 
+     * Here we do not need 2 way IPCs because the communication is always one
+     * way since the timer thread will always notify the main signaling thread
+     * about a timer expiry. However, currently we handle stopping of the 
+     * timer expiry by directly looping into the linked list of timer nodes.
+     * This might take too much time, in such a case, we might need to push
+     * the timer stop operation into the timer thread?
      */
-    if (pthread_create(&g_mb_server.tid, 
-                NULL, mb_iceserver_decision_thread, (void *)s))
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.timer_sockpair) == -1)
     {
-        perror("pthread_create");
-        printf("Thread creation failed\n");
+        perror ("timer socketpair");
+        printf ("timer socketpair() returned error\n");
         return STUN_INT_ERROR;
     }
+
+    /** add internal socket used for communication with the timer thread */
+    FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
+    if (g_mb_server.max_fd < g_mb_server.timer_sockpair[0])
+        g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
+    printf("Added timer thread socket: %d to fd_set\n", 
+                                        g_mb_server.timer_sockpair[0]);
+
+    if (platform_init() != true)
+        return STUN_INT_ERROR;
 
     return STUN_OK;
 }
@@ -317,6 +461,9 @@ int main (int argc, char *argv[])
     /** initialize the turns module */
     iceserver_init_turns();
 
+    /** initialize the stuns module */
+    iceserver_init_stuns();
+
     /** initialize the transport module */
     if (iceserver_init_transport() != STUN_OK)
     {
@@ -324,8 +471,17 @@ int main (int argc, char *argv[])
         return -1;
     }
 
-    /** the loop! */
-    ice_server_run();
+    if (!fork())
+    {
+        /** child */
+        mb_iceserver_decision_thread();
+    }
+    else
+    {
+        /** parent - the loop! */
+        ice_server_run();
+    }
+
 
     return 0;
 }

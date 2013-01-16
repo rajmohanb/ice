@@ -23,17 +23,40 @@ extern "C" {
 /******************************************************************************/
 
 #define TURN_SVR_IP_ADDR_MAX_LEN        16
-#define TURN_SERVER_DEFAULT_PORT        3478
-#define TURN_MAX_USERNAME_LEN           128
-#define TURN_MAX_PASSWORD_LEN           128
-#define TURN_MAX_REALM_LEN              64
-#define TURN_MAX_CONCURRENT_SESSIONS    10
-#define TURN_MAX_PERMISSIONS            3
 
-#define TURN_PERM_REFRESH_DURATION      300 /** seconds */
+#define TURN_SERVER_DEFAULT_PORT        3478
+
+#define TURN_MAX_USERNAME_LEN           128
+
+#define TURN_MAX_PASSWORD_LEN           128
+
+#define TURN_MAX_REALM_LEN              64
+
+#define TURN_MAX_CONCURRENT_SESSIONS    10
+
+#define TURNS_MAX_PERMISSIONS           5
+
+#define TURNS_PERM_REFRESH_DURATION     300 /** seconds */
+
+#define TURNS_CHANNEL_BINDING_DURATION  600 /** seconds */
+
 #define TURN_KEEP_ALIVE_DURATION        15  /** seconds */
 
 #define TURNS_SERVER_NONCE_LEN          64
+
+#define TURNS_MMAP_FILE_PATH            "/tmp/mbiceserver"
+
+#define TURNS_ERROR_REASON_LENGTH       256
+
+#define TURNS_PORT_RANGE_MIN            49152
+
+#define TURNS_PORT_RANGE_MAX            65535
+
+#define TURNS_ALLOCATION_NONCE_STALE_TIMER  3600    /** seconds */
+
+#define TURNS_CHANNEL_NUMBER_MIN        0x4000
+#define TURNS_CHANNEL_NUMBER_MAX        0x7FFE
+
 
 /******************************************************************************/
 
@@ -42,6 +65,7 @@ extern "C" {
 typedef enum
 {
     TURNS_NEW_ALLOC_REQ,
+    TURNS_ALLOC_DECISION,
 } turns_event_t;
 
 
@@ -54,6 +78,7 @@ typedef struct
 
     /** transport parameter */
     handle transport_param;
+    stun_inet_addr_t local_intf;
 
     /** source address of stun packet */
     stun_inet_addr_t src;
@@ -62,6 +87,28 @@ typedef struct
     stun_transport_protocol_type_t protocol;
 
 } turns_rx_stun_pkt_t;
+
+
+
+
+/** source and destination transport details about the received channel data */
+typedef struct
+{
+    /** received data and data length */
+    u_char *data;
+    uint32_t data_len;
+
+    /** transport parameter */
+    handle transport_param;
+
+    /** source address of stun packet */
+    stun_inet_addr_t src;
+
+    /** the transport protocol */
+    stun_transport_protocol_type_t protocol;
+
+} turns_rx_channel_data_t;
+
 
 
 
@@ -78,20 +125,49 @@ typedef struct
     uint32_t realm_len;
     uint32_t lifetime;
     stun_transport_protocol_type_t protocol;
+    void   *blob;
 } turns_new_allocation_params_t;
 
+
+
+typedef struct
+{
+    handle blob;
+    bool_t approved;
+    uint32_t lifetime; /** in secs, if approved */
+    uint32_t code;
+    char reason[TURNS_ERROR_REASON_LENGTH];
+    char key[16];
+} turns_allocation_decision_t;
 
 
 /******************************************************************************/
 
 
 /** 
+ * This callback will be called when the TURN stack wants the
+ * application to listen for data on  a new socket.
+ */
+typedef int32_t (*turns_new_socket_cb) (handle h_alloc, int sock_id);
+
+
+/** 
  * This callback will be called when the TURN stack wants to 
  * send data over the network to the specified destination.
  */
-typedef int32_t (*turns_nwk_send_cb) (handle h_msg, 
+typedef int32_t (*turns_nwk_send_data_cb) (u_char *data, 
+        uint32_t data_len, stun_inet_addr_type_t ip_addr_type, 
+        u_char *ip_addr, uint32_t port, handle transport_param, u_char *key);
+
+
+/** 
+ * This callback will be called when the TURN stack wants to 
+ * send data over the network to the specified destination.
+ */
+typedef int32_t (*turns_nwk_send_stun_msg_cb) (handle h_msg, 
                     stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
-                    uint32_t port, handle transport_param, handle app_param);
+                    uint32_t port, handle transport_param, u_char *key);
+
 
 /** 
  * This callback will be called when the TURN stack wants to 
@@ -113,7 +189,9 @@ typedef int32_t (*turns_stop_timer_cb) (handle timer_id);
 
 
 typedef struct {
-    turns_nwk_send_cb nwk_cb;
+    turns_nwk_send_data_cb nwk_data_cb;
+    turns_nwk_send_stun_msg_cb nwk_stun_cb;
+    turns_new_socket_cb new_socket_cb;
     turns_start_timer_cb start_timer_cb;
     turns_stop_timer_cb  stop_timer_cb;
 } turns_osa_callbacks_t;
@@ -149,8 +227,9 @@ typedef struct {
 /******************************************************************************/
 
 
-int32_t turns_create_instance(handle *h_inst);
 
+int32_t turns_create_instance(uint32_t max_allocs, 
+                        uint32_t num_media_procs, handle *h_inst);
 
 
 int32_t turns_instance_set_osa_callbacks(
@@ -168,6 +247,9 @@ int32_t turns_instance_set_server_software_name(
 int32_t turns_instance_set_realm(handle h_inst, char *realm, uint32_t len);
 
 
+int32_t turns_instance_set_nonce_stale_timer_value(
+                                handle h_inst, uint32_t timeout);
+
 
 int32_t turns_destroy_instance(handle h_inst);
 
@@ -176,11 +258,25 @@ int32_t turns_destroy_instance(handle h_inst);
 int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt);
 
 
-int32_t turns_inject_timer_event(
-                    handle timer_id, handle arg, handle *ice_session);
+
+int32_t turns_inject_received_channeldata_msg(
+                handle h_inst, turns_rx_channel_data_t *chnl_data);
+
+
+int32_t turns_inject_timer_event(handle timer_id, handle arg);
 
 
 int32_t turns_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len);
+
+
+
+int32_t turns_inject_allocation_decision(
+            handle h_inst, turns_allocation_decision_t *decision);
+
+
+int32_t turns_inject_received_udp_msg(
+                handle h_inst, turns_rx_channel_data_t *chnl_data);
+
 
 
 /******************************************************************************/

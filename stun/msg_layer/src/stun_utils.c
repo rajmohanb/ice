@@ -277,6 +277,8 @@ int32_t stun_msg_utils_add_unknown_attributes(
                 "Unable to add unknown attribute type to unknown-attributes");
             goto ERROR_EXIT;
         }
+
+        pah_attr++;
     }
 
     /** now add the attribute to the message */

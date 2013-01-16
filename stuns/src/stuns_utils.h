@@ -13,8 +13,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef TURN_SESSION_FSM__H
-#define TURN_SESSION_FSM__H
+#ifndef STUNS_UTILS__H
+#define STUNS_UTILS__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,50 +23,16 @@ extern "C" {
 /******************************************************************************/
 
 
-int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg);
+int32_t stuns_utils_send_error_resp(stuns_instance_t *instance, 
+                        stuns_rx_stun_pkt_t *stun_pkt, uint32_t error_code, 
+                        char *reason, handle *pah_attr, uint32_t num_attr);
 
+int32_t stuns_utils_send_success_resp(
+            stuns_instance_t *instance, stuns_rx_stun_pkt_t *stun_pkt);
 
-int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg);
+int32_t stuns_utils_process_stun_binding_request(
+                stuns_instance_t *instance, stuns_rx_stun_pkt_t *stun_pkt);
 
-
-int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_send_ind (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_channel_data_ind (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_process_alloc_timer (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_generate_new_nonce(turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_create_perm_req(turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_channel_bind_req(turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc, 
-                                    turns_alloc_event_t event, handle h_msg);
 
 
 /******************************************************************************/

@@ -23,25 +23,29 @@ extern "C" {
 /******************************************************************************/
 
 
+
+#define TURNS_HMAC_KEY_LEN      16
+
+
 typedef enum
 {
     /** timer started by turn transactions */
-    TURN_STUN_TXN_TIMER = 0,
+    TURNS_STUN_TXN_TIMER = 0,
     
     /** timers internal to turn */
-    TURN_ALLOC_REFRESH_TIMER,
-    TURN_PERM_REFRESH_TIMER,
-    TURN_CHNL_REFRESH_TIMER,
-    TURN_KEEP_ALIVE_TIMER,
+    TURNS_ALLOC_TIMER,
+    TURNS_PERM_TIMER,
+    TURNS_CHNL_TIMER,
+    TURNS_NONCE_TIMER,
 
     /** that's all we have as of now */
-} turn_timer_type_t;
+} turns_timer_type_t;
 
 
 typedef struct {
     handle h_instance;
-    handle h_turn_session;
-    turn_timer_type_t type;
+    handle h_alloc;
+    turns_timer_type_t type;
     handle timer_id;
     handle arg;
 } turns_timer_params_t;
@@ -49,9 +53,11 @@ typedef struct {
 
 typedef enum
 {
-    TSALLOC_CHALLENGED = 0,
+    TSALLOC_UNALLOCATED = 0,
+    TSALLOC_CHALLENGED,
     TSALLOC_PENDING,
-    TSALLOC_CREATED,
+    TSALLOC_ALLOCATED,
+    TSALLOC_TERMINATING,
     TSALLOC_STATE_MAX,
 } turns_alloc_state_t;
 
@@ -61,28 +67,48 @@ typedef enum
     TURNS_ALLOC_REQ = 0,
     TURNS_ALLOC_APPROVED,
     TURNS_ALLOC_REJECTED,
+    TURNS_REFRESH_REQ,
+    TURNS_ALLOC_TIMER_EXP,
+    TURNS_PERM_REQ,
+    TURNS_CHNL_BIND_REQ,
+    TURNS_SEND_IND,
+    TURNS_MEDIA_DATA,
+    TURNS_NONCE_TIMER_EXP,
+    TURNS_CHNL_BIND_TIMER_EXP,
+    TURNS_PERM_TIMER_EXP,
+    TURNS_CHNL_DATA_IND,
     TURNS_ALLOC_EVENT_MAX,
 } turns_alloc_event_t;
 
 
 typedef struct
 {
+    bool_t used;
+
+    /** channel number TODO: this number should be 2 bytes? */
+    uint32_t channel_num;
+
+    /** transport address of the peer */
     stun_inet_addr_t peer_addr;
+
+    /** handle to permission refresh timer */
+    handle h_perm_timer;
+    turns_timer_params_t perm_timer;
+
+    /** handle to channel binding time-to-expiry timer */
+    handle h_channel_timer;
+    turns_timer_params_t channel_timer;
 
 #if 0
     /** use data/send indications or channels for media data */
     bool_t use_channel;
 #endif
 
-    /** handle to refresh permission by using channel bind */
-    handle   h_perm_chnl_refresh;
-    turns_timer_params_t *perm_chnl_refresh_timer_params;
-
     handle h_chnl_txn;
     handle h_chnl_req;
     handle h_chnl_resp;
 
-} turn_permission_t;
+} turns_permission_t;
 
 
 typedef struct 
@@ -102,13 +128,27 @@ typedef struct
     char *realm;
 
     /** timer and socker callbacks */
-    turns_nwk_send_cb nwk_send_cb;
+    turns_nwk_send_data_cb nwk_data_cb;
+    turns_nwk_send_stun_msg_cb nwk_stun_cb;
+    turns_new_socket_cb new_socket_cb;
     turns_start_timer_cb start_timer_cb;
     turns_stop_timer_cb stop_timer_cb;
 
     /** event callbacks */
     turns_new_alloc_cb new_alloc_cb;
     turns_alloc_event_cb alloc_event_cb;
+
+    /** current allocations */
+    int num_allocs;
+
+    /** maximum configured allocations */
+    int max_allocs;
+
+    /** number of media worker processes */
+    uint32_t num_media_procs;
+
+    /** nonce stale timer value in seconds */
+    uint32_t nonce_timeout;
 
 } turns_instance_t;
 
@@ -139,6 +179,12 @@ typedef struct
     uint32_t username_len;
     u_char *username;
 
+    /**
+     * hmac key - will always be 16 bytes since 
+     * md5 is used for long-terms authentication.
+     */
+    u_char hmac_key[TURNS_HMAC_KEY_LEN];
+
     /** requested transport */
     stun_transport_protocol_type_t req_tport;
 
@@ -148,6 +194,7 @@ typedef struct
      * client, but gets overwritten by the server application decided value.
      */
     uint32_t lifetime;
+    uint32_t initial_lifetime;
 
     /******/ 
 
@@ -157,36 +204,24 @@ typedef struct
     handle h_req;
     handle h_resp;
 
-    /** relayed address */
+    /** relayed address for this allocation on the server */
     stun_inet_addr_t relay_addr;
-
-    /** server reflexive mapped address */
-    stun_inet_addr_t mapped_addr;
-
+    int relay_sock;
 
     /** handle to allocation refresh timer */
-    handle   h_alloc_refresh;
-    turns_timer_params_t *alloc_refresh_timer_params;
+    handle h_alloc_timer;
+    turns_timer_params_t alloc_timer_params;
 
-    /** permission creation/refresh mode */
-    //turn_perm_method_t perm_method;
-    
+    /** stale nonce timer */
+    handle h_nonce_timer;
+    turns_timer_params_t nonce_timer_params;
+
     /** list of permissions */
-    turn_permission_t *aps_perms[TURN_MAX_PERMISSIONS];
+    turns_permission_t aps_perms[TURNS_MAX_PERMISSIONS];
 
-    /** permission refresh timer */
-    handle   h_perm_refresh;
-    turns_timer_params_t *perm_refresh_timer_params;
-
-    handle h_perm_txn;
-    handle h_perm_req;
-    handle h_perm_resp;
-
-    /** Keep-Alive timer and related stuff */
-    handle   h_keep_alive;
-    turns_timer_params_t *keep_alive_timer_params;
-
-    uint16_t channel_num;
+    // handle h_perm_txn;
+    // handle h_perm_req;
+    // handle h_perm_resp;
 
 } turns_allocation_t;
 

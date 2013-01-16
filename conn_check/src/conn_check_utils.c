@@ -701,7 +701,8 @@ int32_t conn_check_utils_send_error_resp(
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of error code attribute to response message failed");
+                "Retrieving unknown comp required attribute from "\
+                "request message failed");
             goto ERROR_EXIT_PT1;
         }
 

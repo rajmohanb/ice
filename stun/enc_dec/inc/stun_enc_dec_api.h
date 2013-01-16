@@ -31,8 +31,8 @@ extern "C" {
 
 typedef struct 
 {
-    uint32_t len;
-    u_char password[STUN_MSG_AUTH_PASSWORD_LEN];
+    uint32_t key_len;
+    u_char key[STUN_MSG_AUTH_PASSWORD_LEN];
 } stun_auth_params_t;
 
 /**

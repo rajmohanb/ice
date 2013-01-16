@@ -147,6 +147,7 @@ int32_t turns_utils_verify_info_from_alloc_request(
                                 STUN_ATTR_USERNAME, &h_attr, &num);
     if (status == STUN_NOT_FOUND)
     {
+        printf("USERNAME attribute not found, sending 401\n");
         *error_code = 401;
         return status;
     }
@@ -155,6 +156,7 @@ int32_t turns_utils_verify_info_from_alloc_request(
     status = stun_attr_username_get_username_length(h_attr, &len);
     if (status != STUN_OK)
     {
+        printf("USERNAME attribute: Error retrieving length, sending 401\n");
         *error_code = 400;
         return status;
     }
@@ -165,6 +167,7 @@ int32_t turns_utils_verify_info_from_alloc_request(
     status = stun_attr_username_get_username(h_attr, username, &len);
     if (status != STUN_OK)
     {
+        printf("USERNAME attribute: Error retrieving username, sending 401\n");
         resp_code = 400;
         goto MB_ERROR_EXIT1;
     }
@@ -178,10 +181,12 @@ int32_t turns_utils_verify_info_from_alloc_request(
         alloc->username = username;
         alloc->username_len = len;
         username = NULL;
+        printf("OK: So Username is %s\n", alloc->username);
     }
     else
     {
         /** TODO - need to verify against what is stored in the allocation */
+        printf("OK: So hhow and what do we do? TODO\n");
     }
 
     num = 1;
@@ -306,6 +311,8 @@ int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc)
     params->lifetime = alloc->lifetime;
     params->protocol = alloc->req_tport;
 
+    params->blob = (void *)alloc;
+
     /** notify the application for approval */
     alloc->instance->new_alloc_cb(NULL, params);
 
@@ -314,11 +321,48 @@ int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc)
 
 
 
+char *turns_utils_get_error_reason_phrase(uint32_t error_code)
+{
+    if (error_code == STUN_ERROR_TRY_ALTERNATE)
+        return strdup(STUN_REJECT_RESPONSE_300);
+    else if (error_code == STUN_ERROR_BAD_REQUEST)
+        return strdup(STUN_REJECT_RESPONSE_400);
+    else if (error_code == STUN_ERROR_UNAUTHORIZED)
+        return strdup(STUN_REJECT_RESPONSE_401);
+    else if (error_code == STUN_ERROR_FORBIDDEN)
+        return strdup(STUN_REJECT_RESPONSE_403);
+    else if (error_code == STUN_ERROR_UNKNOWN_ATTR)
+        return strdup(STUN_REJECT_RESPONSE_420);
+    else if (error_code == STUN_ERROR_ALLOC_MISMATCH)
+        return strdup(STUN_REJECT_RESPONSE_437);
+    else if (error_code == STUN_ERROR_STALE_NONCE)
+        return strdup(STUN_REJECT_RESPONSE_438);
+    else if (error_code == STUN_ERROR_WRONG_CREDS)
+        return strdup(STUN_REJECT_RESPONSE_441);
+    else if (error_code == STUN_ERROR_UNSUPPORTED_PROTO)
+        return strdup(STUN_REJECT_RESPONSE_442);
+    else if (error_code == STUN_ERROR_QUOTA_REACHED)
+        return strdup(STUN_REJECT_RESPONSE_486);
+    else if (error_code == STUN_ERROR_ROLE_CONFLICT)
+        return strdup(STUN_REJECT_RESPONSE_487);
+    else if (error_code == STUN_ERROR_SERVER_ERROR)
+        return strdup(STUN_REJECT_RESPONSE_500);
+    else if (error_code == STUN_ERROR_INSUF_CAPACITY)
+        return strdup(STUN_REJECT_RESPONSE_508);
+    else
+        return NULL;
+}
+
+
+
 int32_t turns_utils_create_error_response(turns_allocation_t *ctxt, 
                             handle h_req, uint32_t error_code, handle *h_errmsg)
 {
-    int32_t status;
-    handle h_error_code, h_resp, h_software;
+    int32_t i, status, count;
+    handle h_resp, h_attrs[7];
+    char *reason = NULL;
+
+    count = 0;
 
     status = stun_msg_create_resp_from_req(h_req, STUN_ERROR_RESP, &h_resp);
     if (status != STUN_OK)
@@ -328,38 +372,33 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
         return status;
     }
 
-    /** now add error code attribute */
-    status = stun_attr_create(STUN_ATTR_ERROR_CODE, &h_error_code);
+    /** add error code attribute */
+    status = stun_attr_create(STUN_ATTR_ERROR_CODE, &h_attrs[count]);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Creating the error-code attribute failed");
-        goto ERROR_EXIT_PT1;
+        goto MB_ERROR_EXIT1;
     }
+    count++;
 
-    status = stun_attr_error_code_set_error_code(h_error_code, error_code);
+    status = stun_attr_error_code_set_error_code(h_attrs[count-1], error_code);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "setting error code attribute value failed");
-        goto ERROR_EXIT_PT2;
+        goto MB_ERROR_EXIT2;
     }
 
+    reason = turns_utils_get_error_reason_phrase(error_code);
+    /** TODO - what if this returns NULL */
+
     status = stun_attr_error_code_set_error_reason(
-                                    h_error_code, "Unauthorized", strlen("Unauthorized"));
+                            h_attrs[count-1], reason, strlen(reason));
+    free(reason);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "setting error code reason value failed");
-        goto ERROR_EXIT_PT2;
+        goto MB_ERROR_EXIT2;
     }
-
-    status = stun_msg_add_attribute(h_resp, h_error_code);
-    if (status != STUN_OK)
-    { 
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of error code attribute to response message failed");
-        goto ERROR_EXIT_PT2;
-    }
-
-    ICE_LOG(LOG_SEV_DEBUG, "Added error code attribute to response msg");
 
     if (error_code == 420)
     {
@@ -372,71 +411,85 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
         {
             ICE_LOG(LOG_SEV_ERROR, 
                 "Adding of error code attribute to response message failed");
-            goto ERROR_EXIT_PT1;
+            goto MB_ERROR_EXIT2;
         }
 
         status = stun_msg_utils_add_unknown_attributes(
                                                 h_resp, h_unknown_attr, num);
+        if (status != STUN_OK)
+        {
+            /** but we continue!!! */
+            printf("Adding unknown attributes failed\n");
+        }
     }
-    else if (error_code == 401)
+    else if ((error_code == 401) || (error_code == 438))
     {
-        handle h_realm, h_nonce;
+        status = stun_attr_create(STUN_ATTR_REALM, &h_attrs[count]);
+        if (status != STUN_OK)
+        {
+            printf("Creating of realm attribute failed\n");
+            goto MB_ERROR_EXIT2;
+        }
+        count++;
 
-        status = stun_attr_create(STUN_ATTR_REALM, &h_realm);
-        if (status != STUN_OK) return status;
-        /** TODO: handle graceful exit */
-
-        status = stun_attr_realm_set_realm(h_realm, 
+        status = stun_attr_realm_set_realm(h_attrs[count-1], 
                 (uint8_t *)ctxt->instance->realm, ctxt->instance->realm_len);
-        if (status != STUN_OK) return status;
-        /** TODO: handle graceful exit */
+        if (status != STUN_OK)
+        {
+            printf("Setting of realm attribute value failed\n");
+            goto MB_ERROR_EXIT2;
+        }
 
-        status = stun_msg_add_attribute(h_resp, h_realm);
-        if (status != STUN_OK) return status;
+        status = stun_attr_create(STUN_ATTR_NONCE, &h_attrs[count]);
+        if (status != STUN_OK)
+        {
+            printf("Creating of nonce attribute failed\n");
+            goto MB_ERROR_EXIT2;
+        }
+        count++;
 
-        status = stun_attr_create(STUN_ATTR_NONCE, &h_nonce);
-        if (status != STUN_OK) return status;
-        /** TODO: handle graceful exit */
-
-        status = stun_attr_nonce_set_nonce(h_nonce, 
+        status = stun_attr_nonce_set_nonce(h_attrs[count-1], 
                             ctxt->nonce, TURNS_SERVER_NONCE_LEN);
-        if (status != STUN_OK) return status;
-        /** TODO: handle graceful exit */
-
-        status = stun_msg_add_attribute(h_resp, h_nonce);
-        if (status != STUN_OK) return status;
+        if (status != STUN_OK)
+        {
+            printf("Setting of nonce attribute value failed\n");
+            goto MB_ERROR_EXIT2;
+        }
     }
 
-    status = stun_attr_create(STUN_ATTR_SOFTWARE, &h_software);
+    status = stun_attr_create(STUN_ATTR_SOFTWARE, &h_attrs[count]);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Creating the software attribute failed");
-        goto ERROR_EXIT_PT1;
+        goto MB_ERROR_EXIT2;
     }
+    count++;
 
-    status = stun_attr_software_set_value(h_software, 
+    status = stun_attr_software_set_value(h_attrs[count-1], 
                             ctxt->instance->client_name, 
                             ctxt->instance->client_name_len);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "setting software attribute value failed");
-        goto ERROR_EXIT_PT2;
+        goto MB_ERROR_EXIT2;
     }
 
-    status = stun_msg_add_attribute(h_resp, h_software);
+    /** now add all the attributes */
+    status = stun_msg_add_attributes(h_resp, h_attrs, count);
     if (status != STUN_OK)
     { 
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of software attribute to response message failed");
-        goto ERROR_EXIT_PT2;
+            "Adding of array of attributes to response message failed");
+        goto MB_ERROR_EXIT2;
     }
 
     *h_errmsg = h_resp;
     return STUN_OK;
 
-ERROR_EXIT_PT2:
-    stun_attr_destroy(h_error_code);
-ERROR_EXIT_PT1:
+MB_ERROR_EXIT2:
+    for (i = 0; i < count; i++)
+        stun_attr_destroy(h_attrs[i]);
+MB_ERROR_EXIT1:
     stun_msg_destroy(h_resp);
     *h_errmsg = NULL;
 
@@ -445,1296 +498,1683 @@ ERROR_EXIT_PT1:
 
 
 
-turns_allocation_t *turns_utils_create_allocation_context(
-        turns_instance_t *instance, turns_rx_stun_pkt_t *stun_pkt)
+int32_t turns_utils_create_success_response(
+                turns_allocation_t *ctxt, handle h_req, handle *h_msg)
 {
-    turns_allocation_t *new_ctxt;
+    int32_t status, i, count = 0;
+    handle h_resp, h_attrs[7] = {0};
+    stun_addr_family_type_t family;
+    stun_method_type_t method;
 
-    new_ctxt = (turns_allocation_t *) 
-            stun_calloc (1, sizeof(turns_allocation_t));
-    if (new_ctxt == NULL) return new_ctxt;
-
-    new_ctxt->instance = instance;
-
-    new_ctxt->protocol = stun_pkt->protocol;
-    new_ctxt->transport_param = stun_pkt->transport_param;
-    stun_memcpy(&new_ctxt->client_addr, 
-                    &stun_pkt->src, sizeof(stun_inet_addr_t));
-
-    /** Note : TODO
-     * - Can we generate the nonce here for the allocation? so that every time
-     *   an allocation is created, the nonce is automatically generated.
-     * - in case we generate the nonce here, then we can also start the nonce
-     *   stale timer here after above step for expiring the nonce. 
-     */
-    /** generate random nonce */
-    turns_generate_nonce_value((char *)new_ctxt->nonce, TURNS_SERVER_NONCE_LEN);
-
-    /** TODO - should we start the nonce stale timer here now? */
-
-    /** Initialize to some default state? */
-    // new_ctxt->state = 
-
-    return new_ctxt;
-}
-
-
-#if 0
-
-int32_t turn_utils_create_request_msg(turn_session_t *session, 
-                                    stun_method_type_t method, handle *h_msg)
-{
-    int32_t status;
-    handle h_req, h_vendor;
-
-    status = stun_msg_create(STUN_REQUEST, method, &h_req);
-    if (status != STUN_OK) return status;
-
-    /** software attribute */
-    if (session->instance->client_name)
+    status = stun_msg_create_resp_from_req(h_req, STUN_SUCCESS_RESP, &h_resp);
+    if (status != STUN_OK)
     {
-        status = stun_attr_create(STUN_ATTR_SOFTWARE, &h_vendor);
-        if (status != STUN_OK) goto ERROR_EXIT_PT1;
-
-        status = stun_attr_software_set_value(h_vendor, 
-                                            session->instance->client_name, 
-                                            session->instance->client_name_len);
-        if (status != STUN_OK) goto ERROR_EXIT_PT2;
-
-        status = stun_msg_add_attribute(h_req, h_vendor);
-        if (status != STUN_OK) goto ERROR_EXIT_PT2;
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Creating the response message from request msg failed");
+        return status;
     }
 
-    *h_msg = h_req;
-    return status;
+    stun_msg_get_method(h_resp, &method);
+
+    if (method == STUN_METHOD_ALLOCATE)
+    {
+        /** xor relayed address attribute */
+        status = stun_attr_create(STUN_ATTR_XOR_RELAYED_ADDR, &h_attrs[count]);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "Creating the XOR relayed address attribute failed");
+            goto ERROR_EXIT_PT1;
+        }
+        count++;
+
+        if (ctxt->relay_addr.host_type == STUN_INET_ADDR_IPV4)
+            family = STUN_ADDR_FAMILY_IPV4;
+        else if (ctxt->relay_addr.host_type == STUN_INET_ADDR_IPV6)
+            family = STUN_ADDR_FAMILY_IPV6;
+        else
+            family = STUN_ADDR_FAMLY_INVALID;
+
+        status = stun_attr_xor_relayed_addr_set_address(h_attrs[count-1], 
+                                    ctxt->relay_addr.ip_addr, 
+                                    stun_strlen((char *)ctxt->relay_addr.ip_addr), 
+                                    family);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "setting xor relayed address attribute address value failed");
+            goto ERROR_EXIT_PT2;
+        }
+
+        status = stun_attr_xor_relayed_addr_set_port(
+                                h_attrs[count-1], ctxt->relay_addr.port);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "setting xor relayed address attribute port value failed");
+            goto ERROR_EXIT_PT2;
+        }
+
+        /** xor mapped address attribute */
+        status = stun_attr_create(STUN_ATTR_XOR_MAPPED_ADDR, &h_attrs[count]);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "creating the xor mapped address attribute failed");
+            goto ERROR_EXIT_PT2;
+        }
+        count++;
+
+        if (ctxt->relay_addr.host_type == STUN_INET_ADDR_IPV4)
+            family = STUN_ADDR_FAMILY_IPV4;
+        else if (ctxt->relay_addr.host_type == STUN_INET_ADDR_IPV6)
+            family = STUN_ADDR_FAMILY_IPV6;
+        else
+            family = STUN_ADDR_FAMLY_INVALID;
+
+        status = stun_attr_xor_mapped_addr_set_address(h_attrs[count-1], 
+                                    ctxt->client_addr.ip_addr, 
+                                    stun_strlen((char *)ctxt->client_addr.ip_addr),
+                                    family);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "setting xor mapped address attribute address value failed");
+            goto ERROR_EXIT_PT2;
+        }
+
+        status = stun_attr_xor_mapped_addr_set_port(
+                                h_attrs[count-1], ctxt->client_addr.port);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "setting xor mapped address attribute port value failed");
+            goto ERROR_EXIT_PT2;
+        }
+    }
+
+    if ((method == STUN_METHOD_ALLOCATE) || (method == STUN_METHOD_REFRESH))
+    {
+        /** lifetime attribute */
+        status = stun_attr_create(STUN_ATTR_LIFETIME, &h_attrs[count]);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Creating the lifetime attribute failed");
+            goto ERROR_EXIT_PT2;
+        }
+        count++;
+
+        status = stun_attr_lifetime_set_duration(h_attrs[count-1], ctxt->lifetime);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "setting lifetime attribute value failed");
+            goto ERROR_EXIT_PT2;
+        }
+    }
+
+    /** TODO - RESERVATION-TOKEN */
+
+    /** TODO - software should be used only for allocate and refresh responses? */
+
+    /** software */
+    status = stun_attr_create(STUN_ATTR_SOFTWARE, &h_attrs[count]);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "creating the software attribute failed");
+        goto ERROR_EXIT_PT2;
+    }
+    count++;
+
+    status = stun_attr_software_set_value(h_attrs[count-1], 
+            ctxt->instance->client_name, ctxt->instance->client_name_len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "setting software attribute value failed");
+        goto ERROR_EXIT_PT2;
+    }
+
+    /** message integrity */
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &h_attrs[count]);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "creating the message integrity attribute failed");
+        goto ERROR_EXIT_PT2;
+    }
+    count++;
+
+
+    /** fingerprint */
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &h_attrs[count]);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "creating the fingerprint attribute failed");
+        goto ERROR_EXIT_PT2;
+    }
+    count++;
+
+
+    /** add all the attributes */
+    status = stun_msg_add_attributes(h_resp, h_attrs, count);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Adding of attributes to the allocate request failed");
+        goto ERROR_EXIT_PT2;
+    }
+
+    *h_msg = h_resp;
+    return STUN_OK;
 
 ERROR_EXIT_PT2:
-    stun_attr_destroy(h_vendor);
-
+    for (i = 0; i < count; i++)
+        stun_attr_destroy(h_attrs[i]);
 ERROR_EXIT_PT1:
-    stun_msg_destroy(h_req);
+    stun_msg_destroy(h_resp);
+    *h_msg = NULL;
 
     return status;
 }
 
 
 
-int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg)
+int32_t turns_utils_init_allocation_context(
+        turns_instance_t *instance, turns_allocation_t *context, 
+        turns_rx_stun_pkt_t *stun_pkt)
 {
     int32_t status;
-    handle h_attr;
-    uint32_t num, len;
-    u_char *realm;
+    context->instance = instance;
 
-    /** realm */
+    context->protocol = stun_pkt->protocol;
+    context->transport_param = stun_pkt->transport_param;
+    stun_memcpy(&context->client_addr, 
+                    &stun_pkt->src, sizeof(stun_inet_addr_t));
+
+    /** generate random nonce */
+    turns_generate_nonce_value((char *)context->nonce, TURNS_SERVER_NONCE_LEN);
+
+    /** start the nonce stale timer */
+    status = turns_utils_start_nonce_stale_timer(context);
+
+    /** Initialize to some default state? */
+    context->state = TSALLOC_UNALLOCATED;
+
+    /** 
+     * copy the local interface details on which 
+     * the allocation is being requested.
+     */
+    stun_memcpy(&context->relay_addr, 
+                    &stun_pkt->local_intf, sizeof(stun_inet_addr_t));
+
+    return status;
+}
+
+
+
+int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
+{
+    int32_t status;
+
+    /** stop allocation refresh timer if running */
+    status = turns_utils_stop_alloc_timer(alloc);
+
+    /** stop allocation nonce stale timer if running */
+    status = turns_utils_stop_nonce_stale_timer(alloc);
+
+    /** TODO:
+     * - stop all timers
+     * -  delete all permissions
+     */
+
+    return status;
+}
+
+
+
+int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
+{
+    int32_t i, status, sock, sock_type;
+    struct sockaddr addr;
+    unsigned short sa_family;
+
+    memset(&context->relay_addr, 0, sizeof(stun_inet_addr_t));
+
+    /**
+     * TODO - how do we decide whether the client is requesting an IPv6
+     * or an IPv4 relayed address? Currently using the local interface
+     * address on which the request was received, to decide the same.
+     */
+    if (context->relay_addr.host_type == STUN_INET_ADDR_IPV4)
+        sa_family = AF_INET;
+    else if (context->relay_addr.host_type == STUN_INET_ADDR_IPV6)
+        sa_family = AF_INET6;
+    else
+        return STUN_INT_ERROR;
+
+    if (context->req_tport == ICE_TRANSPORT_UDP)
+        sock_type = SOCK_DGRAM;
+    else if (context->req_tport == ICE_TRANSPORT_TCP)
+        sock_type = SOCK_STREAM;
+    else
+        return STUN_INT_ERROR;
+
+    sock = socket(sa_family, sock_type, 0);
+    if (sock == -1) return STUN_NO_RESOURCE;
+
+    addr.sa_family = sa_family;
+
+    for (i = TURNS_PORT_RANGE_MIN; i <= TURNS_PORT_RANGE_MAX; i++)
+    {
+        if (sa_family == AF_INET)
+        {
+            ((struct sockaddr_in *)&addr)->sin_port = htons(i);
+            /** TODO - need to specify the exact interface address */
+            /** must use inet_pton to convert? */
+            //((struct sockaddr_in *)&addr)->sin_addr.s_addr = htonl(INADDR_ANY);
+            ((struct sockaddr_in *)&addr)->sin_addr.s_addr = 
+                            inet_addr((char *)context->relay_addr.ip_addr);
+        }
+        else
+        {
+            ((struct sockaddr_in6 *)&addr)->sin6_port = htons(i);
+            /** TODO - need to specify the exact interface address */
+            /** must use inet_pton to conver? */
+            //addr.sin_addr.s_addr = htonl(INADDR_ANY);
+        }
+
+        /** TODO - do we need to abstract the 'bind' to make it portable? */
+        status = bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+        if (status == -1)
+        {
+            printf("binding to port [%d] failed... "\
+                   "perhaps port already being used? continuing the search", i);
+            continue;
+        }
+
+        break;
+    }
+
+    if (i == TURNS_PORT_RANGE_MAX)
+    {
+        close(sock);
+        return STUN_NO_RESOURCE;
+    }
+
+    //context->relay_addr.host_type = context->client_addr.host_type;
+    /** 
+     * ah shucks! fix it. Probably store this in allocation context when a 
+     * request is received? for now hard coding ...
+     */
+    //memcpy(&context->relay_addr.ip_addr, "192.168.43.237", ICE_IP_ADDR_MAX_LEN);
+    //memcpy(&context->relay_addr.ip_addr, "10.1.71.100", ICE_IP_ADDR_MAX_LEN);
+    context->relay_addr.port = i;
+    context->relay_sock = sock;
+
+    return STUN_OK;
+}
+
+
+
+int32_t turns_utils_setup_allocation(turns_allocation_t *context)
+{
+    int32_t status;
+
+    /** RFC 5766 - 6.2.  Receiving an Allocate Request */
+    status = turns_utils_get_relayed_transport_address(context);
+    if (status != STUN_OK)
+    {
+        printf("Unable to allocate TURN relayed address %d\n", status);
+        return status;
+    }
+
+    return status;
+}
+
+
+
+int32_t turns_utils_start_alloc_timer(turns_allocation_t *alloc)
+{
+    turns_timer_params_t *timer = &alloc->alloc_timer_params;
+
+    timer->h_instance = alloc->instance;
+    timer->h_alloc = alloc;
+    timer->arg = NULL;
+    timer->type = TURNS_ALLOC_TIMER;
+
+    timer->timer_id = 
+        alloc->instance->start_timer_cb((alloc->lifetime * 1000), timer);
+
+    if(!timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Starting of allocation timer "\
+                "for %d secs duration failed", alloc->lifetime);
+        return STUN_NO_RESOURCE;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation context %p "\
+            "refresh timer for duration %d seconds timer id %p ", 
+            alloc, alloc->lifetime, timer->timer_id);
+
+    alloc->h_alloc_timer = timer->timer_id;
+
+    return STUN_OK;
+}
+
+
+
+int32_t turns_utils_stop_alloc_timer(turns_allocation_t *alloc)
+{
+    int32_t status = STUN_OK;
+
+    if (alloc->alloc_timer_params.timer_id == NULL) return status;
+
+    status = alloc->instance->stop_timer_cb(
+                    alloc->alloc_timer_params.timer_id);
+    if (status == STUN_OK)
+    {
+        alloc->alloc_timer_params.timer_id = NULL;
+        alloc->h_alloc_timer = NULL;
+    }
+
+    return status;
+}
+
+
+
+int32_t turns_utils_start_permission_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm)
+{
+    turns_timer_params_t *timer = &perm->perm_timer;
+
+    timer->h_instance = alloc->instance;
+    timer->h_alloc = alloc;
+    timer->arg = perm;
+    timer->type = TURNS_PERM_TIMER;
+
+    timer->timer_id = alloc->instance->start_timer_cb(
+                        (TURNS_PERM_REFRESH_DURATION * 1000), timer);
+
+    if(!timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Starting of channel binding timer "\
+                "for %d secs duration failed", TURNS_PERM_REFRESH_DURATION);
+        return STUN_NO_RESOURCE;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation context %p "\
+            "channel bind timer for duration %d seconds timer id %p ", 
+            alloc, TURNS_PERM_REFRESH_DURATION, timer->timer_id);
+
+    perm->h_perm_timer = timer->timer_id;
+
+    return STUN_OK;
+}
+
+
+
+int32_t turns_utils_stop_permission_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm)
+{
+    int32_t status = STUN_OK;
+
+    if (perm->perm_timer.timer_id == NULL) return status;
+
+    status = alloc->instance->stop_timer_cb(perm->perm_timer.timer_id);
+    if (status == STUN_OK)
+    {
+        perm->perm_timer.timer_id = NULL;
+        perm->h_perm_timer = NULL;
+    }
+
+    return status;
+}
+
+
+
+int32_t turns_utils_start_channel_binding_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm)
+{
+    turns_timer_params_t *timer = &perm->channel_timer;
+
+    timer->h_instance = alloc->instance;
+    timer->h_alloc = alloc;
+    timer->arg = perm;
+    timer->type = TURNS_CHNL_TIMER;
+
+    timer->timer_id = alloc->instance->start_timer_cb(
+                        (TURNS_CHANNEL_BINDING_DURATION * 1000), timer);
+
+    if(!timer->timer_id)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Starting of channel binding timer "\
+                "for %d secs duration failed", TURNS_CHANNEL_BINDING_DURATION);
+        return STUN_NO_RESOURCE;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation context %p "\
+            "channel bind timer for duration %d seconds timer id %p ", 
+            alloc, TURNS_CHANNEL_BINDING_DURATION, timer->timer_id);
+
+    perm->h_channel_timer = timer->timer_id;
+
+    return STUN_OK;
+}
+
+
+
+int32_t turns_utils_stop_channel_binding_timer(
+                turns_allocation_t *alloc, turns_permission_t *perm)
+{
+    int32_t status = STUN_OK;
+
+    if (perm->channel_timer.timer_id == NULL) return status;
+
+    status = alloc->instance->stop_timer_cb(perm->channel_timer.timer_id);
+    if (status == STUN_OK)
+    {
+        perm->channel_timer.timer_id = NULL;
+        perm->h_channel_timer = NULL;
+    }
+
+    return status;
+}
+
+
+
+int32_t turns_utils_verify_request(
+                turns_allocation_t *alloc, handle h_msg, uint32_t *error_code)
+{
+    uint32_t num, resp_code, len;
+    int32_t status;
+    handle h_attr;
+    u_char *realm, *nonce, *username;
+
+    /** 
+     * for any request subsequent to allocate, the parameters used for 
+     * verification are username, realm, nonce and message integrity.
+     */
+
+    *error_code = 0;
+    resp_code = 0;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_USERNAME, &h_attr, &num);
+    if (status == STUN_NOT_FOUND)
+    {
+        printf("USERNAME attribute not found, sending 401\n");
+        *error_code = 401;
+        return status;
+    }
+    else if (status != STUN_OK) return status;
+
+    status = stun_attr_username_get_username_length(h_attr, &len);
+    if (status != STUN_OK)
+    {
+        printf("USERNAME attribute: Error retrieving length, sending 401\n");
+        *error_code = 400;
+        return status;
+    }
+
+    username = (u_char *) stun_calloc(1, len);
+    if(username == NULL) return STUN_MEM_ERROR;
+
+    status = stun_attr_username_get_username(h_attr, username, &len);
+    if (status != STUN_OK)
+    {
+        printf("USERNAME attribute: Error retrieving username, sending 401\n");
+        resp_code = 400;
+        goto MB_ERROR_EXIT1;
+    }
+
+    if (alloc->state == TSALLOC_CHALLENGED)
+    {
+        /**
+         * at this time, we do not have any information on the username. so
+         * just copy what the client has provided and pass on to the server app.
+         */
+        alloc->username = username;
+        alloc->username_len = len;
+        username = NULL;
+        printf("OK: So Username is %s\n", alloc->username);
+    }
+    else
+    {
+        /** TODO - need to verify against what is stored in the allocation */
+        printf("OK: So hhow and what do we do? TODO\n");
+
+        if ((len != alloc->username_len) || 
+                (memcmp(alloc->username, username, len) != 0))
+        {
+            printf("USERNAME mismatch. Rejecting the request message\n");
+            status = STUN_VALIDATON_FAIL;
+            resp_code = 401;
+            goto MB_ERROR_EXIT1;
+        }
+    }
+
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
                                 STUN_ATTR_REALM, &h_attr, &num);
-    if (status != STUN_OK) return status;
+    if (status == STUN_NOT_FOUND)
+    {
+        resp_code = 401;
+        goto MB_ERROR_EXIT1;
+    }
+    else if (status != STUN_OK) goto MB_ERROR_EXIT1;
 
     status = stun_attr_realm_get_realm_length(h_attr, &len);
-    if (status != STUN_OK) return status;
-
-    /** 
-     * check if the realm attribute in the received response is 
-     * the same as the realm that has been provisioned.
-     */
-    if (len != stun_strlen((char *)session->cfg.realm))
+    if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[TURN] Length of realm in the received response is not "\
-                "the same as the provisioned realm. Hence ignoring msg");
-        return STUN_VALIDATON_FAIL;
+        resp_code = 400;
+        goto MB_ERROR_EXIT1;
     }
-    
-    realm = (u_char *) stun_calloc (1, len);
-    if (realm == NULL) return STUN_MEM_ERROR;
-   
+
+    realm = (u_char *) stun_calloc(1, len);
+    if(realm == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto MB_ERROR_EXIT1;
+    }
+
     status = stun_attr_realm_get_realm(h_attr, realm, &len);
     if (status != STUN_OK)
     {
-        stun_free(realm);
-        return status;
+        resp_code = 400;
+        goto MB_ERROR_EXIT2;
     }
 
-    if (stun_memcmp(session->cfg.realm, realm, len) != 0)
+    /** verify that the realm is valid */
+    if ((len != alloc->instance->realm_len) || 
+            (stun_strncmp((char *)realm, alloc->instance->realm, len) != 0))
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[TURN] realm in the received response is not the same as "\
-                "the provisioned realm. Hence ignoring the received message");
-        stun_free(realm);
-        return STUN_VALIDATON_FAIL;
+        /** realm mismatch */
+        resp_code = 401;
+        goto MB_ERROR_EXIT2;
     }
 
-    stun_free(realm);
 
     /** nonce */
     num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_NONCE, &h_attr, &num);
-    if (status != STUN_OK) return status;
+    status = stun_msg_get_specified_attributes(
+                        h_msg, STUN_ATTR_NONCE, &h_attr, &num);
+    if (status != STUN_OK)
+    {
+        resp_code = 400;
+        goto MB_ERROR_EXIT2;
+    }
 
     status = stun_attr_nonce_get_nonce_length(h_attr, &len);
-    if (status != STUN_OK) return status;
-
-    if (len > session->nonce_len)
+    if (status != STUN_OK)
     {
-        stun_free(session->nonce);
-
-        session->nonce = (u_char *) stun_calloc (1, len);
-        if (session->nonce == NULL) return STUN_MEM_ERROR;
-    }
-   
-    session->nonce_len = len;
-
-    status = stun_attr_nonce_get_nonce(h_attr, 
-                            session->nonce, &(session->nonce_len));
-    if (status != STUN_OK) return status;
-
-
-    return STUN_OK;
-}
-
-
-
-int32_t turn_utils_create_alloc_req_msg_with_credential(
-                            turn_session_t *session, handle *h_newmsg)
-{
-    int32_t status, i, attr_count = 0;
-    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
-
-    status = turn_utils_create_request_msg(session, STUN_METHOD_ALLOCATE, &h_msg);
-    if (status != STUN_OK) return status;
-    
-     
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
-                            session->cfg.username, 
-                            strlen((char *)session->cfg.username));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-    
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
-                            session->nonce, session->nonce_len);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, 
-                                                &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_requested_transport_set_protocol(
-                                ah_attr[attr_count - 1], STUN_TRANSPORT_UDP);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
-                                                &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
-    if (status != STUN_OK) return status;
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT_PT:
-
-    for (i = 0; i < attr_count; i++)
-        stun_attr_destroy(ah_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
-
-
-int32_t turn_utils_create_dealloc_req_msg(
-                            turn_session_t *session, handle *h_newmsg)
-{
-    int32_t status, i, attr_count = 0;
-    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
-
-
-    status = turn_utils_create_request_msg(session, 
-                                            STUN_METHOD_REFRESH, &h_msg);
-    if (status != STUN_OK) return status;
-
-
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
-                            session->cfg.username, 
-                            strlen((char *)session->cfg.username));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
-                                session->nonce, session->nonce_len);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, 
-                                                &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_requested_transport_set_protocol(
-                            ah_attr[attr_count - 1], STUN_TRANSPORT_UDP);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_LIFETIME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_lifetime_set_duration(ah_attr[attr_count - 1], 0);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
-                                            &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT_PT:
-
-    for (i = 0; i < attr_count; i++)
-        stun_attr_destroy(ah_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
-
-
-int32_t turn_utils_extract_data_from_alloc_resp(
-                                turn_session_t *session, handle h_msg)
-{
-    handle h_attr;
-    int32_t status;
-    uint32_t num, len;
-    stun_addr_family_type_t addr_family;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_XOR_MAPPED_ADDR, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_mapped_addr_get_address(h_attr, 
-                            &addr_family, session->mapped_addr.ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_xor_mapped_addr_get_port(
-                                    h_attr, &(session->mapped_addr.port));
-    if (status != STUN_OK) return status;
-
-    /** turn rfc supports IPv4 only? */
-    if (addr_family == STUN_ADDR_FAMILY_IPV4)
-        session->mapped_addr.host_type = STUN_INET_ADDR_IPV4;
-    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
-        session->mapped_addr.host_type = STUN_INET_ADDR_IPV6;
-    else
-        session->mapped_addr.host_type = STUN_INET_ADDR_MAX;
-
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_XOR_RELAYED_ADDR, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_relayed_addr_get_address(h_attr, 
-                            &addr_family, session->relay_addr.ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_xor_relayed_addr_get_port(
-                                    h_attr, &(session->relay_addr.port));
-    if (status != STUN_OK) return status;
-
-    /** turn rfc supports IPv4 only */
-    if (addr_family == STUN_ADDR_FAMILY_IPV4)
-        session->relay_addr.host_type = STUN_INET_ADDR_IPV4;
-    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
-        session->relay_addr.host_type = STUN_INET_ADDR_IPV6;
-    else
-        session->relay_addr.host_type = STUN_INET_ADDR_MAX;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_LIFETIME, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    if (num > 0)
-    {
-        status = stun_attr_lifetime_get_duration(
-                                    h_attr, &session->lifetime);
-        if (status != STUN_OK) return status;
+        resp_code = 400;
+        goto MB_ERROR_EXIT2;
     }
 
-    return status;
-}
+    nonce = (u_char *) stun_calloc(1, len);
+    if(nonce == NULL) return STUN_MEM_ERROR;
+
+    status = stun_attr_nonce_get_nonce(h_attr, nonce, &len);
+    if (status != STUN_OK)
+    {
+        printf("NONCE attribute: Error retrieving nonce, sending 401\n");
+        resp_code = 400;
+        goto MB_ERROR_EXIT3;
+    }
+
+    if ((len != TURNS_SERVER_NONCE_LEN) || 
+            (memcmp(alloc->nonce, nonce, TURNS_SERVER_NONCE_LEN) != 0))
+    {
+        printf("Nonce do not match. Send 438 response\n");
+        status = STUN_VALIDATON_FAIL;
+        resp_code = 438;
+        goto MB_ERROR_EXIT3;
+    }
 
 
+    /** message integrity */
+    status = stun_msg_validate_message_integrity(
+                    h_msg, alloc->hmac_key, TURNS_HMAC_KEY_LEN);
+    if (status != STUN_OK)
+    {
+        printf("Message integrity did not match! sending 401\n");
+        resp_code = 401;
+        goto MB_ERROR_EXIT3;
+    }
 
-int32_t turn_utils_extract_data_from_refresh_resp(
-                                turn_session_t *session, handle h_msg)
-{
-    handle h_attr;
-    int32_t status;
-    uint32_t num;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_LIFETIME, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_lifetime_get_duration(
-                                h_attr, &session->lifetime);
-    return status;
-}
-
-
-
-int32_t turn_utils_create_refresh_req_msg(
-                            turn_session_t *session, handle *h_newmsg)
-{
-    int32_t status, i, attr_count = 0;
-    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
-
-
-    status = turn_utils_create_request_msg(session, 
-                                            STUN_METHOD_REFRESH, &h_msg);
-    if (status != STUN_OK) return status;
-
-    
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
-                            session->cfg.username, 
-                            strlen((char *)session->cfg.username));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
-                            session->nonce, session->nonce_len);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REQUESTED_TRANSPORT, 
-                                            &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_requested_transport_set_protocol(
-                                ah_attr[attr_count - 1], STUN_TRANSPORT_UDP);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_LIFETIME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    /** put in default refresh duration */
-    status = stun_attr_lifetime_set_duration(
-                        ah_attr[attr_count - 1], session->lifetime);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
-                                                &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT_PT:
-
-    for (i = 0; i < attr_count; i++)
-        stun_attr_destroy(ah_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
-
-
-
-int32_t turn_session_utils_notify_state_change_event(turn_session_t *session)
-{
-    int32_t i, status = STUN_OK;
-    turn_instance_t *instance = session->instance;
-
-    session->instance->state_change_cb(
-                    session->instance, session,  session->state);
-   
     /** 
-     * once the execution control goes back to the application via callback,
-     * the application might destroy the session within the handler function.
-     * Hence check for the validity of the session after returning from the
-     * app callback handler. But the assumption is that the instance is intact.
-     */
-    for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++)
-        if (instance->ah_session[i] == session) break;
-
-    if (i == TURN_MAX_CONCURRENT_SESSIONS) {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Invalid TURN session handle. Probably application destroyed "\
-                "the session in the notification handler routine");
-        status = STUN_TERMINATED;
-    }
-
-    return status;
-}
-
-
-
-int32_t turn_utils_start_alloc_refresh_timer(
-                                turn_session_t *session, uint32_t duration)
-{
-    turn_timer_params_t *timer;
-
-    if(session->alloc_refresh_timer_params == NULL)
-    {
-        session->alloc_refresh_timer_params = (turn_timer_params_t *) 
-                                stun_calloc (1, sizeof(turn_timer_params_t));
-
-        if (session->alloc_refresh_timer_params == NULL)
-        {
-            ICE_LOG(LOG_SEV_ERROR, 
-                    "Memory allocation failed for TURN Allocation refresh timer");
-            return STUN_MEM_ERROR;
-        }
-    }
-
-    timer = session->alloc_refresh_timer_params;
-
-    timer->h_instance = session->instance;
-    timer->h_turn_session = session;
-    timer->arg = NULL;
-    timer->type = TURN_ALLOC_REFRESH_TIMER;
-
-    timer->timer_id = session->instance->start_timer_cb(duration, timer);
-
-    if(!timer->timer_id)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Starting of timer failed");
-        return STUN_NO_RESOURCE;
-    }
-
-    ICE_LOG(LOG_SEV_INFO, "Started TURN session %p allocation "\
-            "refresh timer for duration %d seconds timer %p ", 
-            session, duration/1000, timer->timer_id);
-
-    return STUN_OK;
-}
-
-
-
-int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session)
-{
-    int32_t status = STUN_OK;
-
-    if (session->alloc_refresh_timer_params == NULL) return status;
-    if (session->alloc_refresh_timer_params->timer_id == NULL) return status;
-
-    status = session->instance->stop_timer_cb(
-                    session->alloc_refresh_timer_params->timer_id);
-    if (status == STUN_OK) session->alloc_refresh_timer_params->timer_id = NULL;
-
-    return status;
-}
-
-
-
-int32_t turn_utils_start_perm_refresh_timer(
-                                turn_session_t *session, uint32_t duration)
-{
-    turn_timer_params_t *timer;
-
-    if(session->perm_refresh_timer_params == NULL)
-    {
-        session->perm_refresh_timer_params = (turn_timer_params_t *) 
-                                stun_calloc (1, sizeof(turn_timer_params_t));
-
-        if (session->perm_refresh_timer_params == NULL)
-        {
-            ICE_LOG(LOG_SEV_ERROR, 
-                    "Memory allocation failed for TURN Permission refresh timer");
-            return STUN_MEM_ERROR;
-        }
-    }
-
-    timer = session->perm_refresh_timer_params;
-
-    timer->h_instance = session->instance;
-    timer->h_turn_session = session;
-    timer->arg = NULL;
-    timer->type = TURN_PERM_REFRESH_TIMER;
-
-    timer->timer_id = session->instance->start_timer_cb(duration, timer);
-
-    if(!timer->timer_id)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Starting of timer failed");
-        return STUN_NO_RESOURCE;
-    }
-
-    ICE_LOG(LOG_SEV_INFO, "Started TURN session %p permission "\
-            "refresh timer for duration %d seconds timer %p ", 
-            session, duration/1000, timer->timer_id);
-
-    return STUN_OK;
-}
-
-
-
-int32_t turn_utils_stop_perm_refresh_timer(turn_session_t *session)
-{
-    int32_t status = STUN_OK;
-
-    if (session->perm_refresh_timer_params == NULL) return status;
-    if (session->perm_refresh_timer_params->timer_id == NULL) return status;
-
-    status = session->instance->stop_timer_cb(
-                    session->perm_refresh_timer_params->timer_id);
-    if (status == STUN_OK) session->perm_refresh_timer_params->timer_id = NULL;
-
-    return status;
-}
-
-
-
-int32_t turn_utils_start_keep_alive_timer(
-                                turn_session_t *session, uint32_t duration)
-{
-    turn_timer_params_t *timer;
-
-    if(session->keep_alive_timer_params == NULL)
-    {
-        session->keep_alive_timer_params = (turn_timer_params_t *) 
-                                stun_calloc (1, sizeof(turn_timer_params_t));
-
-        if (session->keep_alive_timer_params == NULL)
-        {
-            ICE_LOG(LOG_SEV_ERROR, 
-                    "Memory allocation failed for TURN Keep Alive timer");
-            return STUN_MEM_ERROR;
-        }
-    }
-
-    timer = session->keep_alive_timer_params;
-
-    timer->h_instance = session->instance;
-    timer->h_turn_session = session;
-    timer->arg = NULL;
-    timer->type = TURN_KEEP_ALIVE_TIMER;
-
-    timer->timer_id = session->instance->start_timer_cb(duration, timer);
-
-    if(!timer->timer_id)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Starting of Keep Alive timer failed");
-        return STUN_NO_RESOURCE;
-    }
-
-    ICE_LOG(LOG_SEV_INFO, "Started TURN session %p Keep Alive "\
-            "timer for duration %d seconds timer %p ", 
-            session, duration/1000, timer->timer_id);
-
-    return STUN_OK;
-}
-
-
-
-int32_t turn_utils_stop_keep_alive_timer(turn_session_t *session)
-{
-    int32_t status = STUN_OK;
-
-    if (session->keep_alive_timer_params == NULL) return status;
-    if (session->keep_alive_timer_params->timer_id == NULL) return status;
-
-    status = session->instance->stop_timer_cb(
-                    session->keep_alive_timer_params->timer_id);
-    if (status == STUN_OK) session->keep_alive_timer_params->timer_id = NULL;
-
-    return status;
-}
-
-
-
-int32_t turn_utils_create_permission_req_msg(
-                            turn_session_t *session, handle *h_newmsg)
-{
-    int32_t status, i, attr_count = 0;
-    stun_addr_family_type_t addr_family;
-    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
-    turn_permission_t *perm;
-
-
-    status = turn_utils_create_request_msg(session, 
-                                STUN_METHOD_CREATE_PERMISSION, &h_msg);
-    if (status != STUN_OK) return status;
-
-    /** Multiple xor XOR-PEER-ADDRESS attributes ca be added */
-    for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
-    {
-        if (session->aps_perms[i] == NULL) break; // continue?
-
-        perm = session->aps_perms[i];
-
-        status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, 
-                                                &(ah_attr[attr_count]));
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-        attr_count++;
-
-        if (perm->peer_addr.host_type == STUN_INET_ADDR_IPV4)
-            addr_family = STUN_ADDR_FAMILY_IPV4;
-        else if (perm->peer_addr.host_type == STUN_INET_ADDR_IPV6)
-            addr_family = STUN_ADDR_FAMILY_IPV6;
-        else
-            goto ERROR_EXIT_PT;
-
-
-        status = stun_attr_xor_peer_addr_set_address(
-                ah_attr[attr_count - 1], perm->peer_addr.ip_addr,
-                strlen((char *)perm->peer_addr.ip_addr), addr_family);
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-        status = stun_attr_xor_peer_addr_set_port(
-                        ah_attr[attr_count - 1], perm->peer_addr.port);
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-    }
-
-    if (attr_count == 0)
-    {
-        ICE_LOG(LOG_SEV_ERROR,
-                "No Peer addresses set for installing permission");
-        return STUN_INVALID_PARAMS;
-    }
-    
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
-                            session->cfg.username, 
-                            strlen((char *)session->cfg.username));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
-                            session->nonce, session->nonce_len);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
-                                                &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT_PT:
-
-    for (i = 0; i < attr_count; i++)
-        stun_attr_destroy(ah_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
-
-
-int32_t turn_utils_create_channel_bind_req_msg(turn_session_t *session, 
-                                    turn_permission_t *perm, handle *h_newmsg)
-{
-    int32_t status, i, attr_count = 0;
-    stun_addr_family_type_t addr_family;
-    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_msg;
-
-
-    status = turn_utils_create_request_msg(session, 
-                                STUN_METHOD_CHANNEL_BIND, &h_msg);
-    if (status != STUN_OK) return status;
-
-
-    /** channel number */
-    status = stun_attr_create(STUN_ATTR_CHANNEL_NUMBER, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_channel_number_set_channel(
-                            ah_attr[attr_count], session->channel_num);
-    if (status != STUN_OK) return status;
-    session->channel_num += 1;
-
-
-    /** xor peer address */
-    status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, 
-                                            &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    if (perm->peer_addr.host_type == STUN_INET_ADDR_IPV4)
-        addr_family = STUN_ADDR_FAMILY_IPV4;
-    else if (perm->peer_addr.host_type == STUN_INET_ADDR_IPV6)
-        addr_family = STUN_ADDR_FAMILY_IPV6;
-    else
-        goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_xor_peer_addr_set_address(
-            ah_attr[attr_count - 1], perm->peer_addr.ip_addr,
-            strlen((char *)perm->peer_addr.ip_addr), addr_family);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-    status = stun_attr_xor_peer_addr_set_port(
-                    ah_attr[attr_count - 1], perm->peer_addr.port);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-    
-    /** username */
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_username_set_username(ah_attr[attr_count - 1], 
-                            session->cfg.username, 
-                            strlen((char *)session->cfg.username));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    /** nonce */
-    status = stun_attr_create(STUN_ATTR_NONCE, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_nonce_set_nonce(ah_attr[attr_count - 1], 
-                            session->nonce, session->nonce_len);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    /** realm */
-    status = stun_attr_create(STUN_ATTR_REALM, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-    status = stun_attr_realm_set_realm(ah_attr[attr_count - 1], 
-            session->cfg.realm, stun_strlen((char *)session->cfg.realm));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
-                                                &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-    attr_count++;
-
-
-    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT_PT:
-
-    for (i = 0; i < attr_count; i++)
-        stun_attr_destroy(ah_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
-
-
-
-int32_t turn_utils_create_send_ind_msg(
-        turn_session_t *session, turn_app_data_t *data, handle *h_newmsg)
-{
-    int32_t status, i, attr_count = 0;
-    stun_addr_family_type_t addr_family;
-    handle ah_attr[MAX_STUN_ATTRIBUTES] = {0}, h_ind;
-
-    status = stun_msg_create(STUN_INDICATION, STUN_METHOD_SEND, &h_ind);
-    if (status != STUN_OK) return status;
-
-    if ((data) && (data->dest))
-    {
-        if (data->dest->host_type == STUN_INET_ADDR_IPV4)
-            addr_family = STUN_ADDR_FAMILY_IPV4;
-        else if (data->dest->host_type == STUN_INET_ADDR_IPV6)
-            addr_family = STUN_ADDR_FAMILY_IPV6;
-        else
-            goto ERROR_EXIT_PT;
-
-        status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, 
-                                                &(ah_attr[attr_count]));
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-        attr_count++;
-
-        status = stun_attr_xor_peer_addr_set_address(
-                ah_attr[attr_count - 1], data->dest->ip_addr,
-                strlen((char *)data->dest->ip_addr), addr_family);
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-        status = stun_attr_xor_peer_addr_set_port(
-                        ah_attr[attr_count - 1], data->dest->port);
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-    }
-
-    if (data && (data->data) && (data->len > 0))
-    {
-        status = stun_attr_create(STUN_ATTR_DATA, &(ah_attr[attr_count]));
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-        attr_count++;
-
-        status = stun_attr_data_set_data(
-                                ah_attr[attr_count - 1], data->data, data->len);
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-    }
-
-    /** TODO =
-     * Add DONT-FRAGMENT attribute if configured
+     * TODO - Does it make sense to test the fingerprint at the end 
+     * when the message-integrity has alreay been validated? :)
      */
 
-    if (attr_count > 0)
-    {
-        status = stun_msg_add_attributes(h_ind, ah_attr, attr_count);
-        if (status != STUN_OK) goto ERROR_EXIT_PT;
-    }
-
-    *h_newmsg = h_ind;
-
-    return status;
-
-ERROR_EXIT_PT:
-
-    for (i = 0; i < attr_count; i++)
-        stun_attr_destroy(ah_attr[i]);
-
-    stun_msg_destroy(h_ind);
-
-    return status;
-}
-
-
-
-int32_t turn_utils_process_data_indication(
-                                turn_session_t *session, handle h_msg)
-{
-    int32_t status;
-    uint32_t len;
-    void *app_data;
-    handle h_data_attr, h_xor_peer_addr;
-    stun_inet_addr_t src;
-    stun_addr_family_type_t addr_family;
-
-    /**
-     * TURN RFC 5766 sec 10.4 Receiving a Data Indication
-     */
-
-    len = 1;
-    status = stun_msg_get_specified_attributes(
-                    h_msg, STUN_ATTR_XOR_PEER_ADDR, &h_xor_peer_addr, &len);
+#if 0
+    /** fingerprint */
+    status = stun_msg_validate_fingerprint(h_msg);
     if (status == STUN_NOT_FOUND)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[TURN] XOR-PEER-ADDR attribute missing. Discarding the"\
-                " received data indication message");
-        return STUN_VALIDATON_FAIL;
+        printf("FingerPrint not present in request. Its OK?\n");
     }
     else if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[TURN] Extracting XOR-PEER-ADDR attribute from msg failed");
-        return status;
+        printf("FingerPrint did not match! sending 401\n");
+        resp_code = 401;
+        goto MB_ERROR_EXIT3;
     }
+#endif
 
-    ICE_LOG(LOG_SEV_INFO, 
-            "[TURN] XOR-PEER-ADDR attribute is present in the received msg");
+    return status;
 
-    len = ICE_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_peer_addr_get_address(
-                        h_xor_peer_addr, &addr_family, src.ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    if (addr_family == STUN_ADDR_FAMILY_IPV4)
-        src.host_type = STUN_INET_ADDR_IPV4;
-    else
-        src.host_type = STUN_INET_ADDR_IPV6;
-
-    status = stun_attr_xor_peer_addr_get_port(h_xor_peer_addr, &src.port);
-    if (status != STUN_OK) return status;
-
-    ICE_LOG(LOG_SEV_CRITICAL,
-            "TURN DATA IP Address %s:%d", src.ip_addr, src.port);
-
-    /** TODO = 
-     * This xor-peer-addr must be a valid one trusted by the 
-     * application. Validate the received source IP address.
-     */
+MB_ERROR_EXIT3:
+    stun_free(nonce);
+MB_ERROR_EXIT2:
+    stun_free(realm);
+MB_ERROR_EXIT1:
+    if(username) stun_free(username);
+    *error_code = resp_code;
+    return status;
+}
 
 
-    /** data attribute */
-    len = 1;
-    status = stun_msg_get_specified_attributes(
-                    h_msg, STUN_ATTR_DATA, &h_data_attr, &len);
-    if (status == STUN_NOT_FOUND)
+
+int32_t turns_utils_start_nonce_stale_timer(turns_allocation_t *alloc)
+{
+    turns_timer_params_t *timer = &alloc->nonce_timer_params;
+
+    timer->h_instance = alloc->instance;
+    timer->h_alloc = alloc;
+    timer->arg = NULL;
+    timer->type = TURNS_NONCE_TIMER;
+
+    timer->timer_id = alloc->instance->start_timer_cb(
+                        (alloc->instance->nonce_timeout * 1000), timer);
+
+    if(!timer->timer_id)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[TURN] DATA attribute missing. Discarding the"\
-                " received data indication message");
-        return STUN_VALIDATON_FAIL;
-    }
-    else if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "[TURN] Extracting DATA attribute from msg failed");
-        return status;
+        ICE_LOG(LOG_SEV_ERROR, "Starting of allocation stale nonce timer "\
+                "for %d secs duration failed", alloc->instance->nonce_timeout);
+        return STUN_NO_RESOURCE;
     }
 
+    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation context %p "\
+            "stale nonce timer for duration %d seconds timer id %p ", 
+            alloc, alloc->instance->nonce_timeout, timer->timer_id);
 
-    ICE_LOG(LOG_SEV_INFO, 
-            "[TURN] DATA attribute is present in the received msg");
-
-    status = stun_attr_data_get_data_length(h_data_attr, &len);
-    if (status != STUN_OK) return STUN_INVALID_PARAMS;
-
-    /** TODO = avoid calloc and memcpy in data path */
-    app_data = (void *) stun_calloc (1, len);
-    if (app_data == NULL) return STUN_MEM_ERROR;
-
-    status = stun_attr_data_get_data(h_data_attr, app_data, len);
-    if (status != STUN_OK) goto ERROR_EXIT_PT;
-
-    /** pass on the data to the application */
-    session->instance->rx_data_cb(session->instance, 
-                    session, app_data, len, &src, session->transport_param);
-    stun_free(app_data);
+    alloc->h_nonce_timer = timer->timer_id;
 
     return STUN_OK;
+}
 
-ERROR_EXIT_PT:
-    stun_free(app_data);
+
+
+int32_t turns_utils_stop_nonce_stale_timer(turns_allocation_t *alloc)
+{
+    int32_t status = STUN_OK;
+
+    if (alloc->nonce_timer_params.timer_id == NULL) return status;
+
+    status = alloc->instance->stop_timer_cb(
+                    alloc->nonce_timer_params.timer_id);
+    if (status == STUN_OK)
+    {
+        alloc->nonce_timer_params.timer_id = NULL;
+        alloc->h_nonce_timer = NULL;
+    }
 
     return status;
 }
 
 
 
-int32_t turn_table_validate_session_handle(handle h_inst, handle h_session)
+int32_t turns_utils_verify_info_from_refresh_request(
+                turns_allocation_t *alloc, handle h_msg, uint32_t *error_code)
 {
-    uint32_t i;
-    turn_instance_t *instance = (turn_instance_t *) h_inst;
+    int32_t status, num;
+    handle h_attr;
 
-    for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++)
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                            STUN_ATTR_LIFETIME, &h_attr, (uint32_t *)&num);
+    if (status == STUN_OK)
+        status = stun_attr_lifetime_get_duration(h_attr, &(alloc->lifetime));
+
+    return status;
+}
+
+
+
+int32_t turns_utils_search_permissions_for_channel_no(
+                        turns_allocation_t *alloc, int32_t channel_no)
+{
+    int32_t i;
+    turns_permission_t *perm;
+
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
-        if (h_session == instance->ah_session[i])
-        {
-            ICE_LOG (LOG_SEV_INFO, 
-                    "[TURN] TURN session found while searching");
-            return STUN_OK;
-        }
+        perm = &alloc->aps_perms[i];
+        if (perm->channel_num == channel_no) return STUN_OK;
     }
 
-    ICE_LOG (LOG_SEV_ERROR, 
-            "[TURN] TURN session handle NOT FOUND while searching");
+    printf("Did not find any existing permission "\
+            "with given channel number: %d\n", channel_no);
+
     return STUN_NOT_FOUND;
 }
 
 
 
-void turn_utils_free_all_session_timers(turn_session_t *session)
+int32_t turns_utils_install_permission(turns_allocation_t *alloc, 
+                                    uint16_t channel, stun_inet_addr_t *addr)
 {
-    int32_t status;
+    int32_t i, status;
+    turns_permission_t *perm;
 
-    /** stop and free allocation refresh timer */
-    status = turn_utils_stop_alloc_refresh_timer(session);
-    if (status == STUN_OK)
-        if (session->alloc_refresh_timer_params)
-            stun_free(session->alloc_refresh_timer_params);
-
-    session->alloc_refresh_timer_params = NULL;
-
-    /** stop and free permission refresh timer */
-    status = turn_utils_stop_perm_refresh_timer(session);
-    if (status == STUN_OK)
-        if (session->perm_refresh_timer_params)
-            stun_free(session->perm_refresh_timer_params);
-
-    session->perm_refresh_timer_params = NULL;
-
-    /** stop and free keep-alive timer */
-    status = turn_utils_stop_keep_alive_timer(session);
-    if (status == STUN_OK)
-        if (session->keep_alive_timer_params)
-            stun_free(session->keep_alive_timer_params);
-
-    session->keep_alive_timer_params = NULL;
-
-
-    /** TODO free the channel binding refresh timer for each of the channels */
-
-    return;
-}
-
-
-
-void turn_utils_delete_all_permissions(turn_session_t *session)
-{
-    int32_t i;
-    turn_permission_t *perm;
-
-    for (i = 0; i < TURN_MAX_PERMISSIONS; i++)
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
-        perm = session->aps_perms[i];
-        if (perm == NULL) continue;
+        perm = &alloc->aps_perms[i];
+        if (perm->used == true) continue;
 
-        /** TODO - stop and free the channel bind refresh timer */
+        stun_memcpy(&perm->peer_addr, addr, sizeof(stun_inet_addr_t));
 
-        /** delete the channel bind transaction */
-        stun_destroy_txn(session->instance->h_txn_inst, 
-                                    perm->h_chnl_txn, false, false);
+        /** start permission refresh timer */
+        status = turns_utils_start_permission_timer(alloc, perm);
+        if(status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Starting of permission refresh "\
+                    "timer for %d secs duration failed");
+            return STUN_NO_RESOURCE;
+        }
 
-        /** free the memory for permission */
-        stun_free(perm);
-        session->aps_perms[i] = NULL;
+        if (channel)
+        {
+            /** start channel binding timer */
+            status = turns_utils_start_channel_binding_timer(alloc, perm);
+            if(status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Starting of channel binding "\
+                        "timer for %d secs duration failed");
+                return STUN_NO_RESOURCE;
+            }
+
+            ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation "\
+                    "context %p channel binding timer", alloc);
+        }
+
+        perm->channel_num = channel;
+        perm->used = true;
+
+        return STUN_OK;
     }
 
-    return;
+    /** reached the permission limit! */
+    printf("Reached the limit of the number "\
+            "of permissions list for this allocation\n");
+
+    return STUN_NO_RESOURCE;
 }
 
 
 
-int32_t turn_utils_send_create_permission_req(turn_session_t *session)
-{
-    int32_t status = STUN_OK;
-    handle h_txn, h_txn_inst;
-    
-    h_txn_inst = session->instance->h_txn_inst;
-
-    /** delete an existing transaction, if any */
-    stun_destroy_txn(h_txn_inst, session->h_perm_txn, false, false);
-    session->h_perm_txn = session->h_perm_req = session->h_perm_resp = NULL;
-
-    status = turn_utils_create_permission_req_msg(
-                                session, &session->h_perm_req);
-    if (status != STUN_OK) return status;
-
-    status = stun_create_txn(h_txn_inst,
-                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
-    if (status != STUN_OK) return status;
-
-
-    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
-    if (status != STUN_OK) return status;
-
-    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
-    if (status != STUN_OK) return status;
-
-    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_perm_req);
-    if (status != STUN_OK) return status;
-
-    session->h_perm_txn = h_txn;
-
-    return status;
-}
-
-
-
-int32_t turn_utils_send_channel_bind_request (
-                            turn_session_t *session, turn_permission_t *perm)
+int32_t turns_utils_uninstall_permission(
+                turns_allocation_t *alloc, turns_permission_t *perm)
 {
     int32_t status;
-    handle h_txn, h_txn_inst;
-    
-    h_txn_inst = session->instance->h_txn_inst;
 
-    /** delete an existing transaction, if any */
-    stun_destroy_txn(h_txn_inst, perm->h_chnl_txn, false, false);
-    perm->h_chnl_txn = perm->h_chnl_req = perm->h_chnl_resp = NULL;
+    if (perm->perm_timer.timer_id)
+    {
+        status = turns_utils_stop_permission_timer(alloc, perm);
+        if(status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Stopping of permission "\
+                    "timer %p failed", perm->perm_timer.timer_id);
+        }
 
-    status = turn_utils_create_channel_bind_req_msg(
-                                session, perm, &session->h_perm_req);
-    if (status != STUN_OK) return status;
+        ICE_LOG(LOG_SEV_INFO, "Stopped TURNS permission timer for %p", alloc);
+    }
 
-    status = stun_create_txn(h_txn_inst,
-                    STUN_CLIENT_TXN, STUN_UNRELIABLE_TRANSPORT, &h_txn);
-    if (status != STUN_OK) return status;
+    if (perm->channel_timer.timer_id)
+    {
+        status = turns_utils_stop_channel_binding_timer(alloc, perm);
+        if(status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Stopping of permission channel binding "\
+                    "timer %p failed", perm->channel_timer.timer_id);
+        }
+
+        ICE_LOG(LOG_SEV_INFO, "Stopped TURNS channel binding "\
+                "timer for allocation %p", alloc);
+    }
+
+    stun_memset(&perm->peer_addr, 0, sizeof(stun_inet_addr_t));
+    perm->channel_num = 0;
+    perm->used = false;
+
+    return STUN_OK;
+}
 
 
-    status = stun_txn_set_app_transport_param(h_txn_inst, h_txn, session);
-    if (status != STUN_OK) return status;
 
-    status = stun_txn_set_app_param(h_txn_inst, h_txn, (handle)session);
-    if (status != STUN_OK) return status;
+int32_t turns_utils_refresh_permission(
+                turns_allocation_t *alloc, turns_permission_t *perm)
+{
+    int32_t status;
 
-    status = stun_txn_send_stun_message(h_txn_inst, h_txn, session->h_perm_req);
-    if (status != STUN_OK) return status;
+    /** restart permission timer */
+    status = turns_utils_stop_permission_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        /** should we raise an alarm and get out? */
+        printf("Unable to stop the permission timer\n");
+    }
 
-    session->h_perm_txn = h_txn;
+    status = turns_utils_start_permission_timer(alloc, perm);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Starting of permission timer "\
+                "for %d secs duration failed");
+        return STUN_NO_RESOURCE;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation "\
+            "context %p channel binding timer", alloc);
 
     return status;
 }
 
 
 
-int32_t turn_utils_validate_integrity_for_rcvd_msg(
-                                    turn_session_t *session, handle h_rcvdmsg)
+int32_t turns_utils_handle_create_permission_request(
+                                turns_allocation_t *alloc, handle h_msg)
 {
-    stun_MD5_CTX ctx;
-    int32_t len, status;
-    u_char key[16];
+    int32_t i, status;
+    handle h_resp, h_xor_peers[TURNS_MAX_PERMISSIONS];
+    turns_permission_t *perm;
+    uint32_t error_code, num, addr_len;
+    stun_addr_family_type_t addr_family;
+    stun_inet_addr_t addr;
 
-    /** first generate the hmac key */
-    stun_MD5_Init(&ctx);
+    /** rfc 5766 - 9.2 Receiving a CreatePermission Request */
 
-    len = stun_strlen((char *)session->cfg.username);
-    stun_MD5_Update(&ctx, session->cfg.username, len);
-    stun_MD5_Update(&ctx, ":", 1);
+    /** check for XOR-PEER-ADDRESS attribute */
 
-    len = stun_strlen((char *)session->cfg.realm);
-    stun_MD5_Update(&ctx, session->cfg.realm, len);
-    stun_MD5_Update(&ctx, ":", 1);
+    /** TODO 
+     * need to have an API that returns the number of specified attribute. 
+     * If the number of attributes are more than what we support, then we 
+     * can send some error response. In this case, if the number of xor 
+     * peer address attributes are more than TURNS_MAX_PERMISSIONS, then 
+     * we can send some 508 (insufficient capacity) e5ror response.
+     */
+    num = TURNS_MAX_PERMISSIONS;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                            STUN_ATTR_XOR_PEER_ADDR, h_xor_peers, &num);
+    if (status == STUN_NOT_FOUND)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+    else if (status != STUN_OK)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
 
-    len = stun_strlen((char *)session->cfg.credential);
-    stun_MD5_Update(&ctx, session->cfg.credential, len);
+    for (i = 0; i < num; i++)
+    {
+        addr_len = ICE_IP_ADDR_MAX_LEN;
+        status = stun_attr_xor_peer_addr_get_address(
+                    h_xor_peers[i], &addr_family, addr.ip_addr, &addr_len);
+        if (status != STUN_OK)
+        {
+            error_code = STUN_ERROR_BAD_REQUEST;
+            goto MB_ERROR_EXIT1;
+        }
 
-    stun_MD5_Final(key, &ctx);
+        if (addr_family == STUN_ADDR_FAMILY_IPV4)
+            addr.host_type = STUN_INET_ADDR_IPV4;
+        else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+            addr.host_type = STUN_INET_ADDR_IPV6;
+        else
+        {
+            error_code = STUN_ERROR_BAD_REQUEST;
+            goto MB_ERROR_EXIT1;
+        }
 
-    /** validate message integrity */
-    len = 16;
-    status = stun_msg_validate_message_integrity(h_rcvdmsg, key, len);
+        status = stun_attr_xor_peer_addr_get_port(h_xor_peers[i], &addr.port);
+        if (status != STUN_OK)
+        {
+            error_code = STUN_ERROR_BAD_REQUEST;
+            goto MB_ERROR_EXIT1;
+        }
+
+        perm = turns_utils_search_for_permission(alloc, addr);
+        if (!perm)
+        {
+            /** install new permission */
+            status = turns_utils_install_permission(alloc, 0, &addr);
+            if (status != STUN_OK)
+            {
+                printf("Error while installing the permission\n");
+                error_code = STUN_ERROR_INSUF_CAPACITY;
+                goto MB_ERROR_EXIT1;
+            }
+        }
+        else
+        {
+            /** refresh the permission */
+            status = turns_utils_refresh_permission(alloc, perm);
+            if (status != STUN_OK)
+            {
+                printf("Error! Refreshing the channel binding failed\n");
+                error_code = STUN_ERROR_SERVER_ERROR;
+                goto MB_ERROR_EXIT1;
+            }
+        }
+
+        /** send out the success response */
+        status = turns_utils_create_success_response(alloc, h_msg, &h_resp);
+        if (status == STUN_OK)
+        {
+            alloc->h_resp = h_resp;
+
+            /** send the success response */
+            alloc->instance->nwk_stun_cb(h_resp, 
+                    alloc->client_addr.host_type, 
+                    alloc->client_addr.ip_addr, 
+                    alloc->client_addr.port, 
+                    alloc->transport_param, alloc->hmac_key);
+
+            /** TODO: check if send succeeded */
+
+            printf("Sent the create permission success response\n");
+
+            printf("Installed/refreshed the permission\n");
+        }
+        else
+        {
+            printf("Error! Unable to create success response\n");
+            error_code = STUN_ERROR_INSUF_CAPACITY;
+            goto MB_ERROR_EXIT1;
+        }
+    }
+
+    return status;
+
+MB_ERROR_EXIT1:
+
+    status = turns_utils_create_error_response(alloc, h_msg, error_code, &h_resp);
+
+    if (status == STUN_OK)
+    {
+        alloc->instance->nwk_stun_cb(h_resp, 
+                alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
+                alloc->client_addr.port, alloc->transport_param, 
+                alloc->hmac_key);
+
+        /** TODO - check if sending succeeded */
+        printf("Sent the create permission error response: %d\n", error_code);
+    }
+
+    return status;
+}
+
+
+
+int32_t turns_utils_handle_channel_bind_request(
+                                turns_allocation_t *alloc, handle h_msg)
+{
+    int32_t status;
+    handle h_channel, h_xor_peer, h_resp;
+    stun_inet_addr_t addr;
+    turns_permission_t *perm;
+    uint32_t error_code, num, addr_len;
+    stun_addr_family_type_t addr_family;
+    uint16_t channel_no;
+
+    /** rfc 5766 - 11.2 Receiving a ChannelBind Request */
+
+    /** check for CHANNEL-NUMBER attribute */
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                            STUN_ATTR_CHANNEL_NUMBER, &h_channel, &num);
+    if (status == STUN_NOT_FOUND)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+    else if (status != STUN_OK)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    status = stun_attr_channel_number_get_channel(h_channel, &channel_no);
     if (status != STUN_OK)
     {
-        ICE_LOG (LOG_SEV_ERROR, "Validation of STUN response failed");
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    /** validate the channel number range */
+    if ((channel_no < TURNS_CHANNEL_NUMBER_MIN) || 
+            (channel_no > TURNS_CHANNEL_NUMBER_MAX))
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    /** check for XOR-PEER-ADDRESS attribute */
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                            STUN_ATTR_XOR_PEER_ADDR, &h_xor_peer, &num);
+    if (status == STUN_NOT_FOUND)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+    else if (status != STUN_OK)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    addr_len = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_xor_peer_addr_get_address(
+                        h_xor_peer, &addr_family, addr.ip_addr, &addr_len);
+    if (status != STUN_OK)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        addr.host_type = STUN_INET_ADDR_IPV4;
+    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+        addr.host_type = STUN_INET_ADDR_IPV6;
+    else
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    status = stun_attr_xor_peer_addr_get_port(h_xor_peer, &addr.port);
+    if (status != STUN_OK)
+    {
+        error_code = STUN_ERROR_BAD_REQUEST;
+        goto MB_ERROR_EXIT1;
+    }
+
+    /** check if the permission is already installed? */
+    perm = turns_utils_search_for_permission(alloc, addr);
+    if (!perm)
+    {
+        /** install a new permission with the channel binding */
+
+        /** 
+         * make sure the channel number is not currently 
+         * bound to a different transport address.
+         */
+        status = 
+            turns_utils_search_permissions_for_channel_no(alloc, channel_no);
+        if (status != STUN_NOT_FOUND)
+        {
+            error_code = STUN_ERROR_BAD_REQUEST;
+            goto MB_ERROR_EXIT1;
+        }
+
+        status = turns_utils_install_permission(alloc, channel_no, &addr);
+        if (status == STUN_OK)
+        {
+            status = turns_utils_create_success_response(alloc, h_msg, &h_resp);
+            if (status == STUN_OK)
+            {
+                alloc->h_resp = h_resp;
+
+                /** send the success response */
+                alloc->instance->nwk_stun_cb(h_resp, 
+                        alloc->client_addr.host_type, 
+                        alloc->client_addr.ip_addr, 
+                        alloc->client_addr.port, 
+                        alloc->transport_param, alloc->hmac_key);
+
+                /** TODO: check if send succeeded */
+
+                printf("Sent the channel bind success response\n");
+
+                printf("Installed new permission and the channel binding\n");
+            }
+            else
+            {
+                printf("Error! Unable to create success response\n");
+                error_code = STUN_ERROR_INSUF_CAPACITY;
+                goto MB_ERROR_EXIT1;
+            }
+        }
+        else
+        {
+            printf("Error while installing the permission\n");
+            error_code = STUN_ERROR_INSUF_CAPACITY;
+            goto MB_ERROR_EXIT1;
+        }
+    }
+    else
+    {
+        /** 
+         * prior permission exists, refresh the permission. Also install or 
+         * refresh the channel binding since this is a channel bind request.
+         */
+
+        /** 
+         * make sure the transport address is not currently 
+         * bound to a different channel number.
+         */
+        if ((perm->channel_num != 0) && (perm->channel_num != channel_no))
+        {
+            printf("Error! Binding a new channel number [%d] to an already "\
+                    "existing permission with channel number [%d]\n", 
+                    channel_no, perm->channel_num);
+            error_code = STUN_ERROR_BAD_REQUEST;
+            goto MB_ERROR_EXIT1;
+        }
+
+        if ((perm->channel_num == 0) && (perm->h_channel_timer == NULL))
+        {
+            /** installing channel binding to the permission */
+            status = 
+                turns_utils_install_channel_binding(alloc, perm, channel_no);
+            if (status != STUN_OK)
+            {
+                printf("Error! Installing a new channel binding failed\n");
+                error_code = STUN_ERROR_SERVER_ERROR;
+                goto MB_ERROR_EXIT1;
+            }
+        }
+        else
+        {
+            /** refreshing the channel binding */
+            status = turns_utils_refresh_channel_binding(alloc, perm);
+            if (status != STUN_OK)
+            {
+                printf("Error! Refreshing the channel binding failed\n");
+                error_code = STUN_ERROR_SERVER_ERROR;
+                goto MB_ERROR_EXIT1;
+            }
+        }
+
+        /** send out the success response */
+        status = turns_utils_create_success_response(alloc, h_msg, &h_resp);
+        if (status == STUN_OK)
+        {
+            alloc->h_resp = h_resp;
+
+            /** send the success response */
+            alloc->instance->nwk_stun_cb(h_resp, 
+                    alloc->client_addr.host_type, 
+                    alloc->client_addr.ip_addr, 
+                    alloc->client_addr.port, 
+                    alloc->transport_param, alloc->hmac_key);
+
+            /** TODO: check if send succeeded */
+
+            printf("Sent the channel bind success response\n");
+
+            printf("Installed/refreshed the channel binding\n");
+        }
+        else
+        {
+            printf("Error! Unable to create success response\n");
+            error_code = STUN_ERROR_INSUF_CAPACITY;
+            goto MB_ERROR_EXIT1;
+        }
+    }
+
+    return status;
+
+MB_ERROR_EXIT1:
+
+    status = turns_utils_create_error_response(alloc, h_msg, error_code, &h_resp);
+
+    if (status == STUN_OK)
+    {
+        alloc->instance->nwk_stun_cb(h_resp, 
+                alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
+                alloc->client_addr.port, alloc->transport_param, 
+                alloc->hmac_key);
+
+        /** TODO - check if sending succeeded */
+        printf("Sent the channel bind error response: %d\n", error_code);
+    }
+
+    return status;
+}
+
+
+
+turns_permission_t *turns_utils_validate_allocation_channel_binding(
+                                        turns_allocation_t *alloc, handle arg)
+{
+    int32_t i;
+    turns_permission_t *perm;
+
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        if ((handle)perm != arg) continue;
+
+        /** permission might have been de-allocated? */
+        if (perm->used == false) break;
+
+        /** permission might exist, but channel binding might not */
+        if (!perm->channel_num) break;
+
+        /** found the target! */
+        return perm;
+    }
+
+    return NULL;
+}
+
+
+
+turns_permission_t *turns_utils_validate_permission_handle(
+                                        turns_allocation_t *alloc, handle arg)
+{
+    int32_t i;
+    turns_permission_t *perm;
+
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        if ((handle)perm != arg) continue;
+
+        /** permission might have been de-allocated? */
+        if (perm->used == false) break;
+
+        /** found the target! */
+        return perm;
+    }
+
+    return NULL;
+}
+
+
+
+turns_permission_t *turns_utils_search_for_permission(
+                        turns_allocation_t *alloc, stun_inet_addr_t addr)
+{
+    int32_t i;
+    turns_permission_t *perm = NULL;
+
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        if (perm->used == false) continue;
+
+        /**
+         * TODO - should we compare the port when checking 
+         * if a permission has been installed?
+         */
+        if ((perm->peer_addr.host_type == addr.host_type) && 
+            (perm->peer_addr.port == addr.port) && 
+            (turns_utils_host_compare(perm->peer_addr.ip_addr, 
+                                      addr.ip_addr, addr.host_type)))
+        {
+            return perm;
+        }
+    }
+
+    return NULL;
+}
+
+
+
+int32_t turns_utils_install_channel_binding(
+        turns_allocation_t *alloc, turns_permission_t *perm, uint16_t channel)
+{
+    int32_t status;
+
+    /** when channel binding is installed, the permission is refreshed */
+    status = turns_utils_stop_permission_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! stopping the permission timer failed when "\
+                "installing a channel binding. status [%d]\n", status);
+
+        return status;
+    }
+
+    status = turns_utils_start_permission_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! starting the permission timer when installing "\
+                "a channel binding. status [%d]\n", status);
+
+        return status;
+    }
+
+    /** start the channel binding timer */
+    status = turns_utils_start_channel_binding_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! starting the channel binding timer."\
+               " status [%d]\n", status);
+
+        return status;
+    }
+
+    perm->channel_num = channel;
+
+    return status;
+}
+
+
+
+int32_t turns_utils_refresh_channel_binding(
+                turns_allocation_t *alloc, turns_permission_t *perm)
+{
+    int32_t status;
+
+    /** stop the channel binding timer */
+    status = turns_utils_stop_channel_binding_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! stopping the channel binding timer. status [%d]. "\
+                "However, continuing with the channel refresh\n", status);
+    }
+
+    /** start the channel binding timer */
+    status = turns_utils_start_channel_binding_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! starting the channel binding timer."\
+               " status [%d]\n", status);
+
+        return status;
+    }
+
+    /** when channel binding is refreshed, the permission also gets refreshed */
+    status = turns_utils_stop_permission_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! stopping the permission timer. status [%d]. "\
+                "However, continuing with the permission refresh\n", status);
+    }
+
+    /** start the channel binding timer */
+    status = turns_utils_start_permission_timer(alloc, perm);
+    if (status != STUN_OK)
+    {
+        printf("Error! starting the permission timer when "\
+                "refreshing channel binding. status [%d]\n", status);
+
         return status;
     }
 
     return status;
 }
 
+
+
+int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
+{
+    int32_t status;
+    stun_inet_addr_t addr;
+    handle h_peer, h_data;
+    uint32_t addr_len, num, data_len;
+    stun_addr_family_type_t addr_family;
+    turns_permission_t *perm = NULL;
+    u_char *data;
+
+    /** get the peer address */
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                        STUN_ATTR_XOR_PEER_ADDR, &h_peer, &num);
+    if (status != STUN_OK)
+    {
+        goto MB_ERROR_EXIT;
+    }
+
+    addr_len = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_xor_peer_addr_get_address(
+                    h_peer, &addr_family, addr.ip_addr, &addr_len);
+    if (status != STUN_OK)
+    {
+        goto MB_ERROR_EXIT;
+    }
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        addr.host_type = STUN_INET_ADDR_IPV4;
+    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+        addr.host_type = STUN_INET_ADDR_IPV6;
+    else
+    {
+        goto MB_ERROR_EXIT;
+    }
+
+    status = stun_attr_xor_peer_addr_get_port(h_peer, &addr.port);
+    if (status != STUN_OK)
+    {
+        goto MB_ERROR_EXIT;
+    }
+
+    /** check if the peer address has an associated permission installed */
+    perm = turns_utils_search_for_permission(alloc, addr);
+    if (!perm)
+    {
+        printf("Permission has not been installed for the peer "\
+                "address present in the send indication message. "\
+                "Hence dropping the message\n");
+        goto MB_ERROR_EXIT;
+    }
+
+    /** if yes, then extract the data */
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_DATA, &h_data, &num);
+    if (status != STUN_OK)
+    {
+        goto MB_ERROR_EXIT;
+    }
+
+    status = stun_attr_data_get_data_length(h_data, &data_len);
+    if (status != STUN_OK) goto MB_ERROR_EXIT;
+
+    data = (u_char *) stun_calloc(1, data_len);
+    if (data == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto MB_ERROR_EXIT;
+    }
+
+    status = stun_attr_data_get_data(h_data, data, data_len);
+    if (status != STUN_OK) goto MB_ERROR_EXIT;
+
+    /** TODO - handling of DONT-FRAGMENT attribute */
+
+    /** send to peer using relayed address */
+    alloc->instance->nwk_data_cb(data, data_len, 
+            perm->peer_addr.host_type, perm->peer_addr.ip_addr, 
+            perm->peer_addr.port, (handle)alloc->relay_sock, NULL);
+
+    return status;
+
+MB_ERROR_EXIT:
+
+    printf("Error while processing SEND indication message, hence dropping\n");
+
+    return status;
+}
+
+
+
+int32_t turns_utils_forward_channel_data(
+                    turns_allocation_t *alloc, turns_rx_channel_data_t *data)
+{
+    int32_t status = STUN_OK;
+    uint16_t i, channel;
+    turns_permission_t *perm;
+
+    /** get the channel number */
+    stun_memcpy(&channel, data->data, sizeof(uint16_t));
+    channel = ntohs(channel);
+
+    /** check if the allocation has a peer bound to this channel */
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        if ((perm->channel_num == channel) && (perm->used == true)) break;
+    }
+
+    if (i == TURNS_MAX_PERMISSIONS)
+    {
+        printf("Error! Could not find any permission/peer address "\
+                "associated with the channel number %d in the channel "\
+                "data message. Hence dropping the message\n", channel);
+
+        return STUN_INVALID_PARAMS;
+    }
+
+    /** if yes, then send out the data to the peer using relayed address */
+    stun_memcpy(&i, (data->data+2), sizeof(uint16_t));
+    i = ntohs(i);
+
+    alloc->instance->nwk_data_cb((data->data+4), i, 
+            perm->peer_addr.host_type, perm->peer_addr.ip_addr, 
+            perm->peer_addr.port, (handle)alloc->relay_sock, NULL);
+
+    /** TODO : in case of TCP/TLS, padding needs to be done for the app data */
+    /** TODO : check if send really succeeded check return value */
+
+    return status;
+}
+
+
+
+int32_t turns_utils_forward_udp_data_using_channeldata_msg(
+                        turns_allocation_t *alloc, turns_permission_t *perm, 
+                        turns_rx_channel_data_t *data)
+{
+    int32_t status = STUN_OK;
+    char buf[1500] = {0};
+    uint16_t channel, len;
+
+    /** copy the channel number */
+    channel = htons(perm->channel_num);
+    stun_memcpy(buf, &channel, sizeof(uint16_t));
+
+    /** set the length of payload */
+    len = htons(data->data_len);
+    stun_memcpy(buf+2, &len, sizeof(uint16_t));
+
+    /** copy the data */
+    stun_memcpy(buf+4, data->data, data->data_len);
+
+#if 0
+    /** padding - not strictly required for udp but mandated for tcp */
+    //if (data->data % 4)
+    //{
+    //    stun_memcpy(buf + 4 + data->data_len, 0, (data->data % 4));
+    //}
 #endif
+
+    /** send to the client */
+    len = alloc->instance->nwk_data_cb((uint8_t *)buf, (data->data_len + 4), 
+            alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
+            alloc->client_addr.port, alloc->transport_param, NULL);
+
+    if (len <= 0) status = STUN_TRANSPORT_FAIL;
+
+    return status;
+}
+
+
+
+int32_t turns_utils_forward_udp_data_using_data_ind(
+                        turns_allocation_t *alloc, turns_permission_t *perm, 
+                        turns_rx_channel_data_t *data)
+{
+    int32_t i, status, count;
+    handle h_ind, h_attrs[2];
+    stun_addr_family_type_t addr_type;
+
+    count = 0;
+
+    status = stun_msg_create(STUN_INDICATION, STUN_METHOD_DATA, &h_ind);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Creating DATA indication  message msg failed");
+        return status;
+    }
+
+    /** add xor peer address attribute */
+    status = stun_attr_create(STUN_ATTR_XOR_PEER_ADDR, &h_attrs[count]);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "Creating the XOR Peer address attribute failed");
+        goto MB_ERROR_EXIT1;
+    }
+    count++;
+
+    if (data->src.host_type == STUN_INET_ADDR_IPV4)
+        addr_type = STUN_ADDR_FAMILY_IPV4;
+    else
+        addr_type = STUN_ADDR_FAMILY_IPV6;
+    status = stun_attr_xor_peer_addr_set_address(
+                                    h_attrs[count-1], data->src.ip_addr, 
+                                    ICE_IP_ADDR_MAX_LEN, addr_type);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Setting XOR peer address failed");
+        goto MB_ERROR_EXIT2;
+    }
+
+    status = stun_attr_xor_peer_addr_set_port(h_attrs[count-1], data->src.port);
+    if (status != STUN_OK) goto MB_ERROR_EXIT2;
+
+    /** add data attribute */
+    status = stun_attr_create(STUN_ATTR_DATA, &h_attrs[count]);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Creating DATA attribute failed %d", status);
+        goto MB_ERROR_EXIT2;
+    }
+    count++;
+
+    status = stun_attr_data_set_data(
+            h_attrs[count-1], data->data, data->data_len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "setting data to DATA attribute failed");
+        goto MB_ERROR_EXIT2;
+    }
+
+    /** now add all the attributes */
+    status = stun_msg_add_attributes(h_ind, h_attrs, count);
+    if (status != STUN_OK)
+    { 
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Adding of array of attributes to data indication message failed");
+        goto MB_ERROR_EXIT2;
+    }
+
+    /** send the message to the client */
+    i = alloc->instance->nwk_stun_cb(h_ind, 
+                    alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
+                    alloc->client_addr.port, alloc->transport_param, NULL);
+
+    if (i <= 0)
+    {
+        status = STUN_TRANSPORT_FAIL;
+        goto MB_ERROR_EXIT1;
+    }
+
+    return status;
+
+MB_ERROR_EXIT2:
+    for (i = 0; i < count; i++)
+        stun_attr_destroy(h_attrs[i]);
+MB_ERROR_EXIT1:
+    stun_msg_destroy(h_ind);
+    return status;
+}
 
 
 

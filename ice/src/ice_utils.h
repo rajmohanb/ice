@@ -22,6 +22,8 @@ extern "C" {
 
 /******************************************************************************/
 
+
+
 #define ICE_SIZEOF_IPV6_ADDR    16      /** sizeof(struct in_addr) */
 #define ICE_SIZEOF_IPV4_ADDR    4       /** sizeof(struct in6_addr) */
 
@@ -312,6 +314,10 @@ int32_t ice_media_utils_initiate_nomination(ice_media_stream_t *media);
 int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
                                             ice_media_stream_t *media);
 #endif
+
+int32_t ice_utils_compute_turn_hmac_key(
+            ice_session_t *session, u_char *key, uint32_t *key_len);
+
 
 
 

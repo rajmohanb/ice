@@ -111,10 +111,12 @@ typedef enum {
 } stun_addr_family_type_t;
 
 
+//typedef enum {
 /** standard well defined IP protocol types */
 #define STUN_TRANSPORT_TCP              6
 #define STUN_TRANSPORT_UDP              17
 #define STUN_TRANSPORT_SCTP             132
+//} stun_transport_protocol_type_t;
 
 
 /** list of stun error codes reason phrase */
@@ -237,7 +239,12 @@ int32_t stun_attr_xor_mapped_addr_set_port(handle h_attr, uint32_t port);
 int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr, 
         stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len);
 
+int32_t stun_attr_xor_relayed_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family);
+
 int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port);
+
+int32_t stun_attr_xor_relayed_addr_set_port(handle h_attr, uint32_t port);
 
 /* ========================================================================== */
 
@@ -336,6 +343,9 @@ int32_t stun_attr_ice_controlled_set_tiebreaker_value(
                                             handle h_attr, uint64_t tiebreak);
 
 int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num);
+
+int32_t stun_attr_channel_number_get_channel(handle h_attr, uint16_t *num);
+
 
 /* ========================================================================== */
 

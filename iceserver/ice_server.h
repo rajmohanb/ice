@@ -24,16 +24,85 @@ extern "C" {
 
 /** some configuration stuff */
 #define MB_ICE_SERVER   "MindBricks ICE Server 0.1"
-#define ICE_SERVER_INTERNAL_TIMER_PORT    34343
-#define ICE_SERVER_TURN_PORT    3478
+
+#define MB_ICE_SERVER_LISTEN_PORT   3478
+
+#define MB_ICE_SERVER_TIMER_PORT    34343
+
 #define NET_INTERFACE   "eth0"
+
+#define MB_ICE_SERVER_USERNAME_LEN  128
+
+#define MB_ICE_SERVER_REALM_LEN     128
+
+#define MB_ICE_SERVER_HMAC_KEY_LEN  128
+
+#define MB_ICE_SERVER_MAX_ALLOCATIONS   250
+
+#define MB_ICE_SERVER_REASON_LENGTH 256
+
+#define MB_ICE_SERVER_NONCE_EXPIRY  3600    /** secs */
+
+#define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
+
+
+typedef struct
+{
+    void *timer_id;
+    void *arg;
+} mb_ice_server_timer_event_t;
+
+
+typedef struct
+{
+    u_char username[MB_ICE_SERVER_USERNAME_LEN];
+    u_char realm[MB_ICE_SERVER_REALM_LEN];
+    uint32_t lifetime;
+    stun_transport_protocol_type_t protocol;
+    void *blob;
+} mb_ice_server_new_alloc_t;
+
+
+typedef struct
+{
+    handle blob;
+    bool_t approved;
+    uint32_t lifetime; /** in secs, if approved */
+    uint32_t code;
+    char reason[MB_ICE_SERVER_REASON_LENGTH];
+    char hmac_key[MB_ICE_SERVER_HMAC_KEY_LEN];
+} mb_ice_server_alloc_decision_t;
+
+
+typedef struct
+{
+    int sockfd;
+
+    struct sockaddr addr;
+
+} mb_ice_server_intf_t;
 
 
 typedef struct
 {
     handle h_turns_inst;
 
+    handle h_stuns_inst;
+
     pthread_t tid;
+
+    /** internal communication between main thread and decision thread */
+    int     thread_sockpair[2];
+
+    int     timer_sockpair[2];
+
+    fd_set  master_rfds;
+
+    /** data sockets on which to listen */
+    int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    int max_fd;
+
+    mb_ice_server_intf_t intf[2];
 
 } mb_ice_server_t;
 

@@ -13,8 +13,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef TURN_SESSION_FSM__H
-#define TURN_SESSION_FSM__H
+#ifndef STUNS_INT__H
+#define STUNS_INT__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,50 +23,50 @@ extern "C" {
 /******************************************************************************/
 
 
-int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg);
+typedef enum
+{
+    /** timer started by turn transactions */
+    STUNS_STUN_TXN_TIMER = 0,
+    
+    /** timers internal to turn */
+    //TURN_ALLOC_REFRESH_TIMER,
+    //TURN_PERM_REFRESH_TIMER,
+    //TURN_CHNL_REFRESH_TIMER,
+    //TURN_KEEP_ALIVE_TIMER,
+
+    /** that's all we have as of now */
+} stuns_timer_type_t;
 
 
-int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg);
+typedef struct {
+    handle h_instance;
+    handle h_turn_session;
+    stuns_timer_type_t type;
+    handle timer_id;
+    handle arg;
+} stuns_timer_params_t;
 
 
-int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg);
+typedef struct 
+{
+    /** transaction instance handle */
+    handle h_txn_inst;
+
+    /** list of allocations */
+    //handle  h_table;
+
+    /** software client name and version */
+    uint32_t client_name_len;
+    u_char *client_name;
+
+    /** timer and socker callbacks */
+    stuns_nwk_send_cb nwk_send_cb;
+    stuns_start_timer_cb start_timer_cb;
+    stuns_stop_timer_cb stop_timer_cb;
+
+} stuns_instance_t;
 
 
-int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_send_ind (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_channel_data_ind (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_process_alloc_timer (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_generate_new_nonce(turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_create_perm_req(turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_channel_bind_req(turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg);
-
-
-int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc, 
-                                    turns_alloc_event_t event, handle h_msg);
 
 
 /******************************************************************************/
