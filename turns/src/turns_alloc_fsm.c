@@ -184,6 +184,14 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
 
+    /** TODO
+     * Where are we checking that the hmac-sha that has been given by the
+     * application in turns_allocation_decision_t strucure is validated against
+     * the message-integrity received in the initial allocation request that
+     * created this allocation context?  perhaps call 
+     * +++ stun_msg_validate_message_integrity() OR turns_utils_verify_request()
+     */
+
     /** update the allocation context parameters */
     alloc->initial_lifetime = decision->lifetime;
     alloc->lifetime = alloc->initial_lifetime;

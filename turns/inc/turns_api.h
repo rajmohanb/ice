@@ -78,13 +78,15 @@ typedef struct
 
     /** transport parameter */
     handle transport_param;
-    stun_inet_addr_t local_intf;
+    //stun_inet_addr_t local_intf;
 
     /** source address of stun packet */
     stun_inet_addr_t src;
 
     /** the transport protocol */
     stun_transport_protocol_type_t protocol;
+
+    stun_inet_addr_t local_intf;
 
 } turns_rx_stun_pkt_t;
 

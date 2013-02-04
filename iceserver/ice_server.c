@@ -454,12 +454,19 @@ int32_t iceserver_init(void)
 
 int main (int argc, char *argv[])
 {
+    int32_t status;
     printf ("Hello world! This is MindBricks ICE server reporting for duty\n");
 
     iceserver_init();
 
     /** initialize the turns module */
-    iceserver_init_turns();
+    status = iceserver_init_turns();
+    if (status != STUN_OK)
+    {
+        printf("ICE server initialization failed\n");
+        printf("Bailing out!!!\n");
+        exit(1);
+    }
 
     /** initialize the stuns module */
     iceserver_init_stuns();
