@@ -21,6 +21,7 @@ extern "C" {
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <libpq-fe.h>
 
 #include <stun_base.h>
@@ -235,6 +236,21 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
 }
 
 
+int32_t iceserver_get_current_time(char *str)
+{
+    time_t result;
+    struct tm *now;
+
+    result = time(NULL);
+    now = localtime(&result);
+ 
+    sprintf(str, "%.4d-%.2d-%.2d %d:%d:%d.000000", (now->tm_year+1900), 
+            now->tm_mon, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+
+    return STUN_OK;
+}
+
+
 int32_t iceserver_db_add_allocation_record(PGconn *conn, 
             mb_ice_server_new_alloc_t *newalloc, 
             uint32_t allotted_lifetime, mb_iceserver_user_record_t *user)
@@ -245,24 +261,29 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
     char tmp_value1[10] = {0};
     char tmp_value2[15] = {0};
     char tmp_value3[15] = {0};
-    char tmp_value4[30] = "2013-01-17 18:56:22.656666";
+    char tmp_value4[30] = {0};
 
     values[0] = user->username;
     values[1] = user->realm;
 
+    /** requested lifetime */
     sprintf(tmp_value1, "%d", newalloc->lifetime);
-    values[2] = tmp_value1; /** requested lifetime */
+    values[2] = tmp_value1;
 
+    /** allotted lifetime */
     sprintf(tmp_value2, "%d", allotted_lifetime);
-    values[3] = tmp_value2; /** allotted lifetime */
+    values[3] = tmp_value2;
 
     strcpy(tmp_value3, "0");
     values[4] = tmp_value3;
 
-    values[5] = tmp_value4; /** TODO alloc at */
-    values[6] = tmp_value4; /** TODO created at */
-    values[7] = tmp_value4; /** TODO updated at */
-    values[8] = user->user_id_str; /** user id */
+    iceserver_get_current_time(tmp_value4);
+    printf("CURRENT TIME : %s\n", tmp_value4);
+
+    values[5] = tmp_value4;
+    values[6] = tmp_value4;
+    values[7] = tmp_value4;
+    values[8] = user->user_id_str;
 
     result = PQexecPrepared(conn, alloc_insert_plan, 9, values, NULL, NULL, 0);
 
