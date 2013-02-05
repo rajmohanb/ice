@@ -314,7 +314,7 @@ int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc)
     params->blob = (void *)alloc;
 
     /** notify the application for approval */
-    alloc->instance->new_alloc_cb(NULL, params);
+    alloc->instance->new_alloc_cb(alloc, params);
 
     return STUN_OK;
 }
@@ -805,7 +805,7 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
      * request is received? for now hard coding ...
      */
     //memcpy(&context->relay_addr.ip_addr, "192.168.43.237", ICE_IP_ADDR_MAX_LEN);
-    //memcpy(&context->relay_addr.ip_addr, "10.1.71.100", ICE_IP_ADDR_MAX_LEN);
+    memcpy(&context->relay_addr.ip_addr, "10.1.71.102", ICE_IP_ADDR_MAX_LEN);
     context->relay_addr.port = i;
     context->relay_sock = sock;
 

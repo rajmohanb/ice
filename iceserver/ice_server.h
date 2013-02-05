@@ -53,8 +53,16 @@ typedef struct
 } mb_ice_server_timer_event_t;
 
 
+typedef enum
+{
+    MB_ISEVENT_NEW_ALLOC_REQ,
+    MB_ISEVENT_DEALLOC_NOTF,
+} mb_ice_server_event_t;
+
+
 typedef struct
 {
+    mb_ice_server_event_t event;
     u_char username[MB_ICE_SERVER_USERNAME_LEN];
     u_char realm[MB_ICE_SERVER_REALM_LEN];
     uint32_t lifetime;

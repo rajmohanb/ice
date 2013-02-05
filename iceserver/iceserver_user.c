@@ -59,12 +59,6 @@ static char *user_plan = "get_user_record";
 static char *alloc_insert_plan = "alloc_insert";
 
 
-static void dummy_go(void)
-{
-    /** this is just for making use of breakpoint, to be deleted later */
-    return;
-}
-
 
 /** close connection to database */
 void iceserver_db_closeconn(PGconn *conn)
@@ -80,7 +74,8 @@ PGconn *iceserver_db_connect(void)
     PGresult *result;
     ExecStatusType db_status;
     Oid user_plan_param_types[1] = { 1043 };
-    Oid alloc_insert_plan_param_types[9] = { 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23 };
+    Oid alloc_insert_plan_param_types[10] = 
+                    { 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
 
     /** make a connection to the database */
     conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_development hostaddr=127.0.0.1 port=5432");
@@ -123,8 +118,8 @@ PGconn *iceserver_db_connect(void)
     result = PQprepare(conn, alloc_insert_plan, 
                 "INSERT INTO allocations (username, realm, req_lifetime, "\
                 "allotted_lifetime, bandwidth_used, alloc_at, created_at, "\
-                "updated_at, user_id) "\
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)", 9, 
+                "updated_at, user_id, alloc_handle) "\
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)", 10, 
                 alloc_insert_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
@@ -256,12 +251,13 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
             uint32_t allotted_lifetime, mb_iceserver_user_record_t *user)
 {
     ExecStatusType db_status;
-    const char *values[9];
+    const char *values[10];
     PGresult *result;
     char tmp_value1[10] = {0};
     char tmp_value2[15] = {0};
     char tmp_value3[15] = {0};
     char tmp_value4[30] = {0};
+    char tmp_value5[12] = {0};
 
     values[0] = user->username;
     values[1] = user->realm;
@@ -285,7 +281,11 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
     values[7] = tmp_value4;
     values[8] = user->user_id_str;
 
-    result = PQexecPrepared(conn, alloc_insert_plan, 9, values, NULL, NULL, 0);
+    sprintf(tmp_value5, "%u", (unsigned int)newalloc->blob);
+    values[9] = tmp_value5;
+    printf("Allocation handle to DB: %s\n", tmp_value5);
+
+    result = PQexecPrepared(conn, alloc_insert_plan, 10, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -306,7 +306,7 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 
 void *mb_iceserver_decision_thread(void)
 {
-    int bytes, ret, status;
+    int bytes, status;
     mb_ice_server_new_alloc_t newalloc;
     mb_ice_server_alloc_decision_t decision;
     stun_MD5_CTX ctx;
@@ -326,8 +326,6 @@ void *mb_iceserver_decision_thread(void)
         memset(&newalloc, 0, sizeof(newalloc));
         bytes = recv(g_mb_server.thread_sockpair[1], 
                             &newalloc, sizeof(newalloc), 0);
-
-        dummy_go();
 
         printf ("Got an allocation request to approve. ??\n");
 

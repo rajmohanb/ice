@@ -64,8 +64,8 @@ extern "C" {
 
 typedef enum
 {
-    TURNS_NEW_ALLOC_REQ,
-    TURNS_ALLOC_DECISION,
+    TURNS_EV_DEALLOCATED,
+    TURNS_EV_BANDWIDTH,
 } turns_event_t;
 
 
@@ -201,17 +201,17 @@ typedef struct {
 
 
 /** 
- * This callback will be called when the TURN stack wants to notify the 
+ * This callback will be called when the TURNS stack wants to notify the 
  * server application about the reception of a new allocation request. The 
  * server application must not perform any intensive operations within 
  * this callback.
  */
-typedef int32_t (*turns_new_alloc_cb) (handle h_alloc, 
-                                turns_new_allocation_params_t *params);
+typedef int32_t (*turns_new_alloc_cb) (
+            handle h_alloc, turns_new_allocation_params_t *params);
 
 
 /** 
- * This callback will be called when the TURN stack wants to notify the 
+ * This callback will be called when the TURNS stack wants to notify the 
  * server application about an event for an existing allocation. The server 
  * application must not perform any intensive operations within this callback.
  */

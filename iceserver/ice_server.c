@@ -90,7 +90,7 @@ void ice_server_timer_expiry_cb (void *timer_id, void *arg)
     mb_ice_server_timer_event_t timer_event;
 
     printf("[MB ICE SERVER] in sample application timer callback %d %p\n", 
-            timer_id, arg);
+            (int)timer_id, arg);
 
     timer_event.timer_id = timer_id;
     timer_event.arg = arg;
@@ -109,7 +109,7 @@ int32_t ice_server_network_send_data(u_char *data,
         uint32_t data_len, stun_inet_addr_type_t ip_addr_type, 
         u_char *ip_addr, uint32_t port, handle transport_param, u_char *key)
 {
-    int32_t status, sent_bytes = 0;
+    int32_t sent_bytes = 0;
     int ret, sock_fd = (int) transport_param;
     struct sockaddr dest;
 
@@ -266,10 +266,8 @@ int32_t ice_server_stop_timer (handle timer_id)
 int32_t ice_server_new_allocation_request(
                 handle h_alloc, turns_new_allocation_params_t *alloc_req)
 {
-    int size, bytes = 0;
+    int bytes = 0;
     mb_ice_server_new_alloc_t data;
-
-    printf("[][][][][][][] NEW ALLOCATION REQUEST RECEIVED [][][][][][][]\n");
 
     memset(&data, 0, sizeof(data));
 
@@ -277,6 +275,7 @@ int32_t ice_server_new_allocation_request(
      * This is messy! passing data between processes - 
      * need to find an elegant solution 
      */
+    data.event = MB_ISEVENT_NEW_ALLOC_REQ;
     memcpy(data.username, alloc_req->username, alloc_req->username_len);
     memcpy(data.realm, alloc_req->realm, alloc_req->realm_len);
     data.lifetime = alloc_req->lifetime;
@@ -296,8 +295,38 @@ int32_t ice_server_new_allocation_request(
 }
 
 
-int32_t ice_server_handle_events(turns_event_t event, handle h_alloc)
+int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
 {
+    int bytes = 0;
+    mb_ice_server_new_alloc_t data;
+
+    printf("Received allocation event for allocation %p: ", h_alloc);
+
+    if (event == TURNS_EV_DEALLOCATED)
+        printf("TURNS_EV_DEALLOCATED\n");
+    else if (event == TURNS_EV_BANDWIDTH)
+        printf("TURNS_EV_BANDWIDTH\n");
+    else
+        printf("Some unknown event received\n");
+
+    memset(&data, 0, sizeof(data));
+
+    /** 
+     * This is messy! passing data between processes - 
+     * need to find an elegant solution 
+     */
+    data.event = MB_ISEVENT_DEALLOC_NOTF;
+    data.blob = h_alloc;
+    
+    /**
+     * this callback routine must not consume too much time since it is 
+     * running in the context of the main socket listener thread. So post
+     * this allocation request message to the slave thread that will
+     * decide whether the allocation is to be approved or not.
+     */
+    bytes = send(g_mb_server.thread_sockpair[0], &data, sizeof(data), 0);
+    printf ("Sent [%d] bytes to decision process\n", bytes);
+
     return STUN_OK;
 }
 
@@ -334,7 +363,7 @@ int32_t iceserver_init_turns(void)
 
     /** set up event callbacks */
     event_cbs.new_alloc_cb = ice_server_new_allocation_request;
-    event_cbs.alloc_event_cb = ice_server_handle_events;
+    event_cbs.alloc_event_cb = ice_server_handle_allocation_events;
 
     status = turns_instance_set_event_callbacks(
                         g_mb_server.h_turns_inst, &event_cbs);

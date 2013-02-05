@@ -31,3 +31,4 @@ doc/
 *.swo
 tags
 .gdbinit
+core

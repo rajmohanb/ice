@@ -371,7 +371,8 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
              * TODO - need to come back here... how will this 
              * allocation move to TSALLOC_UNALLOCATED? 
              */
-            alloc->state = TSALLOC_TERMINATING;
+            alloc->state = TSALLOC_UNALLOCATED;
+            //alloc->state = TSALLOC_TERMINATING;
         }
         else
         {
@@ -703,8 +704,12 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
                     alloc->instance->h_table, alloc) != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "TURN session %p: Unable to move it to unused", alloc);
+                    "TURN session %p unallocated: Unable to move it to unused",
+                    alloc);
         }
+
+        /** notify the server application */
+        alloc->instance->alloc_event_cb(TURNS_EV_DEALLOCATED, alloc);
     }
 
     return status;
