@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -267,20 +267,20 @@ int32_t ice_server_new_allocation_request(
                 handle h_alloc, turns_new_allocation_params_t *alloc_req)
 {
     int bytes = 0;
-    mb_ice_server_new_alloc_t data;
+    mb_ice_server_event_t event;
 
-    memset(&data, 0, sizeof(data));
+    memset(&event, 0, sizeof(event));
 
     /** 
      * This is messy! passing data between processes - 
      * need to find an elegant solution 
      */
-    data.event = MB_ISEVENT_NEW_ALLOC_REQ;
-    memcpy(data.username, alloc_req->username, alloc_req->username_len);
-    memcpy(data.realm, alloc_req->realm, alloc_req->realm_len);
-    data.lifetime = alloc_req->lifetime;
-    data.protocol = alloc_req->protocol;
-    data.blob = alloc_req->blob;
+    event.type = MB_ISEVENT_NEW_ALLOC_REQ;
+    memcpy(event.username, alloc_req->username, alloc_req->username_len);
+    memcpy(event.realm, alloc_req->realm, alloc_req->realm_len);
+    event.lifetime = alloc_req->lifetime;
+    event.protocol = alloc_req->protocol;
+    event.h_alloc = alloc_req->blob;
     
     /**
      * this callback routine must not consume too much time since it is 
@@ -288,7 +288,7 @@ int32_t ice_server_new_allocation_request(
      * this allocation request message to the slave thread that will
      * decide whether the allocation is to be approved or not.
      */
-    bytes = send(g_mb_server.thread_sockpair[0], &data, sizeof(data), 0);
+    bytes = send(g_mb_server.thread_sockpair[0], &event, sizeof(event), 0);
     printf ("Sent [%d] bytes to decision process\n", bytes);
 
     return STUN_OK;
@@ -298,7 +298,7 @@ int32_t ice_server_new_allocation_request(
 int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
 {
     int bytes = 0;
-    mb_ice_server_new_alloc_t data;
+    mb_ice_server_event_t mb_event;
 
     printf("Received allocation event for allocation %p: ", h_alloc);
 
@@ -309,14 +309,14 @@ int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
     else
         printf("Some unknown event received\n");
 
-    memset(&data, 0, sizeof(data));
+    memset(&mb_event, 0, sizeof(mb_event));
 
     /** 
      * This is messy! passing data between processes - 
      * need to find an elegant solution 
      */
-    data.event = MB_ISEVENT_DEALLOC_NOTF;
-    data.blob = h_alloc;
+    mb_event.type = MB_ISEVENT_DEALLOC_NOTF;
+    mb_event.h_alloc = h_alloc;
     
     /**
      * this callback routine must not consume too much time since it is 
@@ -324,7 +324,8 @@ int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
      * this allocation request message to the slave thread that will
      * decide whether the allocation is to be approved or not.
      */
-    bytes = send(g_mb_server.thread_sockpair[0], &data, sizeof(data), 0);
+    bytes = send(g_mb_server.thread_sockpair[0], 
+                                        &mb_event, sizeof(mb_event), 0);
     printf ("Sent [%d] bytes to decision process\n", bytes);
 
     return STUN_OK;

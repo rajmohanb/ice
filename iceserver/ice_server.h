@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -57,18 +57,18 @@ typedef enum
 {
     MB_ISEVENT_NEW_ALLOC_REQ,
     MB_ISEVENT_DEALLOC_NOTF,
-} mb_ice_server_event_t;
+} mb_ice_server_event_type_t;
 
 
 typedef struct
 {
-    mb_ice_server_event_t event;
+    mb_ice_server_event_type_t type;
     u_char username[MB_ICE_SERVER_USERNAME_LEN];
     u_char realm[MB_ICE_SERVER_REALM_LEN];
     uint32_t lifetime;
     stun_transport_protocol_type_t protocol;
-    void *blob;
-} mb_ice_server_new_alloc_t;
+    handle h_alloc;
+} mb_ice_server_event_t;
 
 
 typedef struct
