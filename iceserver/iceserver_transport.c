@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -162,7 +162,7 @@ int32_t iceserver_init_transport(void)
 
 
 
-void mb_ice_server_process_signaling_msg(int fd)
+void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
 {
     int bytes, temp;
     int32_t status;
@@ -171,7 +171,7 @@ void mb_ice_server_process_signaling_msg(int fd)
     handle h_rcvdmsg = NULL;
     socklen_t addrlen = sizeof(client);
 
-    bytes = recvfrom(fd, buf, 1500, 0, &client, &addrlen);
+    bytes = recvfrom(intf->sockfd, buf, 1500, 0, &client, &addrlen);
     if (bytes == -1) return;
 
     /** TODO - connection closed for TCP, remove the socket from list? */
@@ -197,7 +197,7 @@ void mb_ice_server_process_signaling_msg(int fd)
 
         data.data = buf;
         data.data_len = bytes;
-        data.transport_param = (handle)fd;
+        data.transport_param = (handle)intf->sockfd;
         data.protocol = ICE_TRANSPORT_UDP;
 
         if(client.sa_family == AF_INET)
@@ -243,7 +243,7 @@ void mb_ice_server_process_signaling_msg(int fd)
         }
 
         pkt.h_msg = h_rcvdmsg;
-        pkt.transport_param = (handle)fd;
+        pkt.transport_param = (handle)intf->sockfd;
         pkt.protocol = ICE_TRANSPORT_UDP;
 
         if(client.sa_family == AF_INET)
@@ -271,6 +271,29 @@ void mb_ice_server_process_signaling_msg(int fd)
         }
         else
         {
+            /**
+             * fill up the additional local interface details, which identifies 
+             * the local interface on which the message was received on. 
+             */
+            if(intf->addr.sa_family == AF_INET)
+            {
+                pkt.local_intf.host_type = STUN_INET_ADDR_IPV4;
+                pkt.local_intf.port = 
+                    ntohs(((struct sockaddr_in *)&intf->addr)->sin_port);
+                inet_ntop(AF_INET, 
+                        &(((struct sockaddr_in *)&intf->addr)->sin_addr), 
+                        (char *)pkt.local_intf.ip_addr, ICE_IP_ADDR_MAX_LEN);
+            }
+            else if(intf->addr.sa_family == AF_INET6)
+            {
+                pkt.local_intf.host_type = STUN_INET_ADDR_IPV6;
+                pkt.local_intf.port = 
+                    ntohs(((struct sockaddr_in6 *)&intf->addr)->sin6_port);
+                inet_ntop(AF_INET6, 
+                        &(((struct sockaddr_in6 *)&intf->addr)->sin6_addr),
+                        (char *)pkt.local_intf.ip_addr, ICE_IP_ADDR_MAX_LEN);
+            }
+
             /** hand over to the turns module for further processing */
             status = turns_inject_received_msg(g_mb_server.h_turns_inst, &pkt);
         }
@@ -398,9 +421,9 @@ int32_t iceserver_process_messages(void)
     for (i = 0; i < ret; i++)
     {
         if (FD_ISSET(g_mb_server.intf[0].sockfd, &rfds))
-            mb_ice_server_process_signaling_msg(g_mb_server.intf[0].sockfd);
+            mb_ice_server_process_signaling_msg(&g_mb_server.intf[0]);
         else if (FD_ISSET(g_mb_server.intf[1].sockfd, &rfds))
-            mb_ice_server_process_signaling_msg(g_mb_server.intf[1].sockfd);
+            mb_ice_server_process_signaling_msg(&g_mb_server.intf[1]);
         else if (FD_ISSET(g_mb_server.thread_sockpair[0], &rfds))
             mb_ice_server_process_approval(g_mb_server.thread_sockpair[0]);
         else if (FD_ISSET(g_mb_server.timer_sockpair[0], &rfds))

@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -736,8 +736,6 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
     struct sockaddr addr;
     unsigned short sa_family;
 
-    memset(&context->relay_addr, 0, sizeof(stun_inet_addr_t));
-
     /**
      * TODO - how do we decide whether the client is requesting an IPv6
      * or an IPv4 relayed address? Currently using the local interface
@@ -767,18 +765,16 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
         if (sa_family == AF_INET)
         {
             ((struct sockaddr_in *)&addr)->sin_port = htons(i);
-            /** TODO - need to specify the exact interface address */
-            /** must use inet_pton to convert? */
-            //((struct sockaddr_in *)&addr)->sin_addr.s_addr = htonl(INADDR_ANY);
+            /** TODO - must use inet_pton to convert? */
             ((struct sockaddr_in *)&addr)->sin_addr.s_addr = 
                             inet_addr((char *)context->relay_addr.ip_addr);
         }
         else
         {
             ((struct sockaddr_in6 *)&addr)->sin6_port = htons(i);
-            /** TODO - need to specify the exact interface address */
-            /** must use inet_pton to conver? */
-            //addr.sin_addr.s_addr = htonl(INADDR_ANY);
+            /** TODO - must use inet_pton to convert? */
+            //((struct sockaddr_in6 *)&addr)->sin6_addr = 
+            //                inet_addr((char *)context->relay_addr.ip_addr);
         }
 
         /** TODO - do we need to abstract the 'bind' to make it portable? */
@@ -799,13 +795,6 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
         return STUN_NO_RESOURCE;
     }
 
-    //context->relay_addr.host_type = context->client_addr.host_type;
-    /** 
-     * ah shucks! fix it. Probably store this in allocation context when a 
-     * request is received? for now hard coding ...
-     */
-    //memcpy(&context->relay_addr.ip_addr, "192.168.43.237", ICE_IP_ADDR_MAX_LEN);
-    memcpy(&context->relay_addr.ip_addr, "10.1.71.102", ICE_IP_ADDR_MAX_LEN);
     context->relay_addr.port = i;
     context->relay_sock = sock;
 
