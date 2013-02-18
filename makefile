@@ -17,7 +17,7 @@ ENABLE_ICE_DEBUG := y
 
 # path where the built ice stack libraries will be placed. The application
 # developer can modify this variable as per their environment
-ICE_LIB_DEST_PATH := /root/ICE/lib
+ICE_LIB_DEST_PATH := /home/rajmohan/MindBricks/ice/lib
 
 # application specific additional include path which will be included during 
 # compilation of the ice stack. When the ICE stack is integrated into the 
