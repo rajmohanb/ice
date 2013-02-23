@@ -121,7 +121,7 @@ static turns_alloc_fsm_handler
 int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
-    uint32_t error_code;
+    uint32_t error_code = 0;
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
 
     /** TODO:
@@ -135,7 +135,7 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
      * for now - if this is a re-transmission, we are ignoring it. But we
      * need to handle this either way as defined above asap.
      */
-    status = turns_utils_verify_info_from_alloc_request(
+    status = turns_utils_pre_verify_info_from_alloc_request(
                                     alloc, stun_pkt->h_msg, &error_code);
     if(status != STUN_OK)
     {
@@ -181,21 +181,29 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp;
+    uint32_t error_code = 0;
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
-
-    /** TODO
-     * Where are we checking that the hmac-sha that has been given by the
-     * application in turns_allocation_decision_t strucure is validated against
-     * the message-integrity received in the initial allocation request that
-     * created this allocation context?  perhaps call 
-     * +++ stun_msg_validate_message_integrity() OR turns_utils_verify_request()
-     */
 
     /** update the allocation context parameters */
     alloc->initial_lifetime = decision->lifetime;
     alloc->lifetime = alloc->initial_lifetime;
     memcpy(&alloc->hmac_key, &decision->key, TURNS_HMAC_KEY_LEN);
+
+    /**
+     * When the initial alloc request was received, this module had not checked
+     * the message integrity since we did not have the hmac sha to verify with.
+     * Now we have the necessary info with us, so verify that the message 
+     * integrity of the initial allocation request is valid.
+     */
+    status = 
+        turns_utils_post_verify_info_from_alloc_request(alloc, &error_code);
+    if (status != STUN_OK)
+    {
+        printf("Post verification of message failed. "\
+                "Probably wrong message integrity?\n");
+        goto MB_ERROR_EXIT;
+    }
 
     /** setup the allocation */
     status = turns_utils_setup_allocation(alloc);
@@ -230,8 +238,19 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
             alloc->instance->new_socket_cb(alloc, alloc->relay_sock);
         }
     }
+    else
+    {
+        error_code = 500;
+        goto MB_ERROR_EXIT;
+    }
 
     return status;
+
+MB_ERROR_EXIT:
+
+    decision->code = error_code;
+    decision->approved = false;
+    return turns_alloc_rejected(alloc, (handle)decision);
 }
 
 

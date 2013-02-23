@@ -298,7 +298,7 @@ int32_t turns_table_find_node_for_relayed_transport_address(
     {
         context = &node->context;
         if ((context->protocol == protocol) && 
-                (context->relay_sock == transport_param))
+                (context->relay_sock == (int)transport_param))
         {
             ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation "\
                     "context found for relayed transport address");

@@ -131,7 +131,7 @@ bool_t turns_utils_host_compare (u_char *host1,
 
 
 
-int32_t turns_utils_verify_info_from_alloc_request(
+int32_t turns_utils_pre_verify_info_from_alloc_request(
                 turns_allocation_t *alloc, handle h_msg, uint32_t *error_code)
 {
     uint32_t num, protocol, resp_code, len;
@@ -172,22 +172,14 @@ int32_t turns_utils_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT1;
     }
 
-    if (alloc->state == TSALLOC_CHALLENGED)
-    {
-        /**
-         * at this time, we do not have any information on the username. so
-         * just copy what the client has provided and pass on to the server app.
-         */
-        alloc->username = username;
-        alloc->username_len = len;
-        username = NULL;
-        printf("OK: So Username is %s\n", alloc->username);
-    }
-    else
-    {
-        /** TODO - need to verify against what is stored in the allocation */
-        printf("OK: So hhow and what do we do? TODO\n");
-    }
+    /**
+     * at this time, we do not have any information on the username. so
+     * just copy what the client has provided and pass on to the server app.
+     */
+    alloc->username = username;
+    alloc->username_len = len;
+    username = NULL;
+    printf("OK: So Username is %s\n", alloc->username);
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
@@ -239,8 +231,6 @@ int32_t turns_utils_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT2;
     }
 
-    /** TODO - need to verify NONCE, MESSAGE INTEGRITY and FINGERPRINT */
-
     status = stun_attr_requested_transport_get_protocol(h_attr, &protocol);
     if (status != STUN_OK) goto MB_ERROR_EXIT2;
 
@@ -249,8 +239,10 @@ int32_t turns_utils_verify_info_from_alloc_request(
     {
         alloc->req_tport = ICE_TRANSPORT_UDP;
     }
-    //else if (protocol == STUN_TRANSPORT_TCP)
-    //    params->protocol = ICE_TRANSPORT_TCP;
+    else if (protocol == STUN_TRANSPORT_TCP)
+    {
+        alloc->req_tport = ICE_TRANSPORT_TCP;
+    }
     else
     {
         resp_code = 442;
@@ -275,8 +267,72 @@ int32_t turns_utils_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT2;
     }
 
+    /** 
+     * need to verify NONCE, MESSAGE INTEGRITY and FINGERPRINT. The message 
+     * integrity can only be verified after the server application provides
+     * the hmac sha using the turn long term auth password. This will be done
+     * in the post_verification of alloc request. However, the nonce and the
+     * fingerprint can be checked here now.
+     */
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                        h_msg, STUN_ATTR_NONCE, &h_attr, &num);
+    if (status != STUN_OK)
+    {
+        resp_code = 400;
+        goto MB_ERROR_EXIT2;
+    }
+
+    status = stun_attr_nonce_get_nonce_length(h_attr, &len);
+    if (status != STUN_OK)
+    {
+        resp_code = 400;
+        goto MB_ERROR_EXIT2;
+    }
+
+    nonce = (u_char *) stun_calloc(1, len);
+    if(nonce == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto MB_ERROR_EXIT2;
+    }
+
+    status = stun_attr_nonce_get_nonce(h_attr, nonce, &len);
+    if (status != STUN_OK)
+    {
+        printf("NONCE attribute: Error retrieving nonce, sending 401\n");
+        resp_code = 400;
+        goto MB_ERROR_EXIT3;
+    }
+
+    if ((len != TURNS_SERVER_NONCE_LEN) || 
+            (memcmp(alloc->nonce, nonce, TURNS_SERVER_NONCE_LEN) != 0))
+    {
+        printf("Nonce do not match. Send 438 response\n");
+        status = STUN_VALIDATON_FAIL;
+        resp_code = 438;
+        goto MB_ERROR_EXIT3;
+    }
+
+#ifdef TURNS_ENABLE_FINGERPRINT_VALIDATION
+    /** fingerprint */
+    status = stun_msg_validate_fingerprint(h_msg);
+    if (status == STUN_NOT_FOUND)
+    {
+        printf("FingerPrint not present in request. Its OK?\n");
+    }
+    else if (status != STUN_OK)
+    {
+        printf("FingerPrint did not match! sending 401\n");
+        resp_code = 401;
+        goto MB_ERROR_EXIT3;
+    }
+#endif /** TURNS_ENABLE_FINGERPRINT_VALIDATION */
+
     return status;
 
+MB_ERROR_EXIT3:
+    stun_free(nonce);
 MB_ERROR_EXIT2:
     stun_free(realm);
 MB_ERROR_EXIT1:
@@ -972,13 +1028,13 @@ int32_t turns_utils_stop_channel_binding_timer(
 int32_t turns_utils_verify_request(
                 turns_allocation_t *alloc, handle h_msg, uint32_t *error_code)
 {
-    uint32_t num, resp_code, len;
+    uint32_t num, resp_code, len, protocol;
     int32_t status;
     handle h_attr;
     u_char *realm, *nonce, *username;
 
     /** 
-     * for any request subsequent to allocate, the parameters used for 
+     * for any request subsequent to initial allocate, the parameters used for 
      * verification are username, realm, nonce and message integrity.
      */
 
@@ -1015,30 +1071,14 @@ int32_t turns_utils_verify_request(
         goto MB_ERROR_EXIT1;
     }
 
-    if (alloc->state == TSALLOC_CHALLENGED)
+    /** verify against what is stored in the allocation */
+    if ((len != alloc->username_len) || 
+            (memcmp(alloc->username, username, len) != 0))
     {
-        /**
-         * at this time, we do not have any information on the username. so
-         * just copy what the client has provided and pass on to the server app.
-         */
-        alloc->username = username;
-        alloc->username_len = len;
-        username = NULL;
-        printf("OK: So Username is %s\n", alloc->username);
-    }
-    else
-    {
-        /** TODO - need to verify against what is stored in the allocation */
-        printf("OK: So hhow and what do we do? TODO\n");
-
-        if ((len != alloc->username_len) || 
-                (memcmp(alloc->username, username, len) != 0))
-        {
-            printf("USERNAME mismatch. Rejecting the request message\n");
-            status = STUN_VALIDATON_FAIL;
-            resp_code = 401;
-            goto MB_ERROR_EXIT1;
-        }
+        printf("USERNAME mismatch. Rejecting the request message\n");
+        status = STUN_VALIDATON_FAIL;
+        resp_code = 401;
+        goto MB_ERROR_EXIT1;
     }
 
     num = 1;
@@ -1100,7 +1140,11 @@ int32_t turns_utils_verify_request(
     }
 
     nonce = (u_char *) stun_calloc(1, len);
-    if(nonce == NULL) return STUN_MEM_ERROR;
+    if(nonce == NULL)
+    {
+        status = STUN_MEM_ERROR;
+        goto MB_ERROR_EXIT2;
+    }
 
     status = stun_attr_nonce_get_nonce(h_attr, nonce, &len);
     if (status != STUN_OK)
@@ -1131,11 +1175,47 @@ int32_t turns_utils_verify_request(
     }
 
     /** 
-     * TODO - Does it make sense to test the fingerprint at the end 
-     * when the message-integrity has alreay been validated? :)
+     * make sure the requested protocol if present, is 
+     * same as in the initial allocation request.
      */
+    num = 1;
+    status = stun_msg_get_specified_attributes(h_msg, 
+                    STUN_ATTR_REQUESTED_TRANSPORT, &h_attr, &num);
+    /** Its ok! ignore if not present or an error. lenient? */
+    if (status == STUN_OK)
+    {
+        status = stun_attr_requested_transport_get_protocol(h_attr, &protocol);
+        if (status == STUN_OK)
+        {
+            stun_transport_protocol_type_t type;
 
-#if 0
+            if(protocol == STUN_TRANSPORT_UDP)
+                type = ICE_TRANSPORT_UDP;
+            else if (protocol == STUN_TRANSPORT_TCP)
+                type = ICE_TRANSPORT_TCP;
+            else
+                type = ICE_TRANSPORT_INVALID;
+
+            if (type != alloc->req_tport)
+            {
+                printf("The request transport type in the request does "\
+                        "not match the one in the initial alloc request\n");
+                resp_code = 401;
+                goto MB_ERROR_EXIT3;
+            }
+        }
+    }
+    else if (status == STUN_NOT_FOUND)
+    {
+        status = STUN_OK;
+    }
+    else
+    {
+        resp_code = 400;
+        goto MB_ERROR_EXIT3;
+    }
+
+#ifdef TURNS_ENABLE_FINGERPRINT_VALIDATION
     /** fingerprint */
     status = stun_msg_validate_fingerprint(h_msg);
     if (status == STUN_NOT_FOUND)
@@ -1148,7 +1228,7 @@ int32_t turns_utils_verify_request(
         resp_code = 401;
         goto MB_ERROR_EXIT3;
     }
-#endif
+#endif /** TURNS_ENABLE_FINGERPRINT_VALIDATION */
 
     return status;
 
@@ -2165,6 +2245,24 @@ MB_ERROR_EXIT1:
     return status;
 }
 
+
+int32_t turns_utils_post_verify_info_from_alloc_request(
+                            turns_allocation_t *alloc, uint32_t *error_code)
+{
+    int32_t status;
+
+    /** message integrity */
+    status = stun_msg_validate_message_integrity(
+                    alloc->h_req, alloc->hmac_key, TURNS_HMAC_KEY_LEN);
+    if (status != STUN_OK)
+    {
+        printf("Message integrity did not match! sending 401\n");
+        *error_code = 401;
+    }
+
+    return status;
+}
+ 
 
 
 /******************************************************************************/

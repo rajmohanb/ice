@@ -37,9 +37,11 @@ bool_t turns_utils_host_compare (u_char *host1,
                     u_char *host2, stun_inet_addr_type_t addr_type);
 
 
-int32_t turns_utils_verify_info_from_alloc_request(
+int32_t turns_utils_pre_verify_info_from_alloc_request(
                 turns_allocation_t *alloc, handle h_msg, uint32_t *error_code);
 
+int32_t turns_utils_post_verify_info_from_alloc_request(
+                        turns_allocation_t *alloc, uint32_t *error_code);
 
 int32_t turns_utils_notify_new_alloc_request_to_app(turns_allocation_t *alloc);
 

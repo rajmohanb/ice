@@ -137,6 +137,7 @@ typedef enum
 typedef enum {
     ICE_TRANSPORT_UDP = 0,
     ICE_TRANSPORT_TCP,
+    ICE_TRANSPORT_INVALID,
 } stun_transport_protocol_type_t;
 
 

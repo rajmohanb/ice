@@ -431,7 +431,11 @@ int32_t stun_msg_validate_fingerprint(handle h_msg)
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
                             STUN_ATTR_FINGERPRINT, &h_fingerprint, &num);
-    if (status != STUN_OK)
+    if (status == STUN_NOT_FOUND)
+    {
+        return status;
+    }
+    else if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
             "Extracting fingerprint attribute from message "\

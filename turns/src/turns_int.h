@@ -159,8 +159,6 @@ typedef struct
 
     turns_alloc_state_t state;
 
-    /******/ 
-
     /** client's server-reflexive transport address */    
     stun_inet_addr_t client_addr;
 
@@ -170,8 +168,6 @@ typedef struct
     /** transport protocol */
     stun_transport_protocol_type_t protocol;
     
-    /******/ 
-
     /** nonce */
     u_char nonce[TURNS_SERVER_NONCE_LEN];
 
