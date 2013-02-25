@@ -791,9 +791,10 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
     int32_t i, status, sock, sock_type;
     struct sockaddr addr;
     unsigned short sa_family;
+    int ret;
 
     /**
-     * TODO - how do we decide whether the client is requesting an IPv6
+     * how do we decide whether the client is requesting an IPv6
      * or an IPv4 relayed address? Currently using the local interface
      * address on which the request was received, to decide the same.
      */
@@ -803,6 +804,19 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
         sa_family = AF_INET6;
     else
         return STUN_INT_ERROR;
+
+    if (sa_family == AF_INET)
+    {
+        ret = inet_pton(AF_INET, (char *)context->relay_addr.ip_addr, 
+                    &(((struct sockaddr_in *)&addr)->sin_addr));
+        if (ret != 1) return STUN_INT_ERROR;
+    }
+    else
+    {
+        ret = inet_pton(AF_INET, (char *)context->relay_addr.ip_addr, 
+                    &(((struct sockaddr_in6 *)&addr)->sin6_addr));
+        if (ret != 1) return STUN_INT_ERROR;
+    }
 
     if (context->req_tport == ICE_TRANSPORT_UDP)
         sock_type = SOCK_DGRAM;
@@ -819,19 +833,9 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
     for (i = TURNS_PORT_RANGE_MIN; i <= TURNS_PORT_RANGE_MAX; i++)
     {
         if (sa_family == AF_INET)
-        {
             ((struct sockaddr_in *)&addr)->sin_port = htons(i);
-            /** TODO - must use inet_pton to convert? */
-            ((struct sockaddr_in *)&addr)->sin_addr.s_addr = 
-                            inet_addr((char *)context->relay_addr.ip_addr);
-        }
         else
-        {
             ((struct sockaddr_in6 *)&addr)->sin6_port = htons(i);
-            /** TODO - must use inet_pton to convert? */
-            //((struct sockaddr_in6 *)&addr)->sin6_addr = 
-            //                inet_addr((char *)context->relay_addr.ip_addr);
-        }
 
         /** TODO - do we need to abstract the 'bind' to make it portable? */
         status = bind(sock, (struct sockaddr *) &addr, sizeof(addr));
