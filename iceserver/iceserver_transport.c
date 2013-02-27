@@ -68,7 +68,7 @@ int32_t mb_ice_server_get_local_interface(void)
         if (bind(s, ifa->ifa_addr, sizeof(struct sockaddr)) == -1)
         {
             perror("Bind");
-            printf("Binding to interface failed [%s:%d]\n", 
+            ICE_LOG(LOG_SEV_ERROR, "Binding to interface failed [%s:%d]", 
                             ifa->ifa_name, ifa ->ifa_addr->sa_family);
             close(s);
         }
@@ -83,8 +83,8 @@ int32_t mb_ice_server_get_local_interface(void)
 
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 
-    printf("Socket fd: [%d]\n", g_mb_server.intf[0].sockfd);
-    printf("Socket fd: [%d]\n", g_mb_server.intf[1].sockfd);
+    ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server.intf[0].sockfd);
+    ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server.intf[1].sockfd);
     return STUN_OK;
 
 MB_ERROR_EXIT:
@@ -193,7 +193,7 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
     {
         turns_rx_channel_data_t data;
 
-        printf("CHANNEL DATA message\n");
+        ICE_LOG(LOG_SEV_DEBUG, "CHANNEL DATA message");
 
         data.data = buf;
         data.data_len = bytes;
@@ -220,7 +220,7 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
     }
     else if ((*buf & 0xc0) == 0xc0)
     {
-        printf("Future reserved, Dropping\n");
+        ICE_LOG(LOG_SEV_DEBUG, "Future reserved, Dropping");
     }
     else
     {
@@ -232,13 +232,15 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
         status = turns_verify_valid_stun_packet((u_char *)buf, bytes);
         if (status == STUN_MSG_NOT) return;
 
-        printf("\n\nReceived signaling message of length [%d] bytes\n", bytes);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Received signaling message of length [%d] bytes", bytes);
 
         /** decode the message */
         status = stun_msg_decode((u_char *)buf, bytes, false, &h_rcvdmsg);
         if (status != STUN_OK)
         {
-            printf("stun_msg_decode() returned error %d\n", status);
+            ICE_LOG(LOG_SEV_WARNING, 
+                    "stun_msg_decode() returned error %d", status);
             return;
         }
 
@@ -320,8 +322,8 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
 
     if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
     {
-        printf("UDP data received on unknown socket? "\
-                "This should not happen. Look into this\n");
+        ICE_LOG(LOG_SEV_CRITICAL, "UDP data received on unknown socket? "\
+                "This should not happen. Look into this");
         return;
     }
 
@@ -367,9 +369,9 @@ void mb_ice_server_process_timer_event(int fd)
     bytes = recv(g_mb_server.timer_sockpair[0], 
                 &timer_event, sizeof(timer_event), 0);
     if (bytes == -1)
-        printf("Receiving of timer event failed\n");
+        ICE_LOG(LOG_SEV_ERROR, "Receiving of timer event failed");
 
-    printf("Timer expired: ID %p ARG %p\n", 
+    ICE_LOG(LOG_SEV_DEBUG, "Timer expired: ID %p ARG %p", 
             timer_event.timer_id, timer_event.arg);
 
     status = turns_inject_timer_event(timer_event.timer_id, timer_event.arg);
@@ -408,7 +410,8 @@ int32_t iceserver_process_messages(void)
 
     /** make a copy of the read socket fds set */
     rfds = g_mb_server.master_rfds;
-    printf("About to enter pselect max_fd - %d\n", (g_mb_server.max_fd+1));
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
 
     ret = pselect((g_mb_server.max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
     if (ret == -1)
@@ -416,7 +419,7 @@ int32_t iceserver_process_messages(void)
         perror("pselect");
         return STUN_TRANSPORT_FAIL;
     }
-    printf("After pselect %d\n", ret);
+    ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);
 
     for (i = 0; i < ret; i++)
     {

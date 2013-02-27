@@ -26,6 +26,8 @@ extern "C" {
 #include <sys/un.h>
 #include <pthread.h>
 
+#include <syslog.h> /** logging */
+
 #include <stun_base.h>
 #include <stun_enc_dec_api.h>
 #include <turns_api.h>
@@ -37,10 +39,13 @@ extern "C" {
 #define ICE_SERVER_REALM    "mindbricks.com"
 
 char *log_levels[] =
-{
+{    
+    "LOG_SEV_EMERG",
+    "LOG_SEV_ALERT",
     "LOG_SEV_CRITICAL",
     "LOG_SEV_ERROR",
     "LOG_SEV_WARNING",
+    "LOG_SEV_NOTICE",
     "LOG_SEV_INFO",
     "LOG_SEV_DEBUG",
 };
@@ -75,11 +80,17 @@ void app_log(stun_log_level_t level,
     else
         relative_time = relative_time - 1 + ((now.tv_usec - init.tv_usec) / 1000);
 
+    va_start(args, format);
 
-    va_start(args, format );
+#if 0
     sprintf(buff, "| %s | %i msec <%s: %i> %s\n", 
             log_levels[level], relative_time, file_name, line_num, format);
     vprintf(buff, args );
+#else
+    sprintf(buff, "<%s: %i> %s", file_name, line_num, format);
+    vsyslog(level, buff, args);
+#endif
+
     va_end(args );
 }
 
@@ -89,8 +100,8 @@ void ice_server_timer_expiry_cb (void *timer_id, void *arg)
     ssize_t bytes = 0;
     mb_ice_server_timer_event_t timer_event;
 
-    printf("[MB ICE SERVER] in sample application timer callback %d %p\n", 
-            (int)timer_id, arg);
+    ICE_LOG(LOG_SEV_DEBUG, "[MB ICE SERVER] in sample application timer "\
+            "callback %d %p", (int)timer_id, arg);
 
     timer_event.timer_id = timer_id;
     timer_event.arg = arg;
@@ -98,7 +109,7 @@ void ice_server_timer_expiry_cb (void *timer_id, void *arg)
     bytes = send(g_mb_server.timer_sockpair[1], 
             (u_char *)&timer_event, sizeof(timer_event), 0);
     if (bytes == -1)
-        printf("Error: Sending of timer event failed\n");
+        ICE_LOG(LOG_SEV_ERROR, "Error: Sending of timer event failed");
     
     return;
 }
@@ -121,7 +132,7 @@ int32_t ice_server_network_send_data(u_char *data,
                     &(((struct sockaddr_in *)&dest)->sin_addr));
         if (ret != 1)
         {
-            printf("inet_pton failed\n");
+            ICE_LOG(LOG_SEV_WARNING, "inet_pton failed\n");
             return sent_bytes;
         }
     }
@@ -176,7 +187,7 @@ int32_t ice_server_network_send_msg(handle h_msg,
     status = stun_msg_encode(h_msg, &auth, (uint8_t *)buf, &buf_len);
     if (status != STUN_OK)
     {
-        printf ("Sending of STUN message failed\n");
+        ICE_LOG (LOG_SEV_WARNING, "Sending of STUN message failed");
         return STUN_TRANSPORT_FAIL;
     }
 
@@ -188,7 +199,7 @@ int32_t ice_server_network_send_msg(handle h_msg,
                     &(((struct sockaddr_in *)&dest)->sin_addr));
         if (ret != 1)
         {
-            printf("inet_pton failed\n");
+            ICE_LOG(LOG_SEV_ERROR, "inet_pton failed");
             return sent_bytes;
         }
     }
@@ -218,7 +229,8 @@ int32_t ice_server_network_send_msg(handle h_msg,
 int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
 {
     int i;
-    printf("Now need to listen on this socket as well: %d\n", sock_fd);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Now need to listen on this socket as well: %d", sock_fd);
 
     /** add it to the list */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
@@ -240,12 +252,12 @@ handle ice_server_start_timer (uint32_t duration, handle arg)
 
     timer_expiry_callback timer_cb = ice_server_timer_expiry_cb;
 
-    printf("ice_server: starting timer for duration %d "\
-            "Argument is %p\n", duration, arg);
+    ICE_LOG(LOG_SEV_WARNING, "ice_server: starting timer for duration %d "\
+            "Argument is %p", duration, arg);
 
     timer_id = platform_start_timer(duration, timer_cb, arg);
 
-    printf("timer id returned is %p\n", timer_id);
+    ICE_LOG(LOG_SEV_DEBUG, "timer id returned is %p", timer_id);
 
     return timer_id;
 }
@@ -254,7 +266,7 @@ handle ice_server_start_timer (uint32_t duration, handle arg)
 
 int32_t ice_server_stop_timer (handle timer_id)
 {
-    printf("ice_server: stopping timer %p\n", timer_id);
+    ICE_LOG(LOG_SEV_DEBUG, "ice_server: stopping timer %p", timer_id);
 
     if (platform_stop_timer(timer_id) == true)
         return STUN_OK;
@@ -289,7 +301,7 @@ int32_t ice_server_new_allocation_request(
      * decide whether the allocation is to be approved or not.
      */
     bytes = send(g_mb_server.thread_sockpair[0], &event, sizeof(event), 0);
-    printf ("Sent [%d] bytes to decision process\n", bytes);
+    ICE_LOG (LOG_SEV_DEBUG, "Sent [%d] bytes to decision process", bytes);
 
     return STUN_OK;
 }
@@ -300,14 +312,15 @@ int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
     int bytes = 0;
     mb_ice_server_event_t mb_event;
 
-    printf("Received allocation event for allocation %p: ", h_alloc);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Received allocation event for allocation %p: ", h_alloc);
 
     if (event == TURNS_EV_DEALLOCATED)
-        printf("TURNS_EV_DEALLOCATED\n");
+        ICE_LOG(LOG_SEV_DEBUG, "TURNS_EV_DEALLOCATED");
     else if (event == TURNS_EV_BANDWIDTH)
-        printf("TURNS_EV_BANDWIDTH\n");
+        ICE_LOG(LOG_SEV_DEBUG, "TURNS_EV_BANDWIDTH");
     else
-        printf("Some unknown event received\n");
+        ICE_LOG(LOG_SEV_WARNING, "Some unknown event received");
 
     memset(&mb_event, 0, sizeof(mb_event));
 
@@ -326,7 +339,7 @@ int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
      */
     bytes = send(g_mb_server.thread_sockpair[0], 
                                         &mb_event, sizeof(mb_event), 0);
-    printf ("Sent [%d] bytes to decision process\n", bytes);
+    ICE_LOG (LOG_SEV_DEBUG, "Sent [%d] bytes to decision process", bytes);
 
     return STUN_OK;
 }
@@ -414,7 +427,7 @@ MB_ERROR_EXIT:
 
 void ice_server_run(void)
 {
-    printf("Run Lola run\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Run Lola run");
 
     while (true)
     {
@@ -438,11 +451,11 @@ int32_t iceserver_init(void)
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.thread_sockpair) == -1)
     {
         perror ("process socketpair");
-        printf ("process socketpair() returned error\n");
+        ICE_LOG (LOG_SEV_ERROR, "process socketpair() returned error");
         return STUN_INT_ERROR;
     }
 
-    printf("Added decision process socket: %d to fd_set\n", 
+    ICE_LOG(LOG_SEV_DEBUG, "Added decision process socket: %d to fd_set", 
                                         g_mb_server.thread_sockpair[0]);
     /** add internal socket used for communication with the decision process */
     FD_SET(g_mb_server.thread_sockpair[0], &g_mb_server.master_rfds);
@@ -463,7 +476,7 @@ int32_t iceserver_init(void)
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.timer_sockpair) == -1)
     {
         perror ("timer socketpair");
-        printf ("timer socketpair() returned error\n");
+        ICE_LOG (LOG_SEV_ERROR, "timer socketpair() returned error");
         return STUN_INT_ERROR;
     }
 
@@ -471,7 +484,7 @@ int32_t iceserver_init(void)
     FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
     if (g_mb_server.max_fd < g_mb_server.timer_sockpair[0])
         g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
-    printf("Added timer thread socket: %d to fd_set\n", 
+    ICE_LOG(LOG_SEV_DEBUG, "Added timer thread socket: %d to fd_set", 
                                         g_mb_server.timer_sockpair[0]);
 
     if (platform_init() != true)
@@ -482,10 +495,24 @@ int32_t iceserver_init(void)
 
 
 
+void iceserver_init_log(void)
+{
+    char *ident = "MindBricks";
+    int logopt = LOG_PID | LOG_CONS | LOG_NDELAY;
+    int facility = LOG_USER;
+
+    openlog(ident, logopt, facility);
+}
+
+
+
 int main (int argc, char *argv[])
 {
     int32_t status;
-    printf ("Hello world! This is MindBricks ICE server reporting for duty\n");
+    printf ("MindBricks ICE server booting up...\n");
+
+    /** set up logging */
+    iceserver_init_log();
 
     iceserver_init();
 
@@ -493,8 +520,8 @@ int main (int argc, char *argv[])
     status = iceserver_init_turns();
     if (status != STUN_OK)
     {
-        printf("ICE server initialization failed\n");
-        printf("Bailing out!!!\n");
+        ICE_LOG(LOG_SEV_ERROR, "ICE server initialization failed");
+        ICE_LOG(LOG_SEV_ERROR, "Bailing out!!!");
         exit(1);
     }
 
@@ -504,7 +531,7 @@ int main (int argc, char *argv[])
     /** initialize the transport module */
     if (iceserver_init_transport() != STUN_OK)
     {
-        printf("Initialization of transport failed\n");
+        ICE_LOG(LOG_SEV_ERROR, "Initialization of transport failed");
         return -1;
     }
 
@@ -519,6 +546,7 @@ int main (int argc, char *argv[])
         ice_server_run();
     }
 
+    closelog();
 
     return 0;
 }

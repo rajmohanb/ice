@@ -117,9 +117,12 @@ typedef     void*           handle;
 
 typedef enum
 {
+    LOG_SEV_EMERG = 0,
+    LOG_SEV_ALERT,
     LOG_SEV_CRITICAL,
     LOG_SEV_ERROR,
     LOG_SEV_WARNING,
+    LOG_SEV_NOTICE,
     LOG_SEV_INFO,
     LOG_SEV_DEBUG,
     LOG_SEV_MAX,

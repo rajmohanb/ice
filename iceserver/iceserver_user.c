@@ -93,12 +93,12 @@ PGconn *iceserver_db_connect(void)
     /** check to see that the backend connection was successfully made */
     if (PQstatus(conn) != CONNECTION_OK)
     {
-        printf("Connection to database failed");
+        ICE_LOG(LOG_SEV_ERROR, "Connection to database failed");
         iceserver_db_closeconn(conn);
         return NULL;
     }
 
-    printf("Connection to database - OK\n");
+    ICE_LOG(LOG_SEV_INFO, "Connection to database - OK");
 
     /** 
      * prepare the postgres command, to be 
@@ -110,15 +110,15 @@ PGconn *iceserver_db_connect(void)
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        printf("PostGres user plan prepare failed\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "PostGres user plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
         iceserver_db_closeconn(conn);
         return NULL;
     }
  
-    printf("User PLAN prepared\n");
+    ICE_LOG(LOG_SEV_DEBUG, "User PLAN prepared");
     PQclear( result );
 
     /** 
@@ -134,15 +134,16 @@ PGconn *iceserver_db_connect(void)
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        printf("PostGres allocation insert plan prepare failed\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, 
+                "PostGres allocation insert plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
         iceserver_db_closeconn(conn);
         return NULL;
     }
  
-    printf("Allocation insert PLAN prepared\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Allocation insert PLAN prepared");
     PQclear( result );
 
     /** 
@@ -155,15 +156,15 @@ PGconn *iceserver_db_connect(void)
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        printf("PostGres alloc plan prepare failed\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "PostGres alloc plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
         iceserver_db_closeconn(conn);
         return NULL;
     }
  
-    printf("Alloc PLAN prepared\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Alloc PLAN prepared");
     PQclear( result );
 
     /** 
@@ -176,15 +177,15 @@ PGconn *iceserver_db_connect(void)
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        printf("PostGres alloc plan prepare failed\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "PostGres alloc plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
         iceserver_db_closeconn(conn);
         return NULL;
     }
  
-    printf("Allocation dealloc update PLAN prepared\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Allocation dealloc update PLAN prepared");
     PQclear( result );
 
     return conn;
@@ -205,9 +206,9 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
     {
-        printf("Database query failed!\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "Database query failed!");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         return STUN_INT_ERROR;
     }
 
@@ -219,7 +220,8 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
     rows = PQntuples(result);
     if (rows == 0)
     {
-        printf("Database query returned: no matching account found\n");
+        ICE_LOG(LOG_SEV_NOTICE, 
+                "Database query returned: no matching account found");
         return STUN_NOT_FOUND;
     }
 
@@ -232,9 +234,10 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
      */
     if (rows > 1)
     {
-        printf("Application logic error. Found more than one account for "\
-               "the provided username value. As per our app requirements, no "\
-               "two accounts need to share the same username. BUG???\n");
+        ICE_LOG(LOG_SEV_WARNING, "Application logic error. Found more than "\
+                "one account for the provided username value. As per our app "\
+                "requirements, no two accounts need to share the same "\
+                "username. BUG???");
     }
 
     /** 
@@ -245,36 +248,36 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
 
     /** max_allocs */
     user->max_allocs = atoi(PQgetvalue(result, 0, 13));
-    printf("MAX ALLOCS => %d\n", user->max_allocs);
+    ICE_LOG(LOG_SEV_DEBUG, "MAX ALLOCS => %d", user->max_allocs);
 
     /** max_concur_allocs */
     user->max_concur_allocs = atoi(PQgetvalue(result, 0, 14));
-    printf("MAX CONCURRENT ALLOCS => %d\n", user->max_concur_allocs);
+    ICE_LOG(LOG_SEV_DEBUG, "MAX CONCURRENT ALLOCS => %d", user->max_concur_allocs);
 
     /** realm */
     user->realm = strdup(PQgetvalue(result, 0, 15));
-    printf("REALM => %s\n", user->realm);
+    ICE_LOG(LOG_SEV_DEBUG, "REALM => %s", user->realm);
 
     /** username */
     user->username = strdup(PQgetvalue(result, 0, 16));
-    printf("USERNAME => %s\n", user->username);
+    ICE_LOG(LOG_SEV_DEBUG, "USERNAME => %s", user->username);
 
     /** password */
     user->password = strdup(PQgetvalue(result, 0, 17));
-    printf("PASSWORD => %s\n", user->password);
+    ICE_LOG(LOG_SEV_DEBUG, "PASSWORD => %s", user->password);
 
     /** default lifetime */
     user->def_lifetime = atoi(PQgetvalue(result, 0, 18));
-    printf("DEFAULT LIFETIME => %d\n", user->def_lifetime);
+    ICE_LOG(LOG_SEV_DEBUG, "DEFAULT LIFETIME => %d", user->def_lifetime);
 
     /** max_bandwidth */
     user->max_bandwidth = atoi(PQgetvalue(result, 0, 19));
-    printf("MAXIMUM BANDWIDTH ALLOWED => %d\n", user->max_bandwidth);
+    ICE_LOG(LOG_SEV_DEBUG, "MAXIMUM BANDWIDTH ALLOWED => %d", user->max_bandwidth);
 
     /** store the user id */
     user->user_id_str = strdup(PQgetvalue(result, 0, 0));
     user->user_id = atoi(user->user_id_str);
-    printf("USER ID => %d\n", user->user_id);
+    ICE_LOG(LOG_SEV_DEBUG, "USER ID => %d", user->user_id);
 
     /** clear result */
     PQclear( result );
@@ -298,9 +301,9 @@ int32_t iceserver_db_fetch_allocation_record(PGconn *conn,
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
     {
-        printf("Allocation database query failed!\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "Allocation database query failed!");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         return STUN_INT_ERROR;
     }
 
@@ -312,16 +315,18 @@ int32_t iceserver_db_fetch_allocation_record(PGconn *conn,
     rows = PQntuples(result);
     if (rows == 0)
     {
-        printf("Database query returned: no matching account found. BUG????\n");
+        ICE_LOG(LOG_SEV_WARNING, 
+                "Database query returned: no matching account found. BUG????");
         return STUN_NOT_FOUND;
     }
 
     if (rows > 1)
     {
-        printf("Application logic error. Found more than one allocation "\
-               "record for the provided allocation handle value. As per our "\
-               "app requirements, the allocation handle returned by the turns"\
-               " server is supposed to be unique. BUG???\n");
+        ICE_LOG(LOG_SEV_WARNING, "Application logic error. Found more than "\
+                "one allocation record for the provided allocation handle "\
+                "value. As per our app requirements, the allocation handle "\
+                "returned by the turns server is supposed to be unique. "\
+                "BUG???");
     }
 
     /** 
@@ -332,15 +337,15 @@ int32_t iceserver_db_fetch_allocation_record(PGconn *conn,
 
     /** bandwidth used so far */
     alloc_record->bandwidth_used = atoi(PQgetvalue(result, 0, 5));
-    printf("BANDWIDTH USED => %d\n", alloc_record->bandwidth_used);
+    ICE_LOG(LOG_SEV_DEBUG, "BANDWIDTH USED => %d", alloc_record->bandwidth_used);
 
     /** store the user id */
     alloc_record->user_id = atoi(PQgetvalue(result, 0, 10));
-    printf("USER ID => %d\n", alloc_record->user_id);
+    ICE_LOG(LOG_SEV_DEBUG, "USER ID => %d", alloc_record->user_id);
 
     /** store the allocation id */
     alloc_record->allocation_id = atoi(PQgetvalue(result, 0, 0));
-    printf("ALLOCATION ID => %d\n", alloc_record->allocation_id);
+    ICE_LOG(LOG_SEV_DEBUG, "ALLOCATION ID => %d", alloc_record->allocation_id);
 
     /** clear result */
     PQclear( result );
@@ -392,7 +397,7 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
     values[4] = tmp_value3;
 
     iceserver_get_current_time(tmp_value4);
-    printf("CURRENT TIME : %s\n", tmp_value4);
+    ICE_LOG(LOG_SEV_DEBUG, "CURRENT TIME : %s", tmp_value4);
 
     values[5] = tmp_value4;
     values[6] = tmp_value4;
@@ -401,20 +406,20 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 
     sprintf(tmp_value5, "%u", (unsigned int)event->h_alloc);
     values[9] = tmp_value5;
-    printf("Allocation handle to DB: %s\n", tmp_value5);
+    ICE_LOG(LOG_SEV_DEBUG, "Allocation handle to DB: %s", tmp_value5);
 
     result = PQexecPrepared(conn, alloc_insert_plan, 10, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        printf("PostGres new record insertion  failed\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "PostGres new record insertion  failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
         return STUN_INT_ERROR;
     }
  
-    printf("New allocation RECORD inserted\n");
+    ICE_LOG(LOG_SEV_DEBUG, "New allocation RECORD inserted");
 
     PQclear( result );
 
@@ -432,7 +437,7 @@ int32_t iceserver_db_update_dealloc_column(
     char tmp_value2[30] = {0};
 
     iceserver_get_current_time(tmp_value1);
-    printf("CURRENT TIME : %s\n", tmp_value1);
+    ICE_LOG(LOG_SEV_DEBUG, "CURRENT TIME : %s", tmp_value1);
 
     values[0] = tmp_value1;
     values[1] = tmp_value1;
@@ -446,15 +451,15 @@ int32_t iceserver_db_update_dealloc_column(
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        printf("PostGres updation of dealloc column in "\
-                "allocation table failed\n");
-        printf( "%s\n", PQresStatus(db_status));
-        printf( "%s\n", PQresultErrorMessage( result ));
+        ICE_LOG(LOG_SEV_ERROR, "PostGres updation of dealloc column in "\
+                "allocation table failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
         return STUN_INT_ERROR;
     }
  
-    printf("Deallocation column in allocation table updated\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Deallocation column in allocation table updated");
 
     PQclear( result );
 
@@ -472,12 +477,12 @@ int32_t mb_iceserver_handle_new_allocation(
 
     memset(&decision, 0, sizeof(decision));
 
-    printf ("Got an allocation request to approve\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Got an allocation request to approve");
 
-    printf ("USERNAME: %s\n", event->username);
-    printf ("   REALM: %s\n", event->realm);
-    printf ("LIFETIME: %d\n", event->lifetime);
-    printf ("PROTOCOL: %s\n", mb_transports[event->protocol]);
+    ICE_LOG(LOG_SEV_DEBUG, "USERNAME: %s", event->username);
+    ICE_LOG(LOG_SEV_DEBUG, "   REALM: %s", event->realm);
+    ICE_LOG(LOG_SEV_DEBUG, "LIFETIME: %d", event->lifetime);
+    ICE_LOG(LOG_SEV_DEBUG, "PROTOCOL: %s", mb_transports[event->protocol]);
 
     status = iceserver_db_fetch_user_record(conn, event, &user_record);
     if (status == STUN_NOT_FOUND)
@@ -535,18 +540,20 @@ int32_t mb_iceserver_handle_new_allocation(
                         event, decision.lifetime, &user_record);
     if (status != STUN_OK)
     {
-        printf("Insertion of the allocation row into database failed\n");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Insertion of the allocation row into database failed");
         return STUN_INT_ERROR;
     }
 
     /** post */
     bytes = send(g_mb_server.thread_sockpair[1], 
                         &decision, sizeof(decision), 0);
-    printf ("Sent [%d] bytes to signaling process\n", bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "Sent [%d] bytes to signaling process", bytes);
 
     if (bytes == -1)
     {
-        printf("Sending of allocation decision response failed\n");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Sending of allocation decision response failed");
         status = STUN_INT_ERROR;
     }
 
@@ -565,20 +572,21 @@ int32_t mb_iceserver_handle_deallocation(
 {
     int32_t status;
     mb_iceserver_alloc_record_t alloc_record;
-    printf ("Got an deallocation notification\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Got an deallocation notification");
 
     /** find the allocation record */
     status = iceserver_db_fetch_allocation_record(conn, event, &alloc_record);
     if (status == STUN_NOT_FOUND)
     {
-        printf("BUG!!!\n");
+        ICE_LOG(LOG_SEV_ERROR, "BUG!!!");
         return status;
     }
 
     status = iceserver_db_update_dealloc_column(conn, &alloc_record);
     if (status != STUN_OK)
     {
-        printf("Updating of the dealloc column in allocation record failed\n");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Updating of the dealloc column in allocation record failed");
         return status;
     }
 
@@ -594,8 +602,9 @@ void *mb_iceserver_decision_thread(void)
     mb_ice_server_event_t event;
     PGconn *conn;
 
-    printf("In am in the decision process now\n");
-    printf("Unix domain socket is : %d\n", g_mb_server.thread_sockpair[1]);
+    ICE_LOG(LOG_SEV_DEBUG, "In am in the decision process now");
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Unix domain socket is : %d", g_mb_server.thread_sockpair[1]);
 
     /** first off connect to the postgres server */
     conn = iceserver_db_connect();

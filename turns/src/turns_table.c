@@ -89,8 +89,10 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
         return STUN_MEM_ERROR;
     }
 
-    printf("Size of each allocation: [%d] bytes\n", sizeof(turns_allocation_t));
-    printf("Allocated shared memory of size: [%d] bytes\n", size);
+    ICE_LOG(LOG_SEV_INFO, 
+            "Size of each allocation: [%d] bytes", sizeof(turns_allocation_t));
+    ICE_LOG(LOG_SEV_INFO, 
+            "Allocated shared memory of size: [%d] bytes", size);
 
     close(fd);
     table->alloc_list = (void *) (table + sizeof(turns_alloc_table_t));
@@ -98,8 +100,8 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     table->max_allocs = max_allocs;
     table->cur_allocs = 0;
 
-    printf("table = %p\n", table);
-    printf("table alloc list = %p\n", table->alloc_list);
+    ICE_LOG(LOG_SEV_DEBUG, "table = %p", table);
+    ICE_LOG(LOG_SEV_DEBUG, "table alloc list = %p", table->alloc_list);
 
     *h_table = table;
 
