@@ -69,6 +69,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     fd = open(TURNS_MMAP_FILE_PATH, O_RDWR | O_CREAT);
     if (fd == -1)
     {
+        perror("open");
         printf("TURNS: opening the shared memory file failed\n");
         return STUN_INT_ERROR;
     }

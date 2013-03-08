@@ -55,6 +55,7 @@ typedef struct
 
 
 extern mb_ice_server_t g_mb_server;
+extern int iceserver_quit;
 
 static char *mb_transports[] = 
 {
@@ -610,7 +611,7 @@ void *mb_iceserver_decision_thread(void)
     conn = iceserver_db_connect();
 
     /** get into loop */
-    while(1)
+    while(!iceserver_quit)
     {
         memset(&event, 0, sizeof(event));
         bytes = recv(g_mb_server.thread_sockpair[1], &event, sizeof(event), 0);

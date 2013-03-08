@@ -25,6 +25,8 @@ extern "C" {
 #include <sys/time.h>
 #include <sys/un.h>
 #include <pthread.h>
+#include <signal.h>
+#include <unistd.h>
 
 #include <syslog.h> /** logging */
 
@@ -38,6 +40,7 @@ extern "C" {
 /** need to move the realm into configuration */
 #define ICE_SERVER_REALM    "mindbricks.com"
 
+#if 0
 char *log_levels[] =
 {    
     "LOG_SEV_EMERG",
@@ -49,13 +52,43 @@ char *log_levels[] =
     "LOG_SEV_INFO",
     "LOG_SEV_DEBUG",
 };
+#endif
+
+static void iceserver_sig_handler(int signum);
+
+typedef struct 
+{
+    int signum;
+    void (*handler)(int signum);
+} iceserver_signal_t;
+
+static iceserver_signal_t signals_list[] =
+{
+    { SIGHUP, iceserver_sig_handler },
+    { SIGINT, iceserver_sig_handler },
+    { SIGQUIT, iceserver_sig_handler },
+    { SIGILL, iceserver_sig_handler },
+    { SIGABRT, iceserver_sig_handler },
+    { SIGBUS, iceserver_sig_handler },
+    { SIGSEGV, iceserver_sig_handler },
+}; 
 
 
 /** the global instance of server */ 
 mb_ice_server_t g_mb_server = {0};
 stun_log_level_t g_loglevel = LOG_SEV_WARNING;
+int iceserver_quit = 0;
 
 void *mb_iceserver_decision_thread(void);
+
+
+static void iceserver_sig_handler(int signum)
+{
+    iceserver_quit = 1;
+    printf("Quiting\n");
+    return;
+}
+
 
 
 void app_log(stun_log_level_t level,
@@ -429,7 +462,7 @@ void ice_server_run(void)
 {
     ICE_LOG(LOG_SEV_DEBUG, "Run Lola run");
 
-    while (true)
+    while (!iceserver_quit)
     {
         iceserver_process_messages();
     }
@@ -506,13 +539,49 @@ void iceserver_init_log(void)
 
 
 
+void iceserver_init_sig_handlers(void)
+{
+    int i;
+    struct sigaction sa;
+    iceserver_signal_t *handler;
+    int num_signals = sizeof(signals_list)/sizeof(iceserver_signal_t);
+
+
+    for (i = 0; i < num_signals; i++)
+    {
+        handler = &signals_list[i];
+        memset(&sa, 0, sizeof(sa));
+        sa.sa_handler = handler->handler;
+        if (sigaction(handler->signum, &sa, 0) == -1)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Registering signal handler failed for "\
+                    "signal: %d", handler->signum);
+        }
+    }
+
+    return;
+}
+
+
+
 int main (int argc, char *argv[])
 {
     int32_t status;
     printf ("MindBricks ICE server booting up...\n");
 
+    /** daemonize */
+    /** iceserver_daemonize(); */
+    if (daemon(0, 0) == -1)
+    {
+        printf("Could not be daemonized\n");
+        exit(-1);
+    }
+
     /** set up logging */
     iceserver_init_log();
+
+    /** init the signal handlers */
+    iceserver_init_sig_handlers();
 
     iceserver_init();
 
