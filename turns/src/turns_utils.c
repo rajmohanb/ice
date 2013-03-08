@@ -101,8 +101,7 @@ bool_t turns_utils_host_compare (u_char *host1,
     if (retval != 1)
     {
         ICE_LOG(LOG_SEV_INFO, 
-            "[ICE UTILS] inet_pton failed, probably invalid address [%s]", 
-            host1);
+                "inet_pton failed, probably invalid address [%s]", host1);
         return false;
     }
 
@@ -110,21 +109,18 @@ bool_t turns_utils_host_compare (u_char *host1,
     if (retval != 1)
     {
         ICE_LOG(LOG_SEV_INFO, 
-            "[ICE UTILS] inet_pton failed, probably invalid address [%s]",
-            host2);
+                "inet_pton failed, probably invalid address [%s]", host2);
         return false;
     }
     
     retval = stun_memcmp(addr1, addr2, size);
     if (retval == 0)
     {
-        ICE_LOG(LOG_SEV_DEBUG, 
-            "[ICE UTILS] Given IP addresses matched");
+        ICE_LOG(LOG_SEV_DEBUG, "Given IP addresses matched");
         return true;
     }
 
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "[ICE UTILS] Given IP addresses differ");
+    ICE_LOG(LOG_SEV_DEBUG, "Given IP addresses differ");
 
     return false;
 }
@@ -147,7 +143,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
                                 STUN_ATTR_USERNAME, &h_attr, &num);
     if (status == STUN_NOT_FOUND)
     {
-        printf("USERNAME attribute not found, sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, "USERNAME attribute not found, sending 401");
         *error_code = 401;
         return status;
     }
@@ -156,7 +152,8 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     status = stun_attr_username_get_username_length(h_attr, &len);
     if (status != STUN_OK)
     {
-        printf("USERNAME attribute: Error retrieving length, sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USERNAME attribute: Error retrieving length, sending 401");
         *error_code = 400;
         return status;
     }
@@ -167,7 +164,8 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     status = stun_attr_username_get_username(h_attr, username, &len);
     if (status != STUN_OK)
     {
-        printf("USERNAME attribute: Error retrieving username, sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USERNAME attribute: Error retrieving username, sending 401");
         resp_code = 400;
         goto MB_ERROR_EXIT1;
     }
@@ -179,7 +177,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     alloc->username = username;
     alloc->username_len = len;
     username = NULL;
-    printf("OK: So Username is %s\n", alloc->username);
+    ICE_LOG(LOG_SEV_DEBUG, "OK: So Username is %s", alloc->username);
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
@@ -300,7 +298,8 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     status = stun_attr_nonce_get_nonce(h_attr, nonce, &len);
     if (status != STUN_OK)
     {
-        printf("NONCE attribute: Error retrieving nonce, sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "NONCE attribute: Error retrieving nonce, sending 401");
         resp_code = 400;
         goto MB_ERROR_EXIT3;
     }
@@ -308,7 +307,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     if ((len != TURNS_SERVER_NONCE_LEN) || 
             (memcmp(alloc->nonce, nonce, TURNS_SERVER_NONCE_LEN) != 0))
     {
-        printf("Nonce do not match. Send 438 response\n");
+        ICE_LOG(LOG_SEV_DEBUG, "Nonce do not match. Send 438 response");
         status = STUN_VALIDATON_FAIL;
         resp_code = 438;
         goto MB_ERROR_EXIT3;
@@ -319,11 +318,11 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     status = stun_msg_validate_fingerprint(h_msg);
     if (status == STUN_NOT_FOUND)
     {
-        printf("FingerPrint not present in request. Its OK?\n");
+        ICE_LOG(LOG_SEV_INFO, "FingerPrint not present in request. Its OK?");
     }
     else if (status != STUN_OK)
     {
-        printf("FingerPrint did not match! sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, "FingerPrint did not match! sending 401");
         resp_code = 401;
         goto MB_ERROR_EXIT3;
     }
@@ -475,7 +474,7 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
         if (status != STUN_OK)
         {
             /** but we continue!!! */
-            printf("Adding unknown attributes failed\n");
+            ICE_LOG(LOG_SEV_INFO, "Adding unknown attributes failed");
         }
     }
     else if ((error_code == 401) || (error_code == 438))
@@ -483,7 +482,7 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
         status = stun_attr_create(STUN_ATTR_REALM, &h_attrs[count]);
         if (status != STUN_OK)
         {
-            printf("Creating of realm attribute failed\n");
+            ICE_LOG(LOG_SEV_INFO, "Creating of realm attribute failed");
             goto MB_ERROR_EXIT2;
         }
         count++;
@@ -492,14 +491,14 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
                 (uint8_t *)ctxt->instance->realm, ctxt->instance->realm_len);
         if (status != STUN_OK)
         {
-            printf("Setting of realm attribute value failed\n");
+            ICE_LOG(LOG_SEV_INFO, "Setting of realm attribute value failed");
             goto MB_ERROR_EXIT2;
         }
 
         status = stun_attr_create(STUN_ATTR_NONCE, &h_attrs[count]);
         if (status != STUN_OK)
         {
-            printf("Creating of nonce attribute failed\n");
+            ICE_LOG(LOG_SEV_INFO, "Creating of nonce attribute failed");
             goto MB_ERROR_EXIT2;
         }
         count++;
@@ -508,7 +507,7 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
                             ctxt->nonce, TURNS_SERVER_NONCE_LEN);
         if (status != STUN_OK)
         {
-            printf("Setting of nonce attribute value failed\n");
+            ICE_LOG(LOG_SEV_INFO, "Setting of nonce attribute value failed");
             goto MB_ERROR_EXIT2;
         }
     }
@@ -592,13 +591,14 @@ int32_t turns_utils_create_success_response(
             family = STUN_ADDR_FAMLY_INVALID;
 
         status = stun_attr_xor_relayed_addr_set_address(h_attrs[count-1], 
-                                    ctxt->relay_addr.ip_addr, 
-                                    stun_strlen((char *)ctxt->relay_addr.ip_addr), 
-                                    family);
+                                ctxt->relay_addr.ip_addr, 
+                                stun_strlen((char *)ctxt->relay_addr.ip_addr), 
+                                family);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "setting xor relayed address attribute address value failed");
+                    "setting xor relayed address attribute "\
+                    "address value failed");
             goto ERROR_EXIT_PT2;
         }
 
@@ -629,13 +629,13 @@ int32_t turns_utils_create_success_response(
             family = STUN_ADDR_FAMLY_INVALID;
 
         status = stun_attr_xor_mapped_addr_set_address(h_attrs[count-1], 
-                                    ctxt->client_addr.ip_addr, 
-                                    stun_strlen((char *)ctxt->client_addr.ip_addr),
-                                    family);
+                                ctxt->client_addr.ip_addr, 
+                                stun_strlen((char *)ctxt->client_addr.ip_addr),
+                                family);
         if (status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, 
-                    "setting xor mapped address attribute address value failed");
+            ICE_LOG(LOG_SEV_ERROR,
+                   "setting xor mapped address attribute address value failed");
             goto ERROR_EXIT_PT2;
         }
 
@@ -660,7 +660,8 @@ int32_t turns_utils_create_success_response(
         }
         count++;
 
-        status = stun_attr_lifetime_set_duration(h_attrs[count-1], ctxt->lifetime);
+        status = stun_attr_lifetime_set_duration(
+                                h_attrs[count-1], ctxt->lifetime);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, "setting lifetime attribute value failed");
@@ -693,7 +694,8 @@ int32_t turns_utils_create_success_response(
     status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &h_attrs[count]);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "creating the message integrity attribute failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "creating the message integrity attribute failed");
         goto ERROR_EXIT_PT2;
     }
     count++;
@@ -841,7 +843,7 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
         status = bind(sock, (struct sockaddr *) &addr, sizeof(addr));
         if (status == -1)
         {
-            printf("binding to port [%d] failed... "\
+            ICE_LOG(LOG_SEV_DEBUG, "binding to port [%d] failed... "\
                    "perhaps port already being used? continuing the search", i);
             continue;
         }
@@ -871,7 +873,8 @@ int32_t turns_utils_setup_allocation(turns_allocation_t *context)
     status = turns_utils_get_relayed_transport_address(context);
     if (status != STUN_OK)
     {
-        printf("Unable to allocate TURN relayed address %d\n", status);
+        ICE_LOG(LOG_SEV_ALERT, 
+                "Unable to allocate TURN relayed address %d", status);
         return status;
     }
 
@@ -949,7 +952,7 @@ int32_t turns_utils_start_permission_timer(
         return STUN_NO_RESOURCE;
     }
 
-    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation context %p "\
+    ICE_LOG(LOG_SEV_DEBUG, "Started TURNS allocation context %p "\
             "channel bind timer for duration %d seconds timer id %p ", 
             alloc, TURNS_PERM_REFRESH_DURATION, timer->timer_id);
 
@@ -1050,7 +1053,7 @@ int32_t turns_utils_verify_request(
                                 STUN_ATTR_USERNAME, &h_attr, &num);
     if (status == STUN_NOT_FOUND)
     {
-        printf("USERNAME attribute not found, sending 401\n");
+        ICE_LOG(LOG_SEV_INFO, "USERNAME attribute not found, sending 401");
         *error_code = 401;
         return status;
     }
@@ -1059,7 +1062,8 @@ int32_t turns_utils_verify_request(
     status = stun_attr_username_get_username_length(h_attr, &len);
     if (status != STUN_OK)
     {
-        printf("USERNAME attribute: Error retrieving length, sending 401\n");
+        ICE_LOG(LOG_SEV_INFO, 
+                "USERNAME attribute: Error retrieving length, sending 401");
         *error_code = 400;
         return status;
     }
@@ -1070,7 +1074,8 @@ int32_t turns_utils_verify_request(
     status = stun_attr_username_get_username(h_attr, username, &len);
     if (status != STUN_OK)
     {
-        printf("USERNAME attribute: Error retrieving username, sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USERNAME attribute: Error retrieving username, sending 401");
         resp_code = 400;
         goto MB_ERROR_EXIT1;
     }
@@ -1079,7 +1084,8 @@ int32_t turns_utils_verify_request(
     if ((len != alloc->username_len) || 
             (memcmp(alloc->username, username, len) != 0))
     {
-        printf("USERNAME mismatch. Rejecting the request message\n");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USERNAME mismatch. Rejecting the request message");
         status = STUN_VALIDATON_FAIL;
         resp_code = 401;
         goto MB_ERROR_EXIT1;
@@ -1153,7 +1159,8 @@ int32_t turns_utils_verify_request(
     status = stun_attr_nonce_get_nonce(h_attr, nonce, &len);
     if (status != STUN_OK)
     {
-        printf("NONCE attribute: Error retrieving nonce, sending 401\n");
+        ICE_LOG(LOG_SEV_INFO, 
+                "NONCE attribute: Error retrieving nonce, sending 401");
         resp_code = 400;
         goto MB_ERROR_EXIT3;
     }
@@ -1161,7 +1168,7 @@ int32_t turns_utils_verify_request(
     if ((len != TURNS_SERVER_NONCE_LEN) || 
             (memcmp(alloc->nonce, nonce, TURNS_SERVER_NONCE_LEN) != 0))
     {
-        printf("Nonce do not match. Send 438 response\n");
+        ICE_LOG(LOG_SEV_INFO, "Nonce do not match. Send 438 response");
         status = STUN_VALIDATON_FAIL;
         resp_code = 438;
         goto MB_ERROR_EXIT3;
@@ -1173,7 +1180,7 @@ int32_t turns_utils_verify_request(
                     h_msg, alloc->hmac_key, TURNS_HMAC_KEY_LEN);
     if (status != STUN_OK)
     {
-        printf("Message integrity did not match! sending 401\n");
+        ICE_LOG(LOG_SEV_INFO, "Message integrity did not match! sending 401");
         resp_code = 401;
         goto MB_ERROR_EXIT3;
     }
@@ -1202,8 +1209,9 @@ int32_t turns_utils_verify_request(
 
             if (type != alloc->req_tport)
             {
-                printf("The request transport type in the request does "\
-                        "not match the one in the initial alloc request\n");
+                ICE_LOG(LOG_SEV_INFO, 
+                        "The request transport type in the request does "\
+                        "not match the one in the initial alloc request");
                 resp_code = 401;
                 goto MB_ERROR_EXIT3;
             }
@@ -1224,11 +1232,11 @@ int32_t turns_utils_verify_request(
     status = stun_msg_validate_fingerprint(h_msg);
     if (status == STUN_NOT_FOUND)
     {
-        printf("FingerPrint not present in request. Its OK?\n");
+        ICE_LOG(LOG_SEV_DEBUG, "FingerPrint not present in request. Its OK?");
     }
     else if (status != STUN_OK)
     {
-        printf("FingerPrint did not match! sending 401\n");
+        ICE_LOG(LOG_SEV_DEBUG, "FingerPrint did not match! sending 401");
         resp_code = 401;
         goto MB_ERROR_EXIT3;
     }
@@ -1326,8 +1334,8 @@ int32_t turns_utils_search_permissions_for_channel_no(
         if (perm->channel_num == channel_no) return STUN_OK;
     }
 
-    printf("Did not find any existing permission "\
-            "with given channel number: %d\n", channel_no);
+    ICE_LOG(LOG_SEV_DEBUG, "Did not find any existing permission "\
+            "with given channel number: %d", channel_no);
 
     return STUN_NOT_FOUND;
 }
@@ -1378,8 +1386,8 @@ int32_t turns_utils_install_permission(turns_allocation_t *alloc,
     }
 
     /** reached the permission limit! */
-    printf("Reached the limit of the number "\
-            "of permissions list for this allocation\n");
+    ICE_LOG(LOG_SEV_ALERT, "Reached the limit of the number "\
+            "of permissions list for this allocation");
 
     return STUN_NO_RESOURCE;
 }
@@ -1435,7 +1443,7 @@ int32_t turns_utils_refresh_permission(
     if (status != STUN_OK)
     {
         /** should we raise an alarm and get out? */
-        printf("Unable to stop the permission timer\n");
+        ICE_LOG(LOG_SEV_ALERT, "Unable to stop the permission timer");
     }
 
     status = turns_utils_start_permission_timer(alloc, perm);
@@ -1446,7 +1454,7 @@ int32_t turns_utils_refresh_permission(
         return STUN_NO_RESOURCE;
     }
 
-    ICE_LOG(LOG_SEV_INFO, "Started TURNS allocation "\
+    ICE_LOG(LOG_SEV_DEBUG, "Started TURNS allocation "\
             "context %p channel binding timer", alloc);
 
     return status;
@@ -1524,7 +1532,7 @@ int32_t turns_utils_handle_create_permission_request(
             status = turns_utils_install_permission(alloc, 0, &addr);
             if (status != STUN_OK)
             {
-                printf("Error while installing the permission\n");
+                ICE_LOG(LOG_SEV_ERROR, "Error while installing the permission");
                 error_code = STUN_ERROR_INSUF_CAPACITY;
                 goto MB_ERROR_EXIT1;
             }
@@ -1535,7 +1543,7 @@ int32_t turns_utils_handle_create_permission_request(
             status = turns_utils_refresh_permission(alloc, perm);
             if (status != STUN_OK)
             {
-                printf("Error! Refreshing the channel binding failed\n");
+                ICE_LOG(LOG_SEV_ERROR, "Refreshing the channel binding failed");
                 error_code = STUN_ERROR_SERVER_ERROR;
                 goto MB_ERROR_EXIT1;
             }
@@ -1556,13 +1564,14 @@ int32_t turns_utils_handle_create_permission_request(
 
             /** TODO: check if send succeeded */
 
-            printf("Sent the create permission success response\n");
+            ICE_LOG(LOG_SEV_DEBUG, 
+                    "Sent the create permission success response");
 
-            printf("Installed/refreshed the permission\n");
+            ICE_LOG(LOG_SEV_DEBUG, "Installed/refreshed the permission");
         }
         else
         {
-            printf("Error! Unable to create success response\n");
+            ICE_LOG(LOG_SEV_ERROR, "Unable to create success response");
             error_code = STUN_ERROR_INSUF_CAPACITY;
             goto MB_ERROR_EXIT1;
         }
@@ -1582,7 +1591,8 @@ MB_ERROR_EXIT1:
                 alloc->hmac_key);
 
         /** TODO - check if sending succeeded */
-        printf("Sent the create permission error response: %d\n", error_code);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the create permission error response: %d", error_code);
     }
 
     return status;
@@ -1709,20 +1719,21 @@ int32_t turns_utils_handle_channel_bind_request(
 
                 /** TODO: check if send succeeded */
 
-                printf("Sent the channel bind success response\n");
+                ICE_LOG(LOG_SEV_DEBUG, "Sent the channel bind success response");
 
-                printf("Installed new permission and the channel binding\n");
+                ICE_LOG(LOG_SEV_DEBUG, 
+                        "Installed new permission and the channel binding");
             }
             else
             {
-                printf("Error! Unable to create success response\n");
+                ICE_LOG(LOG_SEV_ERROR, "Unable to create success response");
                 error_code = STUN_ERROR_INSUF_CAPACITY;
                 goto MB_ERROR_EXIT1;
             }
         }
         else
         {
-            printf("Error while installing the permission\n");
+            ICE_LOG(LOG_SEV_ERROR, "Error while installing the permission");
             error_code = STUN_ERROR_INSUF_CAPACITY;
             goto MB_ERROR_EXIT1;
         }
@@ -1740,9 +1751,9 @@ int32_t turns_utils_handle_channel_bind_request(
          */
         if ((perm->channel_num != 0) && (perm->channel_num != channel_no))
         {
-            printf("Error! Binding a new channel number [%d] to an already "\
-                    "existing permission with channel number [%d]\n", 
-                    channel_no, perm->channel_num);
+            ICE_LOG(LOG_SEV_ERROR, "Error! Binding a new channel number [%d] "\
+                    "to an already existing permission with channel "\
+                    "number [%d]", channel_no, perm->channel_num);
             error_code = STUN_ERROR_BAD_REQUEST;
             goto MB_ERROR_EXIT1;
         }
@@ -1754,7 +1765,8 @@ int32_t turns_utils_handle_channel_bind_request(
                 turns_utils_install_channel_binding(alloc, perm, channel_no);
             if (status != STUN_OK)
             {
-                printf("Error! Installing a new channel binding failed\n");
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "Error! Installing a new channel binding failed");
                 error_code = STUN_ERROR_SERVER_ERROR;
                 goto MB_ERROR_EXIT1;
             }
@@ -1765,7 +1777,7 @@ int32_t turns_utils_handle_channel_bind_request(
             status = turns_utils_refresh_channel_binding(alloc, perm);
             if (status != STUN_OK)
             {
-                printf("Error! Refreshing the channel binding failed\n");
+                ICE_LOG(LOG_SEV_ERROR, "Refreshing the channel binding failed");
                 error_code = STUN_ERROR_SERVER_ERROR;
                 goto MB_ERROR_EXIT1;
             }
@@ -1786,13 +1798,13 @@ int32_t turns_utils_handle_channel_bind_request(
 
             /** TODO: check if send succeeded */
 
-            printf("Sent the channel bind success response\n");
+            ICE_LOG(LOG_SEV_DEBUG, "Sent the channel bind success response");
 
-            printf("Installed/refreshed the channel binding\n");
+            ICE_LOG(LOG_SEV_DEBUG, "Installed/refreshed the channel binding");
         }
         else
         {
-            printf("Error! Unable to create success response\n");
+            ICE_LOG(LOG_SEV_ERROR, "Error! Unable to create success response");
             error_code = STUN_ERROR_INSUF_CAPACITY;
             goto MB_ERROR_EXIT1;
         }
@@ -1812,7 +1824,8 @@ MB_ERROR_EXIT1:
                 alloc->hmac_key);
 
         /** TODO - check if sending succeeded */
-        printf("Sent the channel bind error response: %d\n", error_code);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the channel bind error response: %d", error_code);
     }
 
     return status;
@@ -1907,8 +1920,8 @@ int32_t turns_utils_install_channel_binding(
     status = turns_utils_stop_permission_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! stopping the permission timer failed when "\
-                "installing a channel binding. status [%d]\n", status);
+        ICE_LOG(LOG_SEV_ERROR, "Error! stopping the permission timer failed "\
+                "when installing a channel binding. status [%d]", status);
 
         return status;
     }
@@ -1916,8 +1929,8 @@ int32_t turns_utils_install_channel_binding(
     status = turns_utils_start_permission_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! starting the permission timer when installing "\
-                "a channel binding. status [%d]\n", status);
+        ICE_LOG(LOG_SEV_ERROR, "Error! starting the permission timer when "\
+                "installing a channel binding. status [%d]", status);
 
         return status;
     }
@@ -1926,8 +1939,8 @@ int32_t turns_utils_install_channel_binding(
     status = turns_utils_start_channel_binding_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! starting the channel binding timer."\
-               " status [%d]\n", status);
+        ICE_LOG(LOG_SEV_ERROR, "Error! starting the channel binding timer."\
+               " status [%d]", status);
 
         return status;
     }
@@ -1948,17 +1961,17 @@ int32_t turns_utils_refresh_channel_binding(
     status = turns_utils_stop_channel_binding_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! stopping the channel binding timer. status [%d]. "\
-                "However, continuing with the channel refresh\n", status);
+        ICE_LOG(LOG_SEV_ERROR, "Error! stopping the channel binding timer. "\
+                "status [%d]. However, continuing with the channel refresh", 
+                status);
     }
 
     /** start the channel binding timer */
     status = turns_utils_start_channel_binding_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! starting the channel binding timer."\
-               " status [%d]\n", status);
-
+        ICE_LOG(LOG_SEV_ERROR, "Error! starting the channel binding timer."\
+               " status [%d]", status);
         return status;
     }
 
@@ -1966,16 +1979,17 @@ int32_t turns_utils_refresh_channel_binding(
     status = turns_utils_stop_permission_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! stopping the permission timer. status [%d]. "\
-                "However, continuing with the permission refresh\n", status);
+        ICE_LOG(LOG_SEV_ERROR, "Error! stopping the permission timer. "\
+                "status [%d]. However, continuing with the permission refresh",
+                status);
     }
 
     /** start the channel binding timer */
     status = turns_utils_start_permission_timer(alloc, perm);
     if (status != STUN_OK)
     {
-        printf("Error! starting the permission timer when "\
-                "refreshing channel binding. status [%d]\n", status);
+        ICE_LOG(LOG_SEV_ERROR, "Error! starting the permission timer when "\
+                "refreshing channel binding. status [%d]", status);
 
         return status;
     }
@@ -2031,9 +2045,9 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
     perm = turns_utils_search_for_permission(alloc, addr);
     if (!perm)
     {
-        printf("Permission has not been installed for the peer "\
-                "address present in the send indication message. "\
-                "Hence dropping the message\n");
+        ICE_LOG(LOG_SEV_NOTICE, "Permission has not been installed for the "\
+                "peer address present in the send indication message. "\
+                "Hence dropping the message");
         goto MB_ERROR_EXIT;
     }
 
@@ -2070,7 +2084,8 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
 
 MB_ERROR_EXIT:
 
-    printf("Error while processing SEND indication message, hence dropping\n");
+    ICE_LOG(LOG_SEV_ERROR, 
+            "Error while processing SEND indication message, hence dropping");
 
     return status;
 }
@@ -2097,9 +2112,9 @@ int32_t turns_utils_forward_channel_data(
 
     if (i == TURNS_MAX_PERMISSIONS)
     {
-        printf("Error! Could not find any permission/peer address "\
-                "associated with the channel number %d in the channel "\
-                "data message. Hence dropping the message\n", channel);
+        ICE_LOG(LOG_SEV_NOTICE, "Error! Could not find any permission/peer "\
+                "address associated with the channel number %d in the channel "\
+                "data message. Hence dropping the message", channel);
 
         return STUN_INVALID_PARAMS;
     }
@@ -2260,7 +2275,7 @@ int32_t turns_utils_post_verify_info_from_alloc_request(
                     alloc->h_req, alloc->hmac_key, TURNS_HMAC_KEY_LEN);
     if (status != STUN_OK)
     {
-        printf("Message integrity did not match! sending 401\n");
+        ICE_LOG(LOG_SEV_ERROR, "Message integrity did not match! sending 401");
         *error_code = 401;
     }
 

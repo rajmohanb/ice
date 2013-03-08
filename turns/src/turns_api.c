@@ -62,7 +62,8 @@ int32_t turns_create_instance(uint32_t max_allocs,
                 TURN_MAX_CONCURRENT_SESSIONS, &instance->h_txn_inst);
     if (status != STUN_OK)
     {
-        printf("TURNS: Failed to create transaction instance\n");
+        ICE_LOG(LOG_SEV_EMERG, 
+                "TURNS: Failed to create transaction instance");
         goto MB_ERROR_EXIT;
     }
 
@@ -88,7 +89,7 @@ MB_ERROR_EXIT:
 
 int32_t turns_nwk_cb_fxn (handle h_msg, handle h_param)
 {
-    printf("Please send me out\n");
+    ICE_LOG(LOG_SEV_CRITICAL, "Please send me out");
     //turn_session_t *session = (turn_session_t *) h_param;
 
     /** turn client always talks to the turn/stun server */
@@ -367,7 +368,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
         turns_alloc_event_t event;
 
         /** inject into the turns allocation fsm */
-        printf("TURNS allocation context found.\n");
+        ICE_LOG(LOG_SEV_DEBUG, "TURNS allocation context found.");
 
         stun_msg_get_method(stun_pkt->h_msg, &method);
         stun_msg_get_class(stun_pkt->h_msg, &msg_type);
@@ -376,7 +377,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
 
         if ((msg_type != STUN_REQUEST) && (msg_type != STUN_INDICATION))
         {
-            printf("Some stray response/indication. Ignoring\n");
+            ICE_LOG(LOG_SEV_DEBUG, "Some stray response/indication. Ignoring");
             /** TODO - destroy the received message? mem leak? */
             return STUN_OK;
         }
@@ -408,7 +409,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
      * Subsequently, if the server application approves the allocation, then
      * the new allocation context is created.
      */
-    printf("TURNS allocation context NOT found.\n");
+    ICE_LOG(LOG_SEV_DEBUG, "TURNS allocation context NOT found.");
     
     status = stun_msg_get_method(stun_pkt->h_msg, &method);
     status = stun_msg_get_class(stun_pkt->h_msg, &msg_type);
@@ -419,7 +420,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
         //uint32_t error_code = 0;
         //turns_new_allocation_params_t *params;
 
-        printf("This is a NEW allocate request.\n");
+        ICE_LOG(LOG_SEV_DEBUG, "This is a NEW allocate request.");
 
         /** Note/TODO later
          * Right now, the allocation context is being created when the initial
@@ -439,18 +440,20 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
         alloc_ctxt = turns_table_create_allocation(instance->h_table);
         if (alloc_ctxt == NULL)
         {
-            printf("Creation of new allocation context failed: [%d]\n", status);
+            ICE_LOG(LOG_SEV_CRITICAL, 
+                    "Creation of new allocation context failed: [%d]\n", status);
             return STUN_MEM_ERROR;
         }
 
-        printf("New allocation context created: [%p]\n", alloc_ctxt);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "New allocation context created: [%p]", alloc_ctxt);
 
         status = 
             turns_utils_init_allocation_context(instance, alloc_ctxt, stun_pkt);
         if (status != STUN_OK)
         {
-            printf("Initialization of the new allocation "\
-                    "context failed: [%d]\n", status);
+            ICE_LOG(LOG_SEV_ERROR, "Initialization of the "\
+                    "new allocation context failed: [%d]", status);
             return STUN_MEM_ERROR;
         }
 
@@ -514,7 +517,8 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
                         stun_pkt->src.host_type, stun_pkt->src.ip_addr, 
                         stun_pkt->src.port, stun_pkt->transport_param, NULL);
 
-                printf("turns: sent error response with error code: 401\n");
+                ICE_LOG(LOG_SEV_DEBUG, 
+                        "TURNS: sent error response with error code: 401");
                 
                 alloc_ctxt->state = TSALLOC_CHALLENGED;
 #if 0
@@ -542,7 +546,7 @@ int32_t turns_inject_received_msg(handle h_inst, turns_rx_stun_pkt_t *stun_pkt)
          * Mismatch error (if it is a request) or silently ignored (if it 
          * is an indication or a ChannelData message).
          */
-         printf("Ignoring a stray STUN/TURN message\n");
+         ICE_LOG(LOG_SEV_DEBUG, "Ignoring a stray STUN/TURN message");
     }
     
     return status;
@@ -570,8 +574,8 @@ int32_t turns_inject_received_channeldata_msg(
 
     if (status != STUN_OK)
     {
-        printf("Did not find any allocation for the received "\
-                "channeldata message. Hence dropping the message\n");
+        ICE_LOG(LOG_SEV_ERROR, "Did not find any allocation for the "\
+                "received channeldata message. Hence dropping the message");
         return status;
     }
 
@@ -643,8 +647,8 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
             }
             else
             {
-                printf("Some stray unknown allocation refresh "\
-                        "timer id fired. Filtering out...\n");
+                ICE_LOG(LOG_SEV_NOTICE, "Some stray unknown allocation "\
+                        "refresh timer id fired. Filtering out...");
             }
             break;
 
@@ -656,8 +660,8 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
             }
             else
             {
-                printf("Some stray unknown allocation nonce stale "\
-                        "timer id fired. Filtering out...\n");
+                ICE_LOG(LOG_SEV_NOTICE, "Some stray unknown allocation "\
+                        "nonce stale timer id fired. Filtering out...");
             }
             break;
 
@@ -666,8 +670,8 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
                             alloc, TURNS_PERM_TIMER_EXP, arg);
             if (status != STUN_OK)
             {
-                printf("Some stray unknown permission "\
-                        "timer id fired. Filtering out...\n");
+                ICE_LOG(LOG_SEV_NOTICE, "Some stray unknown permission "\
+                        "timer id fired. Filtering out...");
             }
             break;
 
@@ -676,8 +680,8 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
                             alloc, TURNS_CHNL_BIND_TIMER_EXP, arg);
             if (status != STUN_OK)
             {
-                printf("Some stray unknown channel bind "\
-                        "timer id fired. Filtering out...\n");
+                ICE_LOG(LOG_SEV_NOTICE, "Some stray unknown channel bind "\
+                        "timer id fired. Filtering out...");
             }
             break;
 
@@ -730,8 +734,8 @@ int32_t turns_inject_received_udp_msg(
 
     if (status != STUN_OK)
     {
-        printf("Did not find any allocation for the received "\
-                "channeldata message. Hence dropping the message\n");
+        ICE_LOG(LOG_SEV_NOTICE, "Did not find any allocation for the "\
+                "received channeldata message. Hence dropping the message");
         return status;
     }
 

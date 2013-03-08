@@ -70,7 +70,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     if (fd == -1)
     {
         perror("open");
-        printf("TURNS: opening the shared memory file failed\n");
+        ICE_LOG(LOG_SEV_ALERT, "TURNS: opening the shared memory file failed");
         return STUN_INT_ERROR;
     }
 
@@ -86,7 +86,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     if (table == (void *) -1)
     {
         perror("mmap:");
-        printf("TURNS: allocation of shared memory failed\n");
+        ICE_LOG(LOG_SEV_ALERT, "TURNS: allocation of shared memory failed");
         return STUN_MEM_ERROR;
     }
 
@@ -235,7 +235,8 @@ turns_allocation_t *turns_table_create_allocation(handle h_table)
     /** update the table parameters */
     table->cur_allocs += 1;
 
-    printf("Number of allocations now: %d\n", table->cur_allocs);
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Number of allocations now: %d\n", table->cur_allocs);
 
     return &node->context;
 }
@@ -266,14 +267,15 @@ int32_t turns_table_delete_allocation(
             
             node->used = false;
             table->cur_allocs -= 1;
-            printf("Number of allocations now: %d\n", table->cur_allocs);
+            ICE_LOG(LOG_SEV_NOTICE, 
+                    "Number of allocations now: %d", table->cur_allocs);
             return STUN_OK;
         }
 
         node++;
     }
 
-    ICE_LOG (LOG_SEV_ERROR, 
+    ICE_LOG (LOG_SEV_INFO, 
             "[STUN TXN] Stun txn handle NOT FOUND while searching");
     
     return STUN_NOT_FOUND;
@@ -312,7 +314,7 @@ int32_t turns_table_find_node_for_relayed_transport_address(
         node++;
     }
 
-    ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation context NOT "\
+    ICE_LOG (LOG_SEV_DEBUG, "[TURNS] Allocation context NOT "\
             "found for relayed transport address");
     
     return STUN_NOT_FOUND;

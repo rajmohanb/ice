@@ -153,11 +153,12 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
                     stun_pkt->src.host_type, stun_pkt->src.ip_addr, 
                     stun_pkt->src.port, stun_pkt->transport_param, NULL);
 
-            printf("turns: sent error response with error code: %d\n", error_code);
+            ICE_LOG(LOG_SEV_NOTICE, "TURNS: sent "\
+                    "error response with error code: %d", error_code);
         }
         else
         {
-            printf("TODO: Need to handle error in this case\n");
+            ICE_LOG(LOG_SEV_ALERT, "TODO: Need to handle error in this case");
         }
 
         return STUN_OK;
@@ -200,8 +201,8 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
         turns_utils_post_verify_info_from_alloc_request(alloc, &error_code);
     if (status != STUN_OK)
     {
-        printf("Post verification of message failed. "\
-                "Probably wrong message integrity?\n");
+        ICE_LOG(LOG_SEV_WARNING, "Post verification of message failed. "\
+                "Probably wrong message integrity?");
         goto MB_ERROR_EXIT;
     }
 
@@ -210,7 +211,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     if (status != STUN_OK)
     {
         /** TODO - shouldn't we send some error response? */
-        printf("Unable to allocate and allocation failed\n");
+        ICE_LOG(LOG_SEV_WARNING, "Unable to allocate and allocation failed");
         return status;
     }
 
@@ -225,7 +226,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
                 alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
                 alloc->client_addr.port, alloc->transport_param, alloc->hmac_key);
 
-        printf("Sent the allocation success response\n");
+        ICE_LOG(LOG_SEV_DEBUG, "Sent the allocation success response");
 
         alloc->state = TSALLOC_ALLOCATED;
 
@@ -273,12 +274,12 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
                 alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
                 alloc->client_addr.port, alloc->transport_param, alloc->hmac_key);
 
-        printf("Sent the allocation success response\n");
+        ICE_LOG(LOG_SEV_DEBUG, "Sent the allocation success response");
     }
     else
     {
-        printf("Error while creating the "\
-                "allocation error response: [%d]\n", status);
+        ICE_LOG(LOG_SEV_INFO, "Error while creating the "\
+                "allocation error response: [%d]", status);
     }
 
     /** we need to anyway tear down this allocation */
@@ -296,7 +297,7 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
     handle h_resp;
 
-    printf("Received Allocation REFRESH request\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Received Allocation REFRESH request");
 
     /** don't stop the alloc timer yet */
 
@@ -316,7 +317,8 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
 
         /** TODO - check if sending succeeded */
 
-        printf("Sent the allocation error response: %d\n", error_code);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the allocation error response: %d", error_code);
 
         return status;
     }
@@ -351,8 +353,8 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
     }
     else
     {
-        printf("Error while retrieving attribute values from "\
-                "refresh request. Hence sending error response 400\n");
+        ICE_LOG(LOG_SEV_INFO, "Error while retrieving attribute values from "\
+                "refresh request. Hence sending error response 400");
 
         status = turns_utils_create_error_response(
                             alloc, stun_pkt->h_msg, error_code, &h_resp);
@@ -364,7 +366,8 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
 
         /** TODO - check if sending succeeded */
 
-        printf("Sent the allocation error response: %d\n", error_code);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the allocation error response: %d", error_code);
 
         return status;
     }
@@ -382,7 +385,7 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
 
         /** TODO - check if sending succeeded */
 
-        printf("Sent the allocation success response\n");
+        ICE_LOG(LOG_SEV_DEBUG, "Sent the allocation success response");
 
         if (alloc->lifetime == 0)
         {
@@ -400,11 +403,12 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
             if (status != STUN_OK)
             {
                 /** TODO */
-                printf("Unable to stop the allocation timer! what's next? \n");
+                ICE_LOG(LOG_SEV_ALERT, 
+                        "Unable to stop the allocation timer! what's next?");
             }
             else
             {
-                printf("Stopped the current alloc timer:\n");
+                ICE_LOG(LOG_SEV_DEBUG, "Stopped the current alloc timer");
             }
 
             status = turns_utils_start_alloc_timer(alloc);
@@ -423,7 +427,7 @@ int32_t turns_send_ind (turns_allocation_t *alloc, handle h_msg)
     int32_t status;
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
 
-    printf("Received Send indication message\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Received Send indication message");
 
     status = turns_utils_forward_send_data(alloc, stun_pkt->h_msg);
 
@@ -434,7 +438,7 @@ int32_t turns_send_ind (turns_allocation_t *alloc, handle h_msg)
 
 int32_t turns_channel_data_ind (turns_allocation_t *alloc, handle h_msg)
 {
-    printf("Received Channel Data indication message\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Received Channel Data indication message");
 
     return turns_utils_forward_channel_data(alloc, h_msg);
 }
@@ -445,7 +449,7 @@ int32_t turns_process_alloc_timer (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
 
-    printf("Allocation timer expired. Lets unallocate it now\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Allocation timer expired. Lets unallocate it now");
 
     status = turns_utils_deinit_allocation_context(alloc);
 
@@ -461,7 +465,8 @@ int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg)
     turns_permission_t *perm;
     turns_timer_params_t *timer = (turns_timer_params_t *) h_msg;
 
-    printf("Channel Bind timer expired. Lets remove the binding now\n");
+    ICE_LOG(LOG_SEV_INFO, 
+            "Channel Bind timer expired. Lets remove the binding now");
 
     /** 
      * the channel binding and the associated permission 
@@ -471,16 +476,17 @@ int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg)
     if (!perm)
     {
         /** The channel binding does not exist! or has been uninstalled */
-        printf("The channel binding for the channel binding timer does not exist\n");
+        ICE_LOG(LOG_SEV_INFO, "The channel binding "\
+                "for the channel binding timer does not exist");
         return STUN_OK;
     }
 
     /** double check the timer id */
     if (perm->h_channel_timer != timer->timer_id)
     {
-        printf("Unknown channel bind timer?? \n");
-        printf("perm->h_channel_timer [%p] and timer->timer_id [%p]\n", 
-                perm->h_channel_timer, timer->timer_id);
+        ICE_LOG(LOG_SEV_INFO, "Unknown channel bind timer??");
+        ICE_LOG(LOG_SEV_INFO, "perm->h_channel_timer [%p] and "\
+                "timer->timer_id [%p]", perm->h_channel_timer, timer->timer_id);
         return STUN_OK;
     }
 
@@ -493,7 +499,7 @@ int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg)
     perm->h_channel_timer = NULL;
     perm->channel_timer.timer_id = NULL;
 
-    printf("Un-installed channel binding\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Un-installed channel binding");
 
     return STUN_OK;
 }
@@ -505,23 +511,25 @@ int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
     turns_permission_t *perm;
     turns_timer_params_t *timer = (turns_timer_params_t *) h_msg;
 
-    printf("Permission timer expired. Lets remove the permission now\n");
+    ICE_LOG(LOG_SEV_INFO, 
+            "Permission timer expired. Lets remove the permission now");
 
     /** validated the expired permission handle */
     perm = turns_utils_validate_permission_handle(alloc, timer->arg);
     if (!perm)
     {
         /** The permission does not exist! or has been uninstalled */
-        printf("The permission for the permission timer does not exist\n");
+        ICE_LOG(LOG_SEV_INFO, 
+                "The permission for the permission timer does not exist");
         return STUN_OK;
     }
 
     /** double check the timer id */
     if (perm->h_perm_timer != timer->timer_id)
     {
-        printf("Unknown permission timer??\n");
-        printf("perm->h_perm_timer [%p] and timer->timer_id [%p]\n", 
-                perm->h_perm_timer, timer->timer_id);
+        ICE_LOG(LOG_SEV_INFO, "Unknown permission timer??");
+        ICE_LOG(LOG_SEV_INFO, "perm->h_perm_timer [%p] and "\
+                "timer->timer_id [%p]", perm->h_perm_timer, timer->timer_id);
         return STUN_OK;
     }
 
@@ -530,7 +538,7 @@ int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
     perm->h_channel_timer = NULL;
     perm->channel_timer.timer_id = NULL;
 
-    printf("Un-installed permission\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Un-installed permission");
 
     return STUN_OK;
 }
@@ -541,7 +549,8 @@ int32_t turns_generate_new_nonce(turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
 
-    printf("Allocation nonce stale timer expired. Generate a new one\n");
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Allocation nonce stale timer expired. Generate a new one");
 
     /** generate new random nonce */
     turns_generate_nonce_value((char *)alloc->nonce, TURNS_SERVER_NONCE_LEN);
@@ -549,7 +558,7 @@ int32_t turns_generate_new_nonce(turns_allocation_t *alloc, handle h_msg)
     /** start the nonce stale timer */
     status = turns_utils_start_nonce_stale_timer(alloc);
     if (status != STUN_OK)
-        printf("Unable to start the nonce stale timer\n");
+        ICE_LOG(LOG_SEV_ERROR, "Unable to start the nonce stale timer");
 
     /** remain in the same state */
 
@@ -565,7 +574,7 @@ int32_t turns_create_perm_req(turns_allocation_t *alloc, handle h_msg)
     uint32_t error_code;
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
 
-    printf("Received the CREATE PERMISSION request\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Received the CREATE PERMISSION request");
 
     /** authenticate the request */
     status = turns_utils_verify_request(alloc, stun_pkt->h_msg, &error_code);
@@ -582,7 +591,8 @@ int32_t turns_create_perm_req(turns_allocation_t *alloc, handle h_msg)
 
         /** TODO - check if sending succeeded */
 
-        printf("Sent the allocation error response: %d\n", error_code);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the allocation error response: %d", error_code);
 
         return status;
     }
@@ -602,7 +612,7 @@ int32_t turns_channel_bind_req(turns_allocation_t *alloc, handle h_msg)
     uint32_t error_code;
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
 
-    printf("Received the CHANNEL BIND request\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Received the CHANNEL BIND request");
 
     /** 
      * check if there is already a channel number associated with this 
@@ -630,7 +640,8 @@ int32_t turns_channel_bind_req(turns_allocation_t *alloc, handle h_msg)
 
         /** TODO - check if sending succeeded */
 
-        printf("Sent the allocation error response: %d\n", error_code);
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the allocation error response: %d", error_code);
 
         return status;
     }
@@ -657,7 +668,7 @@ int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg)
     if (perm == NULL)
     {
         /** silently discard the UDP datagram */
-        printf("Permission not found for the received "\
+        ICE_LOG(LOG_SEV_INFO, "Permission not found for the received "\
                 "UDP datagram. Hence discarding the UDP datagram"); 
         return STUN_OK;
     }
@@ -686,7 +697,7 @@ int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg)
 
 int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg)
 {
-    printf ("TURNS ALLOCATION FSM: Ignoring the event\n");
+    ICE_LOG (LOG_SEV_INFO, "TURNS ALLOCATION FSM: Ignoring the event");
     return STUN_OK;
 }
 
