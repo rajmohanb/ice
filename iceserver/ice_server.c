@@ -340,7 +340,8 @@ int32_t ice_server_new_allocation_request(
 }
 
 
-int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
+int32_t ice_server_handle_allocation_events(
+            turns_event_t event, handle h_alloc, handle app_blob)
 {
     int bytes = 0;
     mb_ice_server_event_t mb_event;
@@ -363,12 +364,13 @@ int32_t ice_server_handle_allocation_events(turns_event_t event, handle h_alloc)
      */
     mb_event.type = MB_ISEVENT_DEALLOC_NOTF;
     mb_event.h_alloc = h_alloc;
+    mb_event.app_blob = app_blob;
     
     /**
      * this callback routine must not consume too much time since it is 
      * running in the context of the main socket listener thread. So post
      * this allocation request message to the slave thread that will
-     * decide whether the allocation is to be approved or not.
+     * decide how to respond to the specific event.
      */
     bytes = send(g_mb_server.thread_sockpair[0], 
                                         &mb_event, sizeof(mb_event), 0);
@@ -579,6 +581,7 @@ int main (int argc, char *argv[])
 
     /** set up logging */
     iceserver_init_log();
+    ICE_LOG(LOG_SEV_ALERT, "MindBricks ICE server booting up...");
 
     /** init the signal handlers */
     iceserver_init_sig_handlers();

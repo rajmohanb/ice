@@ -83,7 +83,7 @@ PGconn *iceserver_db_connect(void)
     PGresult *result;
     ExecStatusType db_status;
     Oid user_plan_param_types[1] = { 1043 };
-    Oid alloc_plan_param_types[1] = { 20 };
+    Oid alloc_plan_param_types[2] = { 23, 20 };
     Oid alloc_dealloc_update_plan_param_types[3] = { 1114, 1114, 23 };
     Oid alloc_insert_plan_param_types[10] = 
                     { 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
@@ -94,7 +94,7 @@ PGconn *iceserver_db_connect(void)
     /** check to see that the backend connection was successfully made */
     if (PQstatus(conn) != CONNECTION_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Connection to database failed");
+        ICE_LOG(LOG_SEV_ALERT, "Connection to database failed");
         iceserver_db_closeconn(conn);
         return NULL;
     }
@@ -130,8 +130,8 @@ PGconn *iceserver_db_connect(void)
                 "INSERT INTO allocations (username, realm, req_lifetime, "\
                 "allotted_lifetime, bandwidth_used, alloc_at, created_at, "\
                 "updated_at, user_id, alloc_handle) "\
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)", 10, 
-                alloc_insert_plan_param_types);
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
+                10, alloc_insert_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -152,8 +152,8 @@ PGconn *iceserver_db_connect(void)
      * later for querying the allocations table.
      */
     result = PQprepare(conn, get_alloc_plan, 
-                "SELECT * FROM allocations WHERE alloc_handle = $1", 1, 
-                alloc_plan_param_types);
+                "SELECT * FROM allocations WHERE id = $1 AND alloc_handle = $2",
+                2, alloc_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -203,6 +203,8 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
     ExecStatusType db_status;
 
     values[0] = event->username;
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Fetching user record for TURN username: %s", values[0]);
     result = PQexecPrepared(conn, get_user_plan, 1, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
@@ -292,13 +294,16 @@ int32_t iceserver_db_fetch_allocation_record(PGconn *conn,
 {
     int rows;
     PGresult *result;
-    const char *values[1];
+    const char *values[2];
     char alloc_handle[12] = {0};
+    char alloc_primkey[12] = {0};
     ExecStatusType db_status;
 
+    sprintf(alloc_primkey, "%u", (unsigned int)event->app_blob);
+    values[0] = alloc_primkey;
     sprintf(alloc_handle, "%u", (unsigned int)event->h_alloc);
-    values[0] = alloc_handle;
-    result = PQexecPrepared(conn, get_alloc_plan, 1, values, NULL, NULL, 0);
+    values[1] = alloc_handle;
+    result = PQexecPrepared(conn, get_alloc_plan, 2, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
     {
@@ -371,9 +376,10 @@ int32_t iceserver_get_current_time(char *str)
 
 
 int32_t iceserver_db_add_allocation_record(PGconn *conn, 
-            mb_ice_server_event_t *event, 
-            uint32_t allotted_lifetime, mb_iceserver_user_record_t *user)
+            mb_ice_server_event_t *event, uint32_t allotted_lifetime, 
+            mb_iceserver_user_record_t *user, int *alloc_handle)
 {
+    int rows, alloc_id;
     ExecStatusType db_status;
     const char *values[10];
     PGresult *result;
@@ -411,7 +417,7 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 
     result = PQexecPrepared(conn, alloc_insert_plan, 10, values, NULL, NULL, 0);
 
-    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "PostGres new record insertion  failed");
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
@@ -419,8 +425,20 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
         PQclear( result );
         return STUN_INT_ERROR;
     }
+
+    rows = PQntuples(result);
+    ICE_LOG(LOG_SEV_DEBUG, "Number of returned rows: %d\n", rows);
+
+    /** number of columns returned will be 1 since we asked only for id */
+#if 0
+    rows = PQnfields(result);
+    ICE_LOG(LOG_SEV_DEBUG, "Number of columns in the row: %d\n", rows);
+#endif
+
+    alloc_id = atoi(PQgetvalue(result, 0, 0));
+    *alloc_handle = alloc_id;
  
-    ICE_LOG(LOG_SEV_DEBUG, "New allocation RECORD inserted");
+    ICE_LOG(LOG_SEV_DEBUG, "New allocation RECORD inserted. ID - %d", alloc_id);
 
     PQclear( result );
 
@@ -471,7 +489,7 @@ int32_t iceserver_db_update_dealloc_column(
 int32_t mb_iceserver_handle_new_allocation(
                         PGconn *conn, mb_ice_server_event_t *event)
 {
-    int32_t bytes, status = STUN_OK;
+    int32_t bytes, alloc_handle, status = STUN_OK;
     stun_MD5_CTX ctx;
     mb_ice_server_alloc_decision_t decision;
     mb_iceserver_user_record_t user_record;
@@ -538,13 +556,16 @@ int32_t mb_iceserver_handle_new_allocation(
 
     /** add a new allocation record to db */
     status = iceserver_db_add_allocation_record(conn, 
-                        event, decision.lifetime, &user_record);
+                        event, decision.lifetime, &user_record, &alloc_handle);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Insertion of the allocation row into database failed");
         return STUN_INT_ERROR;
     }
+
+    /** set the application blob */
+    decision.app_blob = (handle) alloc_handle;
 
     /** post */
     bytes = send(g_mb_server.thread_sockpair[1], 
@@ -609,6 +630,12 @@ void *mb_iceserver_decision_thread(void)
 
     /** first off connect to the postgres server */
     conn = iceserver_db_connect();
+    if (conn == NULL)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Unable to connect to database. Abort");
+        /** TODO - Notify the parent process? and exit ? */
+        return NULL;
+    }
 
     /** get into loop */
     while(!iceserver_quit)

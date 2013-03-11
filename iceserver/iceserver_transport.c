@@ -384,6 +384,7 @@ void mb_ice_server_process_approval(int fd)
 {
     int32_t bytes, status;
     mb_ice_server_alloc_decision_t resp;
+    turns_allocation_decision_t turns_resp;
 
     bytes = recv(g_mb_server.thread_sockpair[0], &resp, sizeof(resp), 0);
     if (bytes == -1) return;
@@ -394,9 +395,16 @@ void mb_ice_server_process_approval(int fd)
      * 'turns_allocation_decision_t' before injecting. But for now using 
      * the same since both the structures have same contents 
      */
+    turns_resp.blob = resp.blob;
+    turns_resp.approved = resp.approved;
+    turns_resp.lifetime = resp.lifetime;
+    turns_resp.code = resp.code;
+    strncpy(turns_resp.reason, resp.reason, TURNS_ERROR_REASON_LENGTH);
+    memcpy(turns_resp.key, resp.hmac_key, 16);
+    turns_resp.app_blob = resp.app_blob;
 
     status = turns_inject_allocation_decision(
-                        g_mb_server.h_turns_inst, (void *)&resp);
+                        g_mb_server.h_turns_inst, (void *)&turns_resp);
 
     return;
 }

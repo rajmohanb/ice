@@ -219,6 +219,8 @@ typedef struct
     // handle h_perm_req;
     // handle h_perm_resp;
 
+    /** application server blob identifier */
+    handle app_blob;
 } turns_allocation_t;
 
 

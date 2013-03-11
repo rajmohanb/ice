@@ -190,6 +190,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     alloc->initial_lifetime = decision->lifetime;
     alloc->lifetime = alloc->initial_lifetime;
     memcpy(&alloc->hmac_key, &decision->key, TURNS_HMAC_KEY_LEN);
+    alloc->app_blob = decision->app_blob;
 
     /**
      * When the initial alloc request was received, this module had not checked
@@ -739,7 +740,8 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
         }
 
         /** notify the server application */
-        alloc->instance->alloc_event_cb(TURNS_EV_DEALLOCATED, alloc);
+        alloc->instance->alloc_event_cb(
+                TURNS_EV_DEALLOCATED, alloc, alloc->app_blob);
     }
 
     return status;

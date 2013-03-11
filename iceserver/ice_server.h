@@ -68,6 +68,7 @@ typedef struct
     uint32_t lifetime;
     stun_transport_protocol_type_t protocol;
     handle h_alloc;
+    handle app_blob;
 } mb_ice_server_event_t;
 
 
@@ -79,6 +80,7 @@ typedef struct
     uint32_t code;
     char reason[MB_ICE_SERVER_REASON_LENGTH];
     char hmac_key[MB_ICE_SERVER_HMAC_KEY_LEN];
+    handle app_blob;
 } mb_ice_server_alloc_decision_t;
 
 

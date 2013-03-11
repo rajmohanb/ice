@@ -140,6 +140,7 @@ typedef struct
     uint32_t code;
     char reason[TURNS_ERROR_REASON_LENGTH];
     char key[16];
+    handle app_blob;
 } turns_allocation_decision_t;
 
 
@@ -215,7 +216,8 @@ typedef int32_t (*turns_new_alloc_cb) (
  * server application about an event for an existing allocation. The server 
  * application must not perform any intensive operations within this callback.
  */
-typedef int32_t (*turns_alloc_event_cb) (turns_event_t event, handle h_alloc);
+typedef int32_t (*turns_alloc_event_cb) (
+            turns_event_t event, handle h_alloc, handle app_blob);
 
 
 
