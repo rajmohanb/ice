@@ -71,6 +71,7 @@ static iceserver_signal_t signals_list[] =
     { SIGABRT, iceserver_sig_handler },
     { SIGBUS, iceserver_sig_handler },
     { SIGSEGV, iceserver_sig_handler },
+    { SIGCHLD, iceserver_sig_handler },
 }; 
 
 
@@ -128,7 +129,7 @@ void app_log(stun_log_level_t level,
 }
 
 
-void ice_server_timer_expiry_cb (void *timer_id, void *arg)
+static void ice_server_timer_expiry_cb (void *timer_id, void *arg)
 {
     ssize_t bytes = 0;
     mb_ice_server_timer_event_t timer_event;
@@ -149,7 +150,7 @@ void ice_server_timer_expiry_cb (void *timer_id, void *arg)
 
 
 
-int32_t ice_server_network_send_data(u_char *data, 
+static int32_t ice_server_network_send_data(u_char *data, 
         uint32_t data_len, stun_inet_addr_type_t ip_addr_type, 
         u_char *ip_addr, uint32_t port, handle transport_param, u_char *key)
 {
@@ -193,7 +194,7 @@ int32_t ice_server_network_send_data(u_char *data,
 
 
 
-int32_t ice_server_network_send_msg(handle h_msg, 
+static int32_t ice_server_network_send_msg(handle h_msg, 
         stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
         uint32_t port, handle transport_param, u_char *key)
 {
@@ -259,7 +260,7 @@ int32_t ice_server_network_send_msg(handle h_msg,
 }
 
 
-int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
+static int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
 {
     int i;
     ICE_LOG(LOG_SEV_DEBUG, 
@@ -279,13 +280,13 @@ int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
 }
 
 
-handle ice_server_start_timer (uint32_t duration, handle arg)
+static handle ice_server_start_timer (uint32_t duration, handle arg)
 {
     handle timer_id = NULL;
 
     timer_expiry_callback timer_cb = ice_server_timer_expiry_cb;
 
-    ICE_LOG(LOG_SEV_WARNING, "ice_server: starting timer for duration %d "\
+    ICE_LOG(LOG_SEV_DEBUG, "ice_server: starting timer for duration %d "\
             "Argument is %p", duration, arg);
 
     timer_id = platform_start_timer(duration, timer_cb, arg);
@@ -297,7 +298,7 @@ handle ice_server_start_timer (uint32_t duration, handle arg)
 
 
 
-int32_t ice_server_stop_timer (handle timer_id)
+static int32_t ice_server_stop_timer (handle timer_id)
 {
     ICE_LOG(LOG_SEV_DEBUG, "ice_server: stopping timer %p", timer_id);
 
@@ -308,7 +309,7 @@ int32_t ice_server_stop_timer (handle timer_id)
 }
 
 
-int32_t ice_server_new_allocation_request(
+static int32_t ice_server_new_allocation_request(
                 handle h_alloc, turns_new_allocation_params_t *alloc_req)
 {
     int bytes = 0;
@@ -336,11 +337,13 @@ int32_t ice_server_new_allocation_request(
     bytes = send(g_mb_server.thread_sockpair[0], &event, sizeof(event), 0);
     ICE_LOG (LOG_SEV_DEBUG, "Sent [%d] bytes to decision process", bytes);
 
+    if (bytes == -1) return STUN_INT_ERROR;
+
     return STUN_OK;
 }
 
 
-int32_t ice_server_handle_allocation_events(
+static int32_t ice_server_handle_allocation_events(
             turns_event_t event, handle h_alloc, handle app_blob)
 {
     int bytes = 0;
@@ -380,7 +383,7 @@ int32_t ice_server_handle_allocation_events(
 }
 
 
-int32_t iceserver_init_turns(void)
+static int32_t iceserver_init_turns(void)
 {
     int32_t status;
     turns_osa_callbacks_t osa_cbs;
@@ -430,7 +433,7 @@ MB_ERROR_EXIT:
 }
 
 
-int32_t iceserver_init_stuns(void)
+static int32_t iceserver_init_stuns(void)
 {
     int32_t status;
     stuns_osa_callbacks_t osa_cbs;
@@ -572,7 +575,6 @@ int main (int argc, char *argv[])
     printf ("MindBricks ICE server booting up...\n");
 
     /** daemonize */
-    /** iceserver_daemonize(); */
     if (daemon(0, 0) == -1)
     {
         printf("Could not be daemonized\n");
@@ -581,9 +583,9 @@ int main (int argc, char *argv[])
 
     /** set up logging */
     iceserver_init_log();
-    ICE_LOG(LOG_SEV_ALERT, "MindBricks ICE server booting up...");
+    ICE_LOG(LOG_SEV_ALERT, "MindBricks: SeamConnect ICE server booting up...");
 
-    /** init the signal handlers */
+    /** setup the signal handlers */
     iceserver_init_sig_handlers();
 
     iceserver_init();
@@ -598,12 +600,18 @@ int main (int argc, char *argv[])
     }
 
     /** initialize the stuns module */
-    iceserver_init_stuns();
+    status = iceserver_init_stuns();
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "STUNS module initialization failed");
+        ICE_LOG(LOG_SEV_ALERT, "Bailing out!!!");
+        exit(-1);
+    }
 
     /** initialize the transport module */
     if (iceserver_init_transport() != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Initialization of transport failed");
+        ICE_LOG(LOG_SEV_ALERT, "Initialization of transport failed");
         return -1;
     }
 
@@ -617,6 +625,10 @@ int main (int argc, char *argv[])
         /** parent - the loop! */
         ice_server_run();
     }
+
+    /** TODO - de-init turns, stun and transport */
+
+    /** TODO - kill all worker processes */
 
     closelog();
 

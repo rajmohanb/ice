@@ -89,7 +89,11 @@ PGconn *iceserver_db_connect(void)
                     { 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
 
     /** make a connection to the database */
+#ifdef MB_SERVER_DEV
     conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_development hostaddr=127.0.0.1 port=5432");
+#else
+    conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_production hostaddr=127.0.0.1 port=5432");
+#endif
 
     /** check to see that the backend connection was successfully made */
     if (PQstatus(conn) != CONNECTION_OK)
@@ -520,52 +524,52 @@ int32_t mb_iceserver_handle_new_allocation(
     {
         decision.approved = true;
         decision.code = 0;
+
+        /** 
+         * TODO: checks - check at the requested lifetime? suggest provisioned one
+         */
+        decision.lifetime = 1800;
+
+        /** TODO: checks - And look at protocol? */
+         
+        /** TODO: check if the user has already reached max number of allocations? */
+
+        /** TODO: check if the user has already reached the max number of concurrent allocations? */
+
+        /** TODO: Check the bandwidth usage? */
+
+        /** TODO: Then decide to either approve or reject the allocation request */
+
+        /** TODO - for now, just go ahead and approve the allocation */
+        decision.blob = event->h_alloc;
+
+        /** calculate the hmac key for long-term authentication */
+        stun_MD5_Init(&ctx);
+        stun_MD5_Update(&ctx, 
+                event->username, strlen((char *)event->username));
+        stun_MD5_Update(&ctx, ":", 1);
+
+        stun_MD5_Update(&ctx, event->realm, strlen((char *)event->realm));
+        stun_MD5_Update(&ctx, ":", 1);
+
+        stun_MD5_Update(&ctx, 
+                user_record.password, strlen(user_record.password));
+
+        stun_MD5_Final((u_char *)decision.hmac_key, &ctx);
+
+        /** add a new allocation record to db */
+        status = iceserver_db_add_allocation_record(conn, 
+                            event, decision.lifetime, &user_record, &alloc_handle);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Insertion of the allocation row into database failed");
+            return STUN_INT_ERROR;
+        }
+
+        /** set the application blob */
+        decision.app_blob = (handle) alloc_handle;
     }
-
-    /** 
-     * TODO: checks - check at the requested lifetime? suggest provisioned one
-     */
-    decision.lifetime = 1800;
-
-    /** TODO: checks - And look at protocol? */
-     
-    /** TODO: check if the user has already reached max number of allocations? */
-
-    /** TODO: check if the user has already reached the max number of concurrent allocations? */
-
-    /** TODO: Check the bandwidth usage? */
-
-    /** TODO: Then decide to either approve or reject the allocation request */
-
-    /** TODO - for now, just go ahead and approve the allocation */
-    decision.blob = event->h_alloc;
-
-    /** calculate the hmac key for long-term authentication */
-    stun_MD5_Init(&ctx);
-    stun_MD5_Update(&ctx, 
-            event->username, strlen((char *)event->username));
-    stun_MD5_Update(&ctx, ":", 1);
-
-    stun_MD5_Update(&ctx, event->realm, strlen((char *)event->realm));
-    stun_MD5_Update(&ctx, ":", 1);
-
-    stun_MD5_Update(&ctx, 
-            user_record.password, strlen(user_record.password));
-
-    stun_MD5_Final((u_char *)decision.hmac_key, &ctx);
-
-    /** add a new allocation record to db */
-    status = iceserver_db_add_allocation_record(conn, 
-                        event, decision.lifetime, &user_record, &alloc_handle);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Insertion of the allocation row into database failed");
-        return STUN_INT_ERROR;
-    }
-
-    /** set the application blob */
-    decision.app_blob = (handle) alloc_handle;
 
     /** post */
     bytes = send(g_mb_server.thread_sockpair[1], 
@@ -652,7 +656,6 @@ void *mb_iceserver_decision_thread(void)
         {
             status = mb_iceserver_handle_deallocation(conn, &event);
         }
-
    }
 
     iceserver_db_closeconn(conn);

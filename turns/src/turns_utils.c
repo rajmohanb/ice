@@ -2080,6 +2080,11 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
             perm->peer_addr.host_type, perm->peer_addr.ip_addr, 
             perm->peer_addr.port, (handle)alloc->relay_sock, NULL);
 
+    /** TODO - check return value */
+
+    ICE_LOG(LOG_SEV_DEBUG, "Sent UDP data to %s:%p", 
+                perm->peer_addr.ip_addr, perm->peer_addr.port);
+
     return status;
 
 MB_ERROR_EXIT:
@@ -2253,6 +2258,10 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
         status = STUN_TRANSPORT_FAIL;
         goto MB_ERROR_EXIT1;
     }
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Forwarded UDP data using DATA IND to the client at %s:%p", 
+            alloc->client_addr.ip_addr, alloc->client_addr.port);
 
     return status;
 
