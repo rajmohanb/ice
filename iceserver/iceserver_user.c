@@ -645,7 +645,7 @@ void *mb_iceserver_decision_thread(void)
     while(!iceserver_quit)
     {
         memset(&event, 0, sizeof(event));
-        bytes = recv(g_mb_server.thread_sockpair[1], &event, sizeof(event), 0);
+        bytes = recv(g_mb_server.db_lookup.sockpair[1], &event, sizeof(event), 0);
         /** TODO - check and error handling */
 
         if (event.type == MB_ISEVENT_NEW_ALLOC_REQ)

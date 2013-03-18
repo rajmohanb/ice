@@ -27,6 +27,9 @@ extern "C" {
 #include <pthread.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/prctl.h>
 
 #include <syslog.h> /** logging */
 
@@ -56,11 +59,13 @@ char *log_levels[] =
 
 static void iceserver_sig_handler(int signum);
 
+
 typedef struct 
 {
     int signum;
     void (*handler)(int signum);
 } iceserver_signal_t;
+
 
 static iceserver_signal_t signals_list[] =
 {
@@ -77,7 +82,7 @@ static iceserver_signal_t signals_list[] =
 
 /** the global instance of server */ 
 mb_ice_server_t g_mb_server = {0};
-stun_log_level_t g_loglevel = LOG_SEV_WARNING;
+stun_log_level_t g_loglevel = LOG_SEV_DEBUG;
 int iceserver_quit = 0;
 
 void *mb_iceserver_decision_thread(void);
@@ -309,11 +314,27 @@ static int32_t ice_server_stop_timer (handle timer_id)
 }
 
 
+static int mb_worker_get_parent_sock(void)
+{
+    int i, mypid = getpid();
+
+    for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
+        if (g_mb_server.workers[i].pid == mypid)
+            return g_mb_server.workers[i].sockpair[0];
+
+    ICE_LOG(LOG_SEV_ALERT, 
+            "Unable to find the parent socket for pid: %d", mypid);
+    return 0;
+}
+
+
 static int32_t ice_server_new_allocation_request(
                 handle h_alloc, turns_new_allocation_params_t *alloc_req)
 {
     int bytes = 0;
     mb_ice_server_event_t event;
+    static int parent_sock;
+    parent_sock = mb_worker_get_parent_sock();
 
     memset(&event, 0, sizeof(event));
 
@@ -334,7 +355,7 @@ static int32_t ice_server_new_allocation_request(
      * this allocation request message to the slave thread that will
      * decide whether the allocation is to be approved or not.
      */
-    bytes = send(g_mb_server.thread_sockpair[0], &event, sizeof(event), 0);
+    bytes = send(parent_sock, &event, sizeof(event), 0);
     ICE_LOG (LOG_SEV_DEBUG, "Sent [%d] bytes to decision process", bytes);
 
     if (bytes == -1) return STUN_INT_ERROR;
@@ -463,9 +484,54 @@ MB_ERROR_EXIT:
 }
 
 
-void ice_server_run(void)
+static void iceserver_worker_parent_killed(int signum)
+{
+    iceserver_quit = 1;
+    ICE_LOG(LOG_SEV_EMERG, "Parent process has terminated. Cleanup and exit");
+    return;
+}
+
+
+static int32_t worker_init(void)
+{
+    struct sigaction sa;
+
+    if (platform_init() != true)
+    {
+        ICE_LOG(LOG_SEV_ALERT, 
+                "Worker Process: platform initialization failed");
+        return STUN_INT_ERROR;
+    }
+
+    /** register to be notified about the death of parent process */
+    prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
+
+    /** register for the above signal */
+    memset(&sa, 0, sizeof(sa));
+    sa.sa_handler = iceserver_worker_parent_killed;
+    if (sigaction(SIGHUP, &sa, 0) == -1)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Worker Process: Registering signal "\
+                "handler failed for signal: SIGHUP");
+        return STUN_INT_ERROR;
+    }
+
+    /** TODO */
+    /** should we add the local socketpair() connected socket to the fd list? */
+
+    return STUN_OK;
+}
+
+
+static void ice_server_run(void)
 {
     ICE_LOG(LOG_SEV_DEBUG, "Run Lola run");
+
+    if (worker_init() != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Worker process initialization failed");
+        return;
+    }
 
     while (!iceserver_quit)
     {
@@ -476,8 +542,42 @@ void ice_server_run(void)
 }
 
 
+static int32_t iceserver_setup_master_worker_ipcs(void)
+{
+    int32_t count;
 
-int32_t iceserver_init(void)
+    /** for communication between the db process and the master process */
+    if (socketpair(AF_UNIX, 
+                SOCK_STREAM, 0, g_mb_server.db_lookup.sockpair) == -1)
+    {
+        perror ("process socketpair");
+        ICE_LOG (LOG_SEV_ALERT, 
+                "process socketpair() returned error for DB process");
+        return STUN_INT_ERROR;
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Create DB lookup process socket: %d to fd_set", 
+            g_mb_server.thread_sockpair[0]);
+
+    for (count = 0; count < MB_ICE_SERVER_NUM_WORKER_PROCESSES; count++)
+    {
+        /** communication between master and worker process */
+        if (socketpair(AF_UNIX, SOCK_STREAM, 
+                    0, g_mb_server.workers[count].sockpair) == -1)
+        {
+            perror ("process socketpair");
+            ICE_LOG (LOG_SEV_ALERT, "process socketpair() "\
+                    "returned error for Worker process %d", count);
+            return STUN_INT_ERROR;
+        }
+    }
+
+    return STUN_OK;
+}
+
+
+static int32_t iceserver_init(void)
 {
     g_mb_server.max_fd = 0;
     FD_ZERO(&g_mb_server.master_rfds);
@@ -525,12 +625,57 @@ int32_t iceserver_init(void)
     ICE_LOG(LOG_SEV_DEBUG, "Added timer thread socket: %d to fd_set", 
                                         g_mb_server.timer_sockpair[0]);
 
+    /** TODO
+     * When we are supporting multiple worker processes, we use fork(). And a
+     * forked child does not inherit timers from it's parent. We make use of 
+     * timer_create() sysytem call. So we need to move this platform_init() 
+     * call from here. This needs to be called by the each worker child 
+     * process (subsequent to fork).
+     */
     if (platform_init() != true)
         return STUN_INT_ERROR;
 
     return STUN_OK;
 }
 
+
+static int32_t iceserver_prepare_listener_fdset(void)
+{
+    int32_t i;
+
+    /** reset */
+    g_mb_server.max_fd = 0;
+    FD_ZERO(&g_mb_server.master_rfds);
+    memset(g_mb_server.relay_sockets, 0, 
+                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
+
+
+    /** add stun packet listener sockets */
+    for(i = 0; i < 2; i++)
+    {
+        if (g_mb_server.intf[i].sockfd)
+            FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
+        if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
+            g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
+    }
+
+    /** add ipc fds for db process */
+    FD_SET(g_mb_server.db_lookup.sockpair[1], &g_mb_server.master_rfds);
+    if (g_mb_server.max_fd < g_mb_server.db_lookup.sockpair[1])
+        g_mb_server.max_fd = g_mb_server.db_lookup.sockpair[1];
+
+
+    /** add ipc fds for worker processes */
+    for(i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
+    {
+        if (g_mb_server.workers[i].sockpair[1])
+            FD_SET(g_mb_server.workers[i].sockpair[1], &g_mb_server.master_rfds);
+        if (g_mb_server.max_fd < g_mb_server.workers[i].sockpair[1])
+            g_mb_server.max_fd = g_mb_server.workers[i].sockpair[1];
+    }
+
+    return STUN_OK;
+}
 
 
 void iceserver_init_log(void)
@@ -568,11 +713,72 @@ void iceserver_init_sig_handlers(void)
 }
 
 
+static int32_t iceserver_launch_workers(void)
+{
+    pid_t child_pid;
+    int32_t count, i, status;
+
+    child_pid = fork();
+    if (child_pid == -1)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Forking of the database process failed");
+        return STUN_INT_ERROR;
+    }
+    else if (child_pid == 0)
+    {
+        mb_iceserver_decision_thread();
+    }
+    else
+    {
+        g_mb_server.db_lookup.pid = child_pid;
+        ICE_LOG(LOG_SEV_ALERT, "DB worker spawned. PID: %d", child_pid);
+    }
+
+    for (count = 0; count < MB_ICE_SERVER_NUM_WORKER_PROCESSES; count++)
+    {
+        child_pid = fork();
+
+        if (child_pid == -1)
+        {
+            /** unable to create the worker process, bail out! */
+            ICE_LOG(LOG_SEV_ALERT, 
+                    "Unable to create the worker process using fork()");
+            status = STUN_INT_ERROR;
+            goto MB_ERROR_EXIT;
+        }
+        else if (child_pid == 0)
+        {
+            ice_server_run();
+        }
+        else
+        {
+            g_mb_server.workers[count].pid = child_pid;
+            ICE_LOG(LOG_SEV_ALERT, "Worker spawned. PID: %d", child_pid);
+        }
+    }
+
+    return STUN_OK;
+
+MB_ERROR_EXIT:
+
+    for (i = 0; i < count; i++)
+    {
+        /** TODO - kill child process */
+    }
+
+    /** TODO - kill db process */
+
+    return status;
+}
+
 
 int main (int argc, char *argv[])
 {
     int32_t status;
-    printf ("MindBricks ICE server booting up...\n");
+    int options = 0;
+    siginfo_t siginfo;
+
+    printf ("MindBricks: SeamConnect ICE server booting up...\n");
 
     /** daemonize */
     if (daemon(0, 0) == -1)
@@ -588,19 +794,17 @@ int main (int argc, char *argv[])
     /** setup the signal handlers */
     iceserver_init_sig_handlers();
 
-    iceserver_init();
-
     /** initialize the turns module */
     status = iceserver_init_turns();
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "ICE server initialization failed");
-        ICE_LOG(LOG_SEV_ERROR, "Bailing out!!!");
-        exit(1);
+        ICE_LOG(LOG_SEV_ALERT, "TURNS module initialization failed");
+        ICE_LOG(LOG_SEV_ALERT, "Bailing out!!!");
+        exit(-1);
     }
 
     /** initialize the stuns module */
-    status = iceserver_init_stuns();
+    iceserver_init_stuns();
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, "STUNS module initialization failed");
@@ -615,6 +819,43 @@ int main (int argc, char *argv[])
         return -1;
     }
 
+    /** setup IPC between the child processes and the master process */
+    if (iceserver_setup_master_worker_ipcs() != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Initialization of "\
+                "IPC between master and worker processes failed");
+        return -1;
+    }
+
+    /** prepare the socket listener set */
+    if (iceserver_prepare_listener_fdset() != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Preparation of socket listener fdset failed");
+        return -1;
+    }
+
+    /** spin off the db and worker processes */
+    if (iceserver_launch_workers() != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Launching of worker processes failed");
+        return -1;
+    }
+
+    mb_iceserver_decision_thread();
+
+    //iceserver_init();
+
+    /** TODO - now wait for events from all the spawned processes */
+    options = WEXITED;
+    if (waitid(P_ALL, 0, &siginfo, options) == -1)
+    {
+        ICE_LOG(LOG_SEV_ALERT, 
+                "Master process: unable to wait for the child processes");
+    }
+
+    /** TODO - need to handle events from the webapp as well */
+
+#if 0
     if (!fork())
     {
         /** child */
@@ -625,6 +866,7 @@ int main (int argc, char *argv[])
         /** parent - the loop! */
         ice_server_run();
     }
+#endif
 
     /** TODO - de-init turns, stun and transport */
 

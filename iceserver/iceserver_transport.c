@@ -145,15 +145,6 @@ int32_t iceserver_init_transport(void)
     status = mb_ice_server_get_local_interface();
     if (status != STUN_OK) return status;
 
-    /** add main signaling listener sockets */
-    for(i = 0; i < 2; i++)
-    {
-        if (g_mb_server.intf[i].sockfd)
-            FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
-        if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
-            g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
-    }
-
     /** setup internal timer communication */
     // status = mb_ice_server_init_timer_comm();
 

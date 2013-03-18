@@ -45,6 +45,9 @@ extern "C" {
 
 #define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
 
+/** number of worker processes that handle the STUN/TURN traffic */
+#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  2
+
 
 typedef struct
 {
@@ -87,21 +90,27 @@ typedef struct
 typedef struct
 {
     int sockfd;
-
     struct sockaddr addr;
-
 } mb_ice_server_intf_t;
 
 
 typedef struct
 {
-    handle h_turns_inst;
+    /** child pid */
+    pid_t pid;
 
+    /** communication between parent and child - pipe/socketpair? */
+    int sockpair[2];  
+
+} mb_iceserver_worker_t;
+
+
+typedef struct
+{
+    handle h_turns_inst;
     handle h_stuns_inst;
 
-    pthread_t tid;
-
-    /** internal communication between main thread and decision thread */
+    /** internal communication between main thread and decision process */
     int     thread_sockpair[2];
 
     int     timer_sockpair[2];
@@ -113,6 +122,12 @@ typedef struct
     int max_fd;
 
     mb_ice_server_intf_t intf[2];
+
+    /** database lookup process */
+    mb_iceserver_worker_t db_lookup;
+
+    /** worker processes */
+    mb_iceserver_worker_t workers[MB_ICE_SERVER_NUM_WORKER_PROCESSES];
 
 } mb_ice_server_t;
 
