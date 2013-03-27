@@ -95,12 +95,16 @@ bool_t turns_utils_host_compare (u_char *host1,
         size = TURNS_SIZEOF_IPV6_ADDR;
     }
     else
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Invalid IP address type for comparision - [%d]", addr_type);
         return false;
+    }
 
     retval = inet_pton(family, (const char *)host1, &addr1);
     if (retval != 1)
     {
-        ICE_LOG(LOG_SEV_INFO, 
+        ICE_LOG(LOG_SEV_ERROR, 
                 "inet_pton failed, probably invalid address [%s]", host1);
         return false;
     }
@@ -108,7 +112,7 @@ bool_t turns_utils_host_compare (u_char *host1,
     retval = inet_pton(family, (const char *)host2, &addr2);
     if (retval != 1)
     {
-        ICE_LOG(LOG_SEV_INFO, 
+        ICE_LOG(LOG_SEV_ERROR, 
                 "inet_pton failed, probably invalid address [%s]", host2);
         return false;
     }
@@ -1382,6 +1386,9 @@ int32_t turns_utils_install_permission(turns_allocation_t *alloc,
         perm->channel_num = channel;
         perm->used = true;
 
+        ICE_LOG(LOG_SEV_INFO, "Installed permission for %s:%d",
+                            perm->peer_addr.ip_addr, perm->peer_addr.port);
+
         return STUN_OK;
     }
 
@@ -1894,18 +1901,21 @@ turns_permission_t *turns_utils_search_for_permission(
         if (perm->used == false) continue;
 
         /**
-         * TODO - should we compare the port when checking 
-         * if a permission has been installed?
+         * should we compare the port when checking if a permission has been 
+         * installed? As per RFC 5766, "sec 9.2 - Receiving a CreatePermission 
+         * Request", 'The port portion of each attribute is ignored and may 
+         * be any arbitrary value.' Hence port comparision is not done!
          */
         if ((perm->peer_addr.host_type == addr.host_type) && 
-            (perm->peer_addr.port == addr.port) && 
+            /* (perm->peer_addr.port == addr.port) && */
             (turns_utils_host_compare(perm->peer_addr.ip_addr, 
-                                      addr.ip_addr, addr.host_type)))
+                                      addr.ip_addr, addr.host_type) == true))
         {
             return perm;
         }
     }
 
+    ICE_LOG(LOG_SEV_DEBUG, "Permission NOT found");
     return NULL;
 }
 
@@ -2076,14 +2086,21 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
     /** TODO - handling of DONT-FRAGMENT attribute */
 
     /** send to peer using relayed address */
-    alloc->instance->nwk_data_cb(data, data_len, 
+    num = alloc->instance->nwk_data_cb(data, data_len, 
             perm->peer_addr.host_type, perm->peer_addr.ip_addr, 
             perm->peer_addr.port, (handle)alloc->relay_sock, NULL);
+    if (num <= 0)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Sending of UDP data to %s:%d failed", 
+                                perm->peer_addr.ip_addr, perm->peer_addr.port);
+        status = STUN_TRANSPORT_FAIL;
+        goto MB_ERROR_EXIT;
+    }
 
     /** TODO - check return value */
 
-    ICE_LOG(LOG_SEV_DEBUG, "Sent UDP data to %s:%p", 
-                perm->peer_addr.ip_addr, perm->peer_addr.port);
+    ICE_LOG(LOG_SEV_DEBUG, "Sent UDP data of length %d to %s:%d", 
+                num, perm->peer_addr.ip_addr, perm->peer_addr.port);
 
     return status;
 
@@ -2260,7 +2277,7 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
     }
 
     ICE_LOG(LOG_SEV_DEBUG, 
-            "Forwarded UDP data using DATA IND to the client at %s:%p", 
+            "Forwarded UDP data using DATA IND to the client at %s:%d", 
             alloc->client_addr.ip_addr, alloc->client_addr.port);
 
     return status;

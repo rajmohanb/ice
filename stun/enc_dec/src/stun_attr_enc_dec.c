@@ -625,13 +625,15 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_memcpy((buf-STUN_ATTR_MSG_INTEGRITY_LEN), 
                                 hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
 
+#if 0
     stun_enc_dec_utils_print_binary_buffer(
                             mi_print, STUN_MI_PRINT_BUF_LEN, 
                             hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
     mi_print[STUN_MI_PRINT_BUF_LEN] = 0;
-    ICE_LOG(LOG_SEV_INFO,
+    ICE_LOG(LOG_SEV_DEBUG,
             "   MESSAGE-INTEGRITY: key[%s] key_len=[%d], value=%s", 
                 auth->key, auth->key_len, mi_print);
+#endif
 
     *len = integrity->hdr.length + 4;
     return STUN_OK;
@@ -1530,7 +1532,7 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
                             fp_print, STUN_FP_PRINT_BUF_LEN, 
                             (u_char *)&crc32, STUN_ATTR_FINGERPRINT_LEN);
     fp_print[STUN_FP_PRINT_BUF_LEN] = 0;
-    ICE_LOG(LOG_SEV_INFO,
+    ICE_LOG(LOG_SEV_DEBUG,
             "   FINGERPRINT: length=4, value=%s", fp_print);
 
     *len = fingerprint->hdr.length + 4;

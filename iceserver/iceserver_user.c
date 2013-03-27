@@ -91,8 +91,10 @@ PGconn *iceserver_db_connect(void)
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
     conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_development hostaddr=127.0.0.1 port=5432");
+    ICE_LOG(LOG_SEV_ALERT, "Using Development database");
 #else
     conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_production hostaddr=127.0.0.1 port=5432");
+    ICE_LOG(LOG_SEV_ALERT, "Using Production database");
 #endif
 
     /** check to see that the backend connection was successfully made */
@@ -508,6 +510,7 @@ int32_t mb_iceserver_handle_new_allocation(
     ICE_LOG(LOG_SEV_DEBUG, "PROTOCOL: %s", mb_transports[event->protocol]);
 
     status = iceserver_db_fetch_user_record(conn, event, &user_record);
+
     if (status == STUN_NOT_FOUND)
     {
         /** TODO - reject the request */

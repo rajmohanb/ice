@@ -86,7 +86,7 @@ void *mb_iceserver_decision_thread(void);
 static void iceserver_sig_handler(int signum)
 {
     iceserver_quit = 1;
-    printf("Quiting\n");
+    printf("Quiting - Signal : %d\n", signum);
     return;
 }
 
@@ -269,7 +269,16 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
     /** add it to the list */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
         if (g_mb_server.relay_sockets[i] == 0)
-            g_mb_server.relay_sockets[i] = sock_fd;
+            break;
+    
+    if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Ran out of the pool of "\
+                "listenable relayed sockets. Hence not adding to the list");
+        return STUN_NO_RESOURCE;
+    }
+
+    g_mb_server.relay_sockets[i] = sock_fd;
 
     FD_SET(sock_fd, &g_mb_server.master_rfds);
     if (g_mb_server.max_fd < sock_fd) g_mb_server.max_fd = sock_fd;
@@ -574,12 +583,14 @@ int main (int argc, char *argv[])
     int32_t status;
     printf ("MindBricks ICE server booting up...\n");
 
+#if 1
     /** daemonize */
     if (daemon(0, 0) == -1)
     {
         printf("Could not be daemonized\n");
         exit(-1);
     }
+#endif
 
     /** set up logging */
     iceserver_init_log();
