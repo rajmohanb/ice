@@ -177,7 +177,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     alloc->username = username;
     alloc->username_len = len;
     username = NULL;
-    ICE_LOG(LOG_SEV_DEBUG, "OK: So Username is %s", alloc->username);
+    //ICE_LOG(LOG_SEV_DEBUG, "OK: So Username is %s", alloc->username);
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 

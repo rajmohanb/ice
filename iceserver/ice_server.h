@@ -58,14 +58,14 @@ typedef struct
 
 typedef enum
 {
-    MB_ISEVENT_NEW_ALLOC_REQ,
+    MB_ISEVENT_NEW_ALLOC_REQ = 0,
     MB_ISEVENT_DEALLOC_NOTF,
 } mb_ice_server_event_type_t;
 
 
 typedef struct
 {
-    mb_ice_server_event_type_t type;
+    mb_ice_server_event_type_t msg_type;
     u_char username[MB_ICE_SERVER_USERNAME_LEN];
     u_char realm[MB_ICE_SERVER_REALM_LEN];
     uint32_t lifetime;
@@ -128,6 +128,12 @@ typedef struct
 
     /** worker processes */
     mb_iceserver_worker_t workers[MB_ICE_SERVER_NUM_WORKER_PROCESSES];
+
+    /** communication from worker processes to DB processes */
+    mqd_t qid_worker_db;
+
+    /** communication from DB processes to Worker processes */
+    mqd_t qid_db_worker;
 
 } mb_ice_server_t;
 

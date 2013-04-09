@@ -69,7 +69,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     fd = open(TURNS_MMAP_FILE_PATH, O_RDWR | O_CREAT);
     if (fd == -1)
     {
-        perror("open");
+        perror("shared memory open");
         ICE_LOG(LOG_SEV_ALERT, "TURNS: opening the shared memory file failed");
         return STUN_INT_ERROR;
     }
@@ -85,7 +85,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     table = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (table == (void *) -1)
     {
-        perror("mmap:");
+        perror("shared mem mmap:");
         ICE_LOG(LOG_SEV_ALERT, "TURNS: allocation of shared memory failed");
         return STUN_MEM_ERROR;
     }

@@ -24,6 +24,11 @@ extern "C" {
 #include <ifaddrs.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <mqueue.h>
+
+#include <errno.h>
 
 #include <stun_base.h>
 #include <msg_layer_api.h>
@@ -141,6 +146,12 @@ int32_t mb_ice_server_init_timer_comm(void)
 int32_t iceserver_init_transport(void)
 {
     int32_t status, i;
+
+    /** reset */
+    g_mb_server.max_fd = 0;
+    FD_ZERO(&g_mb_server.master_rfds);
+    memset(g_mb_server.relay_sockets, 0, 
+                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
     status = mb_ice_server_get_local_interface();
     if (status != STUN_OK) return status;
@@ -371,32 +382,49 @@ void mb_ice_server_process_timer_event(int fd)
 }
 
 
-void mb_ice_server_process_approval(int fd)
+void mb_ice_server_process_approval(mqd_t mqdes)
 {
     int32_t bytes, status;
-    mb_ice_server_alloc_decision_t resp;
+    mb_ice_server_alloc_decision_t *resp;
+    struct mq_attr attr;
+    char *buffer = NULL;
     turns_allocation_decision_t turns_resp;
 
-    bytes = recv(g_mb_server.thread_sockpair[0], &resp, sizeof(resp), 0);
-    if (bytes == -1) return;
+    /** TODO - need to optimize so that we do not allocate memory every time */
+
+    mq_getattr(mqdes, &attr);
+    buffer = (char *) stun_malloc(attr.mq_msgsize);
+
+    bytes = mq_receive(mqdes, buffer, attr.mq_msgsize, 0);
+    if (bytes == -1)
+    {
+        perror("Worker mq_receive");
+        ICE_LOG(LOG_SEV_ERROR, "Worker Retrieving msg from msg queue failed");
+        free(buffer);
+        return;
+    }
+
     if (bytes == 0) return;
+
+    resp = (mb_ice_server_alloc_decision_t *) buffer;
 
     /** 
      * TODO - The 'mb_ice_server_alloc_decision_t' must be converted to 
      * 'turns_allocation_decision_t' before injecting. But for now using 
      * the same since both the structures have same contents 
      */
-    turns_resp.blob = resp.blob;
-    turns_resp.approved = resp.approved;
-    turns_resp.lifetime = resp.lifetime;
-    turns_resp.code = resp.code;
-    strncpy(turns_resp.reason, resp.reason, TURNS_ERROR_REASON_LENGTH);
-    memcpy(turns_resp.key, resp.hmac_key, 16);
-    turns_resp.app_blob = resp.app_blob;
+    turns_resp.blob = resp->blob;
+    turns_resp.approved = resp->approved;
+    turns_resp.lifetime = resp->lifetime;
+    turns_resp.code = resp->code;
+    strncpy(turns_resp.reason, resp->reason, TURNS_ERROR_REASON_LENGTH);
+    memcpy(turns_resp.key, resp->hmac_key, 16);
+    turns_resp.app_blob = resp->app_blob;
 
     status = turns_inject_allocation_decision(
                         g_mb_server.h_turns_inst, (void *)&turns_resp);
 
+    free(buffer);
     return;
 }
 
@@ -426,8 +454,8 @@ int32_t iceserver_process_messages(void)
             mb_ice_server_process_signaling_msg(&g_mb_server.intf[0]);
         else if (FD_ISSET(g_mb_server.intf[1].sockfd, &rfds))
             mb_ice_server_process_signaling_msg(&g_mb_server.intf[1]);
-        else if (FD_ISSET(g_mb_server.thread_sockpair[0], &rfds))
-            mb_ice_server_process_approval(g_mb_server.thread_sockpair[0]);
+        else if (FD_ISSET(g_mb_server.qid_db_worker, &rfds))
+            mb_ice_server_process_approval(g_mb_server.qid_db_worker);
         else if (FD_ISSET(g_mb_server.timer_sockpair[0], &rfds))
             mb_ice_server_process_timer_event(g_mb_server.timer_sockpair[0]);
         else

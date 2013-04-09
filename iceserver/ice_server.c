@@ -30,6 +30,9 @@ extern "C" {
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/prctl.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <mqueue.h>
 
 #include <syslog.h> /** logging */
 
@@ -66,6 +69,8 @@ typedef struct
     void (*handler)(int signum);
 } iceserver_signal_t;
 
+#define MQ_WORKER_DB    "/mb_ice_mq_worker_db"
+#define MQ_DB_WORKER    "/mb_ice_mq_db_worker"
 
 static iceserver_signal_t signals_list[] =
 {
@@ -91,7 +96,8 @@ void *mb_iceserver_decision_thread(void);
 static void iceserver_sig_handler(int signum)
 {
     iceserver_quit = 1;
-    printf("Quiting\n");
+    printf("PID: %d Quiting - received signal %d\n", getpid(), signum);
+    exit(-1);
     return;
 }
 
@@ -331,10 +337,8 @@ static int mb_worker_get_parent_sock(void)
 static int32_t ice_server_new_allocation_request(
                 handle h_alloc, turns_new_allocation_params_t *alloc_req)
 {
-    int bytes = 0;
+    int ret;
     mb_ice_server_event_t event;
-    static int parent_sock;
-    parent_sock = mb_worker_get_parent_sock();
 
     memset(&event, 0, sizeof(event));
 
@@ -342,7 +346,7 @@ static int32_t ice_server_new_allocation_request(
      * This is messy! passing data between processes - 
      * need to find an elegant solution 
      */
-    event.type = MB_ISEVENT_NEW_ALLOC_REQ;
+    event.msg_type = MB_ISEVENT_NEW_ALLOC_REQ;
     memcpy(event.username, alloc_req->username, alloc_req->username_len);
     memcpy(event.realm, alloc_req->realm, alloc_req->realm_len);
     event.lifetime = alloc_req->lifetime;
@@ -354,11 +358,19 @@ static int32_t ice_server_new_allocation_request(
      * running in the context of the main socket listener thread. So post
      * this allocation request message to the slave thread that will
      * decide whether the allocation is to be approved or not.
+     * TODO - make use of NON_BLOCK flag for the message queue
      */
-    bytes = send(parent_sock, &event, sizeof(event), 0);
-    ICE_LOG (LOG_SEV_DEBUG, "Sent [%d] bytes to decision process", bytes);
-
-    if (bytes == -1) return STUN_INT_ERROR;
+    ret = mq_send(g_mb_server.qid_worker_db, (char *)&event, sizeof(event), 0);
+    if (ret != 0)
+    {
+        /** TODO - handle this error! send error resp to turn client? */
+        ICE_LOG (LOG_SEV_ERROR, 
+                "Error posting to the DB process message queue");
+        return STUN_INT_ERROR;
+    }
+    
+    ICE_LOG (LOG_SEV_DEBUG, 
+            "Posted the message to the DB process message queue");
 
     return STUN_OK;
 }
@@ -367,7 +379,7 @@ static int32_t ice_server_new_allocation_request(
 static int32_t ice_server_handle_allocation_events(
             turns_event_t event, handle h_alloc, handle app_blob)
 {
-    int bytes = 0;
+    int ret;
     mb_ice_server_event_t mb_event;
 
     ICE_LOG(LOG_SEV_DEBUG, 
@@ -386,7 +398,7 @@ static int32_t ice_server_handle_allocation_events(
      * This is messy! passing data between processes - 
      * need to find an elegant solution 
      */
-    mb_event.type = MB_ISEVENT_DEALLOC_NOTF;
+    mb_event.msg_type = MB_ISEVENT_DEALLOC_NOTF;
     mb_event.h_alloc = h_alloc;
     mb_event.app_blob = app_blob;
     
@@ -396,9 +408,18 @@ static int32_t ice_server_handle_allocation_events(
      * this allocation request message to the slave thread that will
      * decide how to respond to the specific event.
      */
-    bytes = send(g_mb_server.thread_sockpair[0], 
-                                        &mb_event, sizeof(mb_event), 0);
-    ICE_LOG (LOG_SEV_DEBUG, "Sent [%d] bytes to decision process", bytes);
+    ret = mq_send(g_mb_server.qid_worker_db, 
+                    (char *)&mb_event, sizeof(mb_event), 0);
+    if (ret != 0)
+    {
+        /** TODO - handle error! send error response to turn client? */
+        ICE_LOG (LOG_SEV_ERROR, 
+            "Error while posting the message to the DB process message queue");
+        return STUN_INT_ERROR;
+    }
+
+    ICE_LOG (LOG_SEV_DEBUG, 
+            "Posted the message to the DB process message queue");
 
     return STUN_OK;
 }
@@ -519,6 +540,11 @@ static int32_t worker_init(void)
     /** TODO */
     /** should we add the local socketpair() connected socket to the fd list? */
 
+    /** Add the message queue to the master fd set */
+    FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
+    if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
+        g_mb_server.max_fd = g_mb_server.qid_db_worker;
+
     return STUN_OK;
 }
 
@@ -542,6 +568,33 @@ static void ice_server_run(void)
 }
 
 
+static int32_t iceserver_setup_db_worker_ipcs(void)
+{
+    g_mb_server.qid_db_worker = mq_open(
+            MQ_DB_WORKER, O_CREAT | O_EXCL | O_RDWR | O_NONBLOCK, 0660, NULL);
+    if (g_mb_server.qid_db_worker == (mqd_t) -1)
+    {
+        perror ("mq_open");
+        ICE_LOG(LOG_SEV_ALERT, "Creation of DB-to-worker message queue failed");
+        return STUN_INT_ERROR;
+    }
+
+    g_mb_server.qid_worker_db = mq_open(
+            MQ_WORKER_DB, O_CREAT | O_EXCL | O_RDWR | O_NONBLOCK, 0660, NULL);
+    if (g_mb_server.qid_worker_db == (mqd_t) -1)
+    {
+        perror ("mq_open");
+        ICE_LOG(LOG_SEV_ALERT, "Creation of Worker-to-DB message queue failed");
+        return STUN_INT_ERROR;
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG,
+            "Message queues created for communication between DB processes and "
+            "the worker processes");
+    return STUN_OK;
+}
+
+
 static int32_t iceserver_setup_master_worker_ipcs(void)
 {
     int32_t count;
@@ -560,9 +613,9 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
             "Create DB lookup process socket: %d to fd_set", 
             g_mb_server.thread_sockpair[0]);
 
+    /** communication between master and each of the worker processes */
     for (count = 0; count < MB_ICE_SERVER_NUM_WORKER_PROCESSES; count++)
     {
-        /** communication between master and worker process */
         if (socketpair(AF_UNIX, SOCK_STREAM, 
                     0, g_mb_server.workers[count].sockpair) == -1)
         {
@@ -642,13 +695,6 @@ static int32_t iceserver_init(void)
 static int32_t iceserver_prepare_listener_fdset(void)
 {
     int32_t i;
-
-    /** reset */
-    g_mb_server.max_fd = 0;
-    FD_ZERO(&g_mb_server.master_rfds);
-    memset(g_mb_server.relay_sockets, 0, 
-                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
-
 
     /** add stun packet listener sockets */
     for(i = 0; i < 2; i++)
@@ -781,11 +827,13 @@ int main (int argc, char *argv[])
     printf ("MindBricks: SeamConnect ICE server booting up...\n");
 
     /** daemonize */
+#if 1
     if (daemon(0, 0) == -1)
     {
         printf("Could not be daemonized\n");
         exit(-1);
     }
+#endif
 
     /** set up logging */
     iceserver_init_log();
@@ -827,6 +875,14 @@ int main (int argc, char *argv[])
         return -1;
     }
 
+    /** setup IPC between worker processes and the db processes */
+    if (iceserver_setup_db_worker_ipcs() != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Initialization of "\
+                "IPC between db process and worker processes failed");
+        return -1;
+    }
+
     /** prepare the socket listener set */
     if (iceserver_prepare_listener_fdset() != STUN_OK)
     {
@@ -841,7 +897,7 @@ int main (int argc, char *argv[])
         return -1;
     }
 
-    mb_iceserver_decision_thread();
+    //mb_iceserver_decision_thread();
 
     //iceserver_init();
 
@@ -871,6 +927,14 @@ int main (int argc, char *argv[])
     /** TODO - de-init turns, stun and transport */
 
     /** TODO - kill all worker processes */
+
+    /** TODO - close all sockets */
+
+    /** TODO - close all message queues */
+    mq_close(g_mb_server.qid_worker_db);
+    mq_close(g_mb_server.qid_db_worker);
+    mq_unlink(MQ_WORKER_DB);
+    mq_unlink(MQ_DB_WORKER);
 
     closelog();
 

@@ -23,6 +23,9 @@ extern "C" {
 #include <stdlib.h>
 #include <time.h>
 #include <libpq-fe.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <mqueue.h>
 
 #include <stun_base.h>
 #include <turns_api.h>
@@ -493,12 +496,13 @@ int32_t iceserver_db_update_dealloc_column(
 int32_t mb_iceserver_handle_new_allocation(
                         PGconn *conn, mb_ice_server_event_t *event)
 {
-    int32_t bytes, alloc_handle, status = STUN_OK;
+    int32_t retval, alloc_handle, status = STUN_OK;
     stun_MD5_CTX ctx;
     mb_ice_server_alloc_decision_t decision;
     mb_iceserver_user_record_t user_record;
 
     memset(&decision, 0, sizeof(decision));
+    memset(&user_record, 0, sizeof(user_record));
 
     ICE_LOG(LOG_SEV_DEBUG, "Got an allocation request to approve");
 
@@ -541,7 +545,6 @@ int32_t mb_iceserver_handle_new_allocation(
         /** TODO: Then decide to either approve or reject the allocation request */
 
         /** TODO - for now, just go ahead and approve the allocation */
-        decision.blob = event->h_alloc;
 
         /** calculate the hmac key for long-term authentication */
         stun_MD5_Init(&ctx);
@@ -571,23 +574,30 @@ int32_t mb_iceserver_handle_new_allocation(
         decision.app_blob = (handle) alloc_handle;
     }
 
-    /** post */
-    bytes = send(g_mb_server.thread_sockpair[1], 
-                        &decision, sizeof(decision), 0);
-    ICE_LOG(LOG_SEV_DEBUG, "Sent [%d] bytes to signaling process", bytes);
+    /** set the allocation handle given by the turns module */
+    decision.blob = event->h_alloc;
 
-    if (bytes == -1)
+    /** post */
+    retval = mq_send(g_mb_server.qid_db_worker, 
+                    (char *)&decision, sizeof(decision), 0);
+
+    if (retval == -1)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Sending of allocation decision response failed");
+                "Posting of allocation decision response to worker mq failed");
         status = STUN_INT_ERROR;
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Posted the allocation decision response to the Worker MQ");
     }
 
     /** free the memory allocated  for user record */
-    free(user_record.realm);
-    free(user_record.username);
-    free(user_record.password);
-    free(user_record.user_id_str);
+    if (user_record.realm) free(user_record.realm);
+    if (user_record.username) free(user_record.username);
+    if (user_record.password) free(user_record.password);
+    if (user_record.user_id_str) free(user_record.user_id_str);
 
     return status;
 }
@@ -622,21 +632,91 @@ int32_t mb_iceserver_handle_deallocation(
 }
 
 
+int32_t mb_ice_server_db_process_msg_from_master(PGconn *conn, int fd)
+{
+    int32_t bytes, status = STUN_OK;
+    mb_ice_server_alloc_decision_t resp;
+    turns_allocation_decision_t turns_resp;
+
+    bytes = recv(fd, &resp, sizeof(resp), 0);
+    if (bytes == -1) return STUN_INT_ERROR;
+    if (bytes == 0) return STUN_OK;
+
+    return status;
+}
+
+
+
+int32_t mb_ice_server_db_process_msg_from_worker(PGconn *conn, mqd_t mqdes)
+{
+    int32_t bytes, status;
+    mb_ice_server_event_t *event;
+    static struct mq_attr attr;
+    static char *dbmsg = NULL;
+
+    if (dbmsg == NULL)
+    {
+        mq_getattr(g_mb_server.qid_worker_db, &attr);
+        dbmsg = (char *) stun_malloc(attr.mq_msgsize);
+    }
+
+    memset(&event, 0, sizeof(event));
+    bytes = mq_receive(mqdes, dbmsg, attr.mq_msgsize, 0);
+    if (bytes == (mqd_t) -1)
+    {
+        perror("mq_receive: ");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "DB Process: Error while retrieving message from "\
+                "the message queue");
+        return STUN_INT_ERROR;
+    }
+
+    if (bytes == 0) return STUN_OK;
+
+    event = (mb_ice_server_event_t *)dbmsg;
+
+    if (event->msg_type == MB_ISEVENT_NEW_ALLOC_REQ)
+    {
+        status = mb_iceserver_handle_new_allocation(conn, event);
+    }
+    else if (event->msg_type == MB_ISEVENT_DEALLOC_NOTF)
+    {
+        status = mb_iceserver_handle_deallocation(conn, event);
+    }
+
+    return status;
+}
+
+
 void *mb_iceserver_decision_thread(void)
 {
-    int bytes, status;
-    mb_ice_server_event_t event;
+    int status, ret, max_fd, i;
+    fd_set rfds;
     PGconn *conn;
 
-    ICE_LOG(LOG_SEV_DEBUG, "In am in the decision process now");
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "Unix domain socket is : %d", g_mb_server.thread_sockpair[1]);
+    ICE_LOG(LOG_SEV_DEBUG, "DB Process: In am in the decision process now");
+    ICE_LOG(LOG_SEV_DEBUG, "DB Process: Unix domain socket is : %d", 
+            g_mb_server.thread_sockpair[1]);
+
+    printf("Message QUeue ID: Worker->DB: %d DB->Worker: %d\n", 
+            g_mb_server.qid_worker_db, g_mb_server.qid_db_worker);
+
+    /** setup the sockets for listening */
+    FD_ZERO(&rfds);
+    FD_SET(g_mb_server.db_lookup.sockpair[1], &rfds);
+    max_fd = g_mb_server.db_lookup.sockpair[1];
+    FD_SET(g_mb_server.qid_worker_db, &rfds);
+    if (g_mb_server.qid_worker_db > max_fd)
+        max_fd = g_mb_server.qid_worker_db;
+
+    max_fd++;
 
     /** first off connect to the postgres server */
     conn = iceserver_db_connect();
     if (conn == NULL)
     {
-        ICE_LOG(LOG_SEV_ALERT, "Unable to connect to database. Abort");
+        ICE_LOG(LOG_SEV_ALERT, 
+                "DB Process: Unable to connect to database. Abort");
         /** TODO - Notify the parent process? and exit ? */
         return NULL;
     }
@@ -644,17 +724,24 @@ void *mb_iceserver_decision_thread(void)
     /** get into loop */
     while(!iceserver_quit)
     {
-        memset(&event, 0, sizeof(event));
-        bytes = recv(g_mb_server.db_lookup.sockpair[1], &event, sizeof(event), 0);
-        /** TODO - check and error handling */
-
-        if (event.type == MB_ISEVENT_NEW_ALLOC_REQ)
+        printf("DB Process: Before select: max_fd %d\n", max_fd);
+        ret = pselect(max_fd, &rfds, NULL, NULL, NULL, NULL);
+        if (ret == -1)
         {
-            status = mb_iceserver_handle_new_allocation(conn, &event);
+            perror("pselect");
+            ICE_LOG(LOG_SEV_ALERT, 
+                "DB Process: pselect returned error!!! Abort? now");
         }
-        else if (event.type == MB_ISEVENT_DEALLOC_NOTF)
+        ICE_LOG(LOG_SEV_DEBUG, "DB Process: After pselect %d", ret);
+    
+        for (i = 0; i < ret; i++)
         {
-            status = mb_iceserver_handle_deallocation(conn, &event);
+            if (FD_ISSET(g_mb_server.db_lookup.sockpair[1], &rfds))
+                mb_ice_server_db_process_msg_from_master(
+                            conn, &g_mb_server.db_lookup.sockpair[1]);
+            else
+                mb_ice_server_db_process_msg_from_worker(
+                            conn, g_mb_server.qid_worker_db);
         }
    }
 
