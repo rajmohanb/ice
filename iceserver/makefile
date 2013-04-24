@@ -15,7 +15,7 @@
 
 # Makefile for creating mindbricks ice server
 
-ICE_LIB_DEST_PATH := /home/rajmohan/MindBricks/ice/lib
+ICE_LIB_DEST_PATH := $(shell pwd)/../lib
 
 ICE_SERVER := mb_ice_server
 TARGET := all

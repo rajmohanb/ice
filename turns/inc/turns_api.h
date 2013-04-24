@@ -232,8 +232,7 @@ typedef struct {
 
 
 
-int32_t turns_create_instance(uint32_t max_allocs, 
-                        uint32_t num_media_procs, handle *h_inst);
+int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst);
 
 
 int32_t turns_instance_set_osa_callbacks(

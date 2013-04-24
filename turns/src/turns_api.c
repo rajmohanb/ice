@@ -36,11 +36,10 @@ extern "C" {
 
 
 
-int32_t turns_create_instance(uint32_t max_allocs, 
-                        uint32_t num_media_procs, handle *h_inst)
+int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst)
 {
     turns_instance_t *instance;
-    int32_t i, status;
+    int32_t status;
 
     if (h_inst == NULL)
         return STUN_INVALID_PARAMS;
@@ -52,7 +51,6 @@ int32_t turns_create_instance(uint32_t max_allocs,
     if (instance == NULL) return STUN_MEM_ERROR;
 
     instance->max_allocs = max_allocs;
-    instance->num_media_procs = num_media_procs;
     instance->nonce_timeout = TURNS_ALLOCATION_NONCE_STALE_TIMER;
 
     status = turns_create_table(max_allocs, &(instance->h_table));
@@ -65,12 +63,6 @@ int32_t turns_create_instance(uint32_t max_allocs,
         ICE_LOG(LOG_SEV_EMERG, 
                 "TURNS: Failed to create transaction instance");
         goto MB_ERROR_EXIT;
-    }
-
-    /** create the list of media worker processes that deal with media relay */
-    for (i = 0; i < instance->num_media_procs; i++)
-    {
-        //fork();
     }
 
     /** TODO - reserve a block of ports now itself? */
@@ -152,7 +144,7 @@ ERROR_EXIT_PT:
 
 int32_t turns_stop_txn_timer(handle timer_id)
 {
-    int32_t status;
+    int32_t status = STUN_OK;
 #if 0
     turn_timer_params_t *timer = (turn_timer_params_t *) timer_id;
     turn_session_t *session;
@@ -303,26 +295,45 @@ int32_t turns_instance_set_nonce_stale_timer_value(
 
 
 
+void turns_allocation_terminate(handle h_alloc, turns_allocation_t *alloc)
+{
+    int32_t status;
+
+    printf("terminate me NOW table: %p allocation: %p\n", h_alloc, alloc);
+
+    status = turns_allocation_fsm_inject_msg(
+                                alloc, TURNS_ALLOC_TERMINATE, NULL);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                    "Unable to terminate the allocation: %d", status);
+    }
+
+    return;
+}
+
+
+
 int32_t turns_destroy_instance(handle h_inst)
 {
     turns_instance_t *instance;
-    uint32_t i;
+    turns_alloc_iteration_cb cb = turns_allocation_terminate;
 
     if (h_inst == NULL)
         return STUN_INVALID_PARAMS;
 
     instance = (turns_instance_t *) h_inst;
 
-    for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++)
-    {
-        //if (instance->ah_session[i] == NULL) continue;
+    /** iterate on all allocations and terminate them */
+    turns_table_iterate(instance->h_table, cb);
 
-        //turn_destroy_session(h_inst, instance->ah_session[i]);
-    }
+    /** destory the table */
+    turns_destroy_table(instance->h_table);
 
     stun_txn_destroy_instance(instance->h_txn_inst);
     
-    stun_free(instance->client_name);
+    if (instance->client_name) stun_free(instance->client_name);
+    if (instance->realm) stun_free(instance->realm);
 
     stun_free(instance);
 

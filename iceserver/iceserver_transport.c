@@ -164,6 +164,17 @@ int32_t iceserver_init_transport(void)
 
 
 
+int32_t iceserver_deinit_transport(void)
+{
+    /** close the listening sockets */
+    if (g_mb_server.intf[0].sockfd) close(g_mb_server.intf[0].sockfd);
+    if (g_mb_server.intf[1].sockfd) close(g_mb_server.intf[1].sockfd);
+
+    return STUN_OK;
+}
+
+
+
 void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
 {
     int bytes, temp;

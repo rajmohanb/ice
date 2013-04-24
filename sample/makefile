@@ -15,7 +15,7 @@
 
 # Makefile for creating sample application programs
 
-ICE_LIB_DEST_PATH := /root/ICE/lib
+ICE_LIB_DEST_PATH := $(shell pwd)/../lib
 
 ICE_FULL_AGENT := ice_full_agent
 ICE_LITE_AGENT := ice_lite_agent
@@ -25,7 +25,9 @@ ICE_AGENT_DEMO := ice_agent_demo
 MB_ICE_WARRIOR := mb_ice_warrior
 GEN_LIC_KEY := gen_lic_key
 TARGET := all
-SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c ice_agent_demo.c mb_ice_warrior.c verify_key.c stun_keepalive_refresh.c ice_lite_agent_dual_stack.c gen_key.c
+SRC := stun_keepalive.c ice_full_agent.c ice_lite_agent.c \
+	ice_agent_demo.c mb_ice_warrior.c verify_key.c \
+	stun_keepalive_refresh.c ice_lite_agent_dual_stack.c gen_key.c
 
 # Include header file path
 INCLUDE :=-I ../ -I ../binding/inc -I ../stun/msg_layer/inc -I ../ \
@@ -66,7 +68,9 @@ OBJ:=$(SRC:c=o)
 	$(CC) $(CFLAGS) -o $*.o $<
 
 #$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR)
-$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) $(GEN_LIC_KEY)
+$(TARGET) : clean $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_LITE_AGENT) \
+	$(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) \
+	$(GEN_LIC_KEY)
 
 $(ICE_LITE_AGENT) :
 	@echo "Creating ice lite sample... " $(TARGET) 
@@ -115,5 +119,7 @@ clean_obj:
 
 clean:
 	@echo "Removing all sample ... "
-	rm -rf $(ICE_LITE_AGENT) $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) $(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) $(GEN_LIC_KEY) $(OBJ)
+	rm -rf $(ICE_LITE_AGENT) $(ICE_FULL_AGENT) $(STUN_KEEPALIVE) \
+		$(ICE_AGENT_DEMO) $(MB_ICE_WARRIOR) $(ICE_LITE_AGENT_DUAL_STACK) \
+		$(GEN_LIC_KEY) $(OBJ)
 

@@ -49,10 +49,12 @@ static turns_alloc_fsm_handler
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
+        turns_ignore_msg,
     },
     /** TSALLOC_CHALLENGED */
     {
         turns_process_alloc_req,
+        turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
@@ -81,6 +83,7 @@ static turns_alloc_fsm_handler
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
+        turns_terminate_allocation,
     },
     /** TSALLOC_ALLOCATED */
     {
@@ -97,9 +100,11 @@ static turns_alloc_fsm_handler
         turns_channel_bind_timer,
         turns_perm_timer,
         turns_channel_data_ind,
+        turns_terminate_allocation,
     },
     /** TSALLOC_TERMINATING */
     {
+        turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
@@ -694,6 +699,22 @@ int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg)
 
     return status;
 }
+
+
+
+int32_t turns_terminate_allocation (turns_allocation_t *alloc, handle h_msg)
+{
+    int32_t status;
+
+    ICE_LOG (LOG_SEV_INFO, "TURNS ALLOCATION FSM: Terminate event");
+    
+    status = turns_utils_deinit_allocation_context(alloc);
+
+    alloc->state = TSALLOC_UNALLOCATED;
+
+    return status;
+}
+
 
 
 int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg)

@@ -117,8 +117,81 @@ int32_t turns_destroy_table(handle h_table)
 
     if (h_table == NULL) return STUN_INVALID_PARAMS;
 
-    /** TODO: check return value */
-    munmap(table, table->mmap_len);
+    if (munmap(table, table->mmap_len) != 0)
+    {
+        perror("turns munmap");
+        ICE_LOG(LOG_SEV_ALERT, "Shared memory release failed");
+        return STUN_INT_ERROR;
+    }
+
+    return STUN_OK;
+}
+
+
+#if 0
+int32_t turns_destroy_table_with_callback(handle h_table)
+{
+    turns_alloc_table_t *table = (turns_alloc_table_t *) h_table;
+    turns_alloc_node_t *node;
+    uint32_t i;
+
+    if (h_table == NULL) return STUN_INVALID_PARAMS;
+
+    node = (turns_alloc_node_t *) table->alloc_list;
+
+    /** 
+     * for each allocation in the table, inform 
+     * the application using the event notifier 
+     */
+    for (i = 0; i < table->max_allocs; i++)
+    {
+        if (&node->context)
+        {
+            if (node->used == true)
+            {
+                ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation context found");
+                return STUN_OK;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        node++;
+    }
+
+
+    if (munmap(table, table->mmap_len) != 0)
+    {
+        perror("turns munmap");
+        ICE_LOG(LOG_SEV_ALERT, "Shared memory release failed");
+        return STUN_INT_ERROR;
+    }
+
+    return STUN_OK;
+}
+#endif
+
+
+
+int32_t turns_table_iterate(handle h_table, turns_alloc_iteration_cb iter_cb)
+{
+    turns_alloc_table_t *table = (turns_alloc_table_t *) h_table;
+    turns_alloc_node_t *node;
+    uint32_t i;
+
+    if (h_table == NULL) return STUN_INVALID_PARAMS;
+    if (table->cur_allocs == 0) return STUN_OK;
+    node = (turns_alloc_node_t *) table->alloc_list;
+
+    for (i = 0; i < table->max_allocs; i++)
+    {
+        if (node->used == true)
+            iter_cb(h_table, &(node->context)); /** callback */
+
+        node++;
+    }
 
     return STUN_OK;
 }

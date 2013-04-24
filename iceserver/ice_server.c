@@ -97,7 +97,6 @@ static void iceserver_sig_handler(int signum)
 {
     iceserver_quit = 1;
     printf("PID: %d Quiting - received signal %d\n", getpid(), signum);
-    exit(-1);
     return;
 }
 
@@ -432,7 +431,7 @@ static int32_t iceserver_init_turns(void)
     turns_event_callbacks_t event_cbs;
 
     /** initialize the turns module */
-    status = turns_create_instance(25, 1, &(g_mb_server.h_turns_inst));
+    status = turns_create_instance(25, &(g_mb_server.h_turns_inst));
     if (status != STUN_OK) return status;
 
     status = turns_instance_set_server_software_name(
@@ -475,6 +474,24 @@ MB_ERROR_EXIT:
 }
 
 
+
+static int32_t iceserver_deinit_turns(void)
+{
+    int32_t status;
+
+    /** de-initialize the turns module */
+    status = turns_destroy_instance(g_mb_server.h_turns_inst);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Deinitialization of the "\
+                "turns module failed. Returned error status: %d\n", status);
+    }
+
+    return status;
+}
+
+
+
 static int32_t iceserver_init_stuns(void)
 {
     int32_t status;
@@ -501,6 +518,22 @@ static int32_t iceserver_init_stuns(void)
 
 MB_ERROR_EXIT:
     status = stuns_destroy_instance(g_mb_server.h_stuns_inst);
+    return status;
+}
+
+
+static int32_t iceserver_deinit_stuns(void)
+{
+    int32_t status;
+
+    /** de-init the stuns module */
+    status = stuns_destroy_instance(g_mb_server.h_stuns_inst);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Deinitialization of the "\
+                "stuns module failed. Returned error status: %d\n", status);
+    }
+
     return status;
 }
 
@@ -630,67 +663,6 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
 }
 
 
-static int32_t iceserver_init(void)
-{
-    g_mb_server.max_fd = 0;
-    FD_ZERO(&g_mb_server.master_rfds);
-    memset(g_mb_server.relay_sockets, 0, 
-                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
-
-
-    /** for comm between the approval process and main signaling process */
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.thread_sockpair) == -1)
-    {
-        perror ("process socketpair");
-        ICE_LOG (LOG_SEV_ERROR, "process socketpair() returned error");
-        return STUN_INT_ERROR;
-    }
-
-    ICE_LOG(LOG_SEV_DEBUG, "Added decision process socket: %d to fd_set", 
-                                        g_mb_server.thread_sockpair[0]);
-    /** add internal socket used for communication with the decision process */
-    FD_SET(g_mb_server.thread_sockpair[0], &g_mb_server.master_rfds);
-    if (g_mb_server.max_fd < g_mb_server.thread_sockpair[0])
-        g_mb_server.max_fd = g_mb_server.thread_sockpair[0];
-
-    /** 
-     * for comm between the timer thread and the main signaling 
-     * thread to notify about the timer expiry 
-     * TODO: 
-     * Here we do not need 2 way IPCs because the communication is always one
-     * way since the timer thread will always notify the main signaling thread
-     * about a timer expiry. However, currently we handle stopping of the 
-     * timer expiry by directly looping into the linked list of timer nodes.
-     * This might take too much time, in such a case, we might need to push
-     * the timer stop operation into the timer thread?
-     */
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.timer_sockpair) == -1)
-    {
-        perror ("timer socketpair");
-        ICE_LOG (LOG_SEV_ERROR, "timer socketpair() returned error");
-        return STUN_INT_ERROR;
-    }
-
-    /** add internal socket used for communication with the timer thread */
-    FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
-    if (g_mb_server.max_fd < g_mb_server.timer_sockpair[0])
-        g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
-    ICE_LOG(LOG_SEV_DEBUG, "Added timer thread socket: %d to fd_set", 
-                                        g_mb_server.timer_sockpair[0]);
-
-    /** TODO
-     * When we are supporting multiple worker processes, we use fork(). And a
-     * forked child does not inherit timers from it's parent. We make use of 
-     * timer_create() sysytem call. So we need to move this platform_init() 
-     * call from here. This needs to be called by the each worker child 
-     * process (subsequent to fork).
-     */
-    if (platform_init() != true)
-        return STUN_INT_ERROR;
-
-    return STUN_OK;
-}
-
 
 static int32_t iceserver_prepare_listener_fdset(void)
 {
@@ -778,6 +750,7 @@ static int32_t iceserver_launch_workers(void)
     {
         g_mb_server.db_lookup.pid = child_pid;
         ICE_LOG(LOG_SEV_ALERT, "DB worker spawned. PID: %d", child_pid);
+        printf("DB worker spawned. PID: %d\n", child_pid);
     }
 
     for (count = 0; count < MB_ICE_SERVER_NUM_WORKER_PROCESSES; count++)
@@ -800,6 +773,7 @@ static int32_t iceserver_launch_workers(void)
         {
             g_mb_server.workers[count].pid = child_pid;
             ICE_LOG(LOG_SEV_ALERT, "Worker spawned. PID: %d", child_pid);
+            printf("Worker[%d] spawned. PID: %d\n", count, child_pid);
         }
     }
 
@@ -820,14 +794,14 @@ MB_ERROR_EXIT:
 
 int main (int argc, char *argv[])
 {
-    int32_t status;
+    int32_t status, i;
     int options = 0;
     siginfo_t siginfo;
 
     printf ("MindBricks: SeamConnect ICE server booting up...\n");
 
     /** daemonize */
-#if 1
+#if 0
     if (daemon(0, 0) == -1)
     {
         printf("Could not be daemonized\n");
@@ -890,16 +864,14 @@ int main (int argc, char *argv[])
         return -1;
     }
 
+    printf("Master process. PID: %d\n", getpid());
+
     /** spin off the db and worker processes */
     if (iceserver_launch_workers() != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, "Launching of worker processes failed");
         return -1;
     }
-
-    //mb_iceserver_decision_thread();
-
-    //iceserver_init();
 
     /** TODO - now wait for events from all the spawned processes */
     options = WEXITED;
@@ -909,24 +881,21 @@ int main (int argc, char *argv[])
                 "Master process: unable to wait for the child processes");
     }
 
+    printf("MASTER: OUT of wait loop\n");
+
     /** TODO - need to handle events from the webapp as well */
 
-#if 0
-    if (!fork())
-    {
-        /** child */
-        mb_iceserver_decision_thread();
-    }
-    else
-    {
-        /** parent - the loop! */
-        ice_server_run();
-    }
-#endif
-
-    /** TODO - de-init turns, stun and transport */
 
     /** TODO - kill all worker processes */
+    for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
+        kill(g_mb_server.workers[i].pid, SIGTERM);
+
+    kill(g_mb_server.db_lookup.pid, SIGTERM);
+
+    /** de-init turns, stun and transport */
+    iceserver_deinit_stuns();
+    iceserver_deinit_turns();
+    iceserver_deinit_transport();
 
     /** TODO - close all sockets */
 

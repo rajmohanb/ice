@@ -77,6 +77,7 @@ typedef enum
     TURNS_CHNL_BIND_TIMER_EXP,
     TURNS_PERM_TIMER_EXP,
     TURNS_CHNL_DATA_IND,
+    TURNS_ALLOC_TERMINATE,
     TURNS_ALLOC_EVENT_MAX,
 } turns_alloc_event_t;
 
@@ -143,9 +144,6 @@ typedef struct
 
     /** maximum configured allocations */
     int max_allocs;
-
-    /** number of media worker processes */
-    uint32_t num_media_procs;
 
     /** nonce stale timer value in seconds */
     uint32_t nonce_timeout;
