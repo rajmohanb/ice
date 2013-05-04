@@ -517,6 +517,7 @@ int32_t mb_iceserver_handle_new_allocation(
     mb_iceserver_user_record_t user_record;
 
     memset(&decision, 0, sizeof(decision));
+    memset(&user_record, 0, sizeof(user_record));
 
     ICE_LOG(LOG_SEV_DEBUG, "Got an allocation request to approve");
 
@@ -603,10 +604,10 @@ int32_t mb_iceserver_handle_new_allocation(
     }
 
     /** free the memory allocated  for user record */
-    free(user_record.realm);
-    free(user_record.username);
-    free(user_record.password);
-    free(user_record.user_id_str);
+    if (user_record.realm) free(user_record.realm);
+    if (user_record.username) free(user_record.username);
+    if (user_record.password) free(user_record.password);
+    if (user_record.user_id_str) free(user_record.user_id_str);
 
     return status;
 }

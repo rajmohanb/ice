@@ -774,19 +774,48 @@ int32_t turns_utils_init_allocation_context(
 
 int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
 {
-    int32_t status;
+    int32_t i, status;
+    turns_permission_t *perm;
+
+    /** stop all the permission related timers */
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        if (perm->used == false) continue;
+
+        status = turns_utils_stop_channel_binding_timer(alloc, perm);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Error! stopping the channel binding timer."\
+                    " status [%d]", status);
+        }
+
+        status = turns_utils_stop_permission_timer(alloc, perm);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Error! stopping the permission timer. "\
+                    "status [%d]", status);
+        }
+
+        perm->used = false;
+    }
+ 
+    /** stop allocation nonce stale timer if running */
+    status = turns_utils_stop_nonce_stale_timer(alloc);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Error! stopping the nonce stale timer. "\
+                "status [%d]", status);
+    }
 
     /** stop allocation refresh timer if running */
     status = turns_utils_stop_alloc_timer(alloc);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Error! stopping the allocation refresh timer. "\
+                "status [%d]", status);
+    }
 
-    /** stop allocation nonce stale timer if running */
-    status = turns_utils_stop_nonce_stale_timer(alloc);
-
-    /** TODO:
-     * - stop all timers
-     * -  delete all permissions
-     */
-    
     /** TODO: in the end, memset is safe? */
     stun_memset(alloc, 0, sizeof(turns_allocation_t));
 
