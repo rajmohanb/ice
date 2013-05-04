@@ -69,6 +69,8 @@ typedef struct
     stun_transport_protocol_type_t protocol;
     handle h_alloc;
     handle app_blob;
+    uint64_t ingress_bytes;
+    uint64_t egress_bytes;
 } mb_ice_server_event_t;
 
 

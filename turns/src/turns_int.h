@@ -108,6 +108,12 @@ typedef struct
     handle h_chnl_req;
     handle h_chnl_resp;
 
+    /** ingress relay data to the client from the peer */
+    uint64_t ingress_bytes;
+
+    /** egress relay data from the client to the peer */
+    uint64_t egress_bytes;
+
 } turns_permission_t;
 
 
@@ -221,6 +227,7 @@ typedef struct
 
     /** application server blob identifier */
     handle app_blob;
+
 } turns_allocation_t;
 
 

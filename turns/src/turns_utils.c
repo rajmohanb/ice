@@ -786,6 +786,9 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
      * - stop all timers
      * -  delete all permissions
      */
+    
+    /** TODO: in the end, memset is safe? */
+    stun_memset(alloc, 0, sizeof(turns_allocation_t));
 
     return status;
 }
@@ -1385,6 +1388,8 @@ int32_t turns_utils_install_permission(turns_allocation_t *alloc,
 
         perm->channel_num = channel;
         perm->used = true;
+        perm->ingress_bytes = 0;
+        perm->egress_bytes = 0;
 
         ICE_LOG(LOG_SEV_INFO, "Installed permission for %s:%d",
                             perm->peer_addr.ip_addr, perm->peer_addr.port);
@@ -2097,10 +2102,12 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
         goto MB_ERROR_EXIT;
     }
 
-    /** TODO - check return value */
-
     ICE_LOG(LOG_SEV_DEBUG, "Sent UDP data of length %d to %s:%d", 
                 num, perm->peer_addr.ip_addr, perm->peer_addr.port);
+
+    perm->egress_bytes += num;
+
+    printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
 
     return status;
 
@@ -2120,6 +2127,7 @@ int32_t turns_utils_forward_channel_data(
     int32_t status = STUN_OK;
     uint16_t i, channel;
     turns_permission_t *perm;
+    uint32_t bytes = 0;
 
     /** get the channel number */
     stun_memcpy(&channel, data->data, sizeof(uint16_t));
@@ -2145,11 +2153,24 @@ int32_t turns_utils_forward_channel_data(
     stun_memcpy(&i, (data->data+2), sizeof(uint16_t));
     i = ntohs(i);
 
-    alloc->instance->nwk_data_cb((data->data+4), i, 
+    /** TODO : in case of TCP/TLS, padding needs to be done for the app data */
+
+    bytes = alloc->instance->nwk_data_cb((data->data+4), i, 
             perm->peer_addr.host_type, perm->peer_addr.ip_addr, 
             perm->peer_addr.port, (handle)alloc->relay_sock, NULL);
 
-    /** TODO : in case of TCP/TLS, padding needs to be done for the app data */
+    if (bytes <= 0)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Sending of UDP data to %s:%d failed", 
+                                perm->peer_addr.ip_addr, perm->peer_addr.port);
+        status = STUN_TRANSPORT_FAIL;
+    }
+    else
+    {
+        perm->egress_bytes += bytes;
+        printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+    }
+
     /** TODO : check if send really succeeded check return value */
 
     return status;
@@ -2161,7 +2182,7 @@ int32_t turns_utils_forward_udp_data_using_channeldata_msg(
                         turns_allocation_t *alloc, turns_permission_t *perm, 
                         turns_rx_channel_data_t *data)
 {
-    int32_t status = STUN_OK;
+    int32_t bytes, status = STUN_OK;
     char buf[1500] = {0};
     uint16_t channel, len;
 
@@ -2185,11 +2206,16 @@ int32_t turns_utils_forward_udp_data_using_channeldata_msg(
 #endif
 
     /** send to the client */
-    len = alloc->instance->nwk_data_cb((uint8_t *)buf, (data->data_len + 4), 
+    bytes = alloc->instance->nwk_data_cb((uint8_t *)buf, (data->data_len + 4), 
             alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
             alloc->client_addr.port, alloc->transport_param, NULL);
 
-    if (len <= 0) status = STUN_TRANSPORT_FAIL;
+    if (bytes <= 0)
+        status = STUN_TRANSPORT_FAIL;
+    else
+        perm->ingress_bytes += data->data_len;
+
+    printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     return status;
 }
@@ -2276,6 +2302,10 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
         goto MB_ERROR_EXIT1;
     }
 
+    perm->ingress_bytes += data->data_len;
+
+    printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+
     ICE_LOG(LOG_SEV_DEBUG, 
             "Forwarded UDP data using DATA IND to the client at %s:%d", 
             alloc->client_addr.ip_addr, alloc->client_addr.port);
@@ -2308,6 +2338,29 @@ int32_t turns_utils_post_verify_info_from_alloc_request(
     return status;
 }
  
+
+int32_t turns_utils_calculate_allocation_relayed_data(
+                        turns_allocation_t *alloc, uint64_t *ingress_data, 
+                        uint64_t *egress_data)
+{
+    turns_permission_t *perm = NULL;
+    uint64_t ingress = 0, egress = 0;
+    uint16_t i;
+
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        if (perm->used == false) continue;
+
+        ingress += perm->ingress_bytes;
+        egress += perm->egress_bytes;
+    }
+
+    *ingress_data = ingress;
+    *egress_data = egress;
+
+    return STUN_OK;
+}
 
 
 /******************************************************************************/

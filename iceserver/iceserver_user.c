@@ -84,7 +84,7 @@ PGconn *iceserver_db_connect(void)
     ExecStatusType db_status;
     Oid user_plan_param_types[1] = { 1043 };
     Oid alloc_plan_param_types[2] = { 23, 20 };
-    Oid alloc_dealloc_update_plan_param_types[3] = { 1114, 1114, 23 };
+    Oid alloc_dealloc_update_plan_param_types[6] = { 1114, 1114, 23, 23, 23, 23 };
     Oid alloc_insert_plan_param_types[10] = 
                     { 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
 
@@ -179,8 +179,9 @@ PGconn *iceserver_db_connect(void)
      * updating the dealloc column in the allocations table.
      */
     result = PQprepare(conn, alloc_dealloc_update, 
-                "UPDATE allocations SET dealloc_at = $1, updated_at = $2 "\
-                "WHERE id = $3", 3, alloc_dealloc_update_plan_param_types);
+                "UPDATE allocations SET dealloc_at = $1, updated_at = $2, "\
+                "ingress_data = $3, egress_data = $4, total_relay = $5 "\
+                "WHERE id = $6", 6, alloc_dealloc_update_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -452,27 +453,42 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 }
 
 
-int32_t iceserver_db_update_dealloc_column(
-                PGconn *conn, mb_iceserver_alloc_record_t *alloc_record)
+int32_t iceserver_db_update_dealloc_column(PGconn *conn, 
+        mb_ice_server_event_t *event, mb_iceserver_alloc_record_t *alloc_record)
 {
     ExecStatusType db_status;
-    const char *values[3];
+    const char *values[6];
     PGresult *result;
     char tmp_value1[30] = {0};
-    char tmp_value2[30] = {0};
+    char tmp_value2[12] = {0};
+    char tmp_value3[12] = {0};
+    char tmp_value4[12] = {0};
+    char tmp_value5[30] = {0};
 
     iceserver_get_current_time(tmp_value1);
     ICE_LOG(LOG_SEV_DEBUG, "CURRENT TIME : %s", tmp_value1);
 
+    /** deallocated and updated time */
     values[0] = tmp_value1;
     values[1] = tmp_value1;
 
-    /** requested lifetime */
-    sprintf(tmp_value2, "%u", alloc_record->allocation_id);
+    /** ingress data size */
+    sprintf(tmp_value2, "%d", event->ingress_bytes);
     values[2] = tmp_value2;
 
+    /** egress data size */
+    sprintf(tmp_value3, "%d", event->egress_bytes);
+    values[3] = tmp_value3;
+
+    /** total relay data size */
+    sprintf(tmp_value4, "%d", (event->ingress_bytes + event->egress_bytes));
+    values[4] = tmp_value4;
+
+    sprintf(tmp_value5, "%u", alloc_record->allocation_id);
+    values[5] = tmp_value5;
+
     result = PQexecPrepared(
-            conn, alloc_dealloc_update, 3, values, NULL, NULL, 0);
+            conn, alloc_dealloc_update, 6, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -611,13 +627,16 @@ int32_t mb_iceserver_handle_deallocation(
         return status;
     }
 
-    status = iceserver_db_update_dealloc_column(conn, &alloc_record);
+    status = iceserver_db_update_dealloc_column(conn, event, &alloc_record);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Updating of the dealloc column in allocation record failed");
         return status;
     }
+
+    printf("TOTAL INGRESS DATA: %d bytes\n", event->ingress_bytes);
+    printf("TOTAL EGRESS DATA: %d bytes\n", event->egress_bytes);
 
     /** TODO - should we update the stats in user record */
 

@@ -452,7 +452,7 @@ int32_t turns_process_alloc_timer (turns_allocation_t *alloc, handle h_msg)
 
     ICE_LOG(LOG_SEV_DEBUG, "Allocation timer expired. Lets unallocate it now");
 
-    status = turns_utils_deinit_allocation_context(alloc);
+    // status = turns_utils_deinit_allocation_context(alloc);
 
     alloc->state = TSALLOC_UNALLOCATED;
 
@@ -727,6 +727,18 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
 
     if (alloc->state == TSALLOC_UNALLOCATED)
     {
+        turns_alloc_event_params_t event_params = {0};
+
+        event_params.h_alloc = alloc;
+        event_params.app_blob = alloc->app_blob;
+
+        turns_utils_calculate_allocation_relayed_data(alloc, 
+                &event_params.ingress_bytes, &event_params.egress_bytes);
+        printf("TURNS = TOTAL INGRESS BYTES %d\n", event_params.ingress_bytes);
+
+        /** notify the server application */
+        alloc->instance->alloc_event_cb(TURNS_EV_DEALLOCATED, &event_params);
+
         /** 
          * if a context has been unallocated, then mark the node in 
          * the context list as unused so that this can be reused.
@@ -739,9 +751,7 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
                     alloc);
         }
 
-        /** notify the server application */
-        alloc->instance->alloc_event_cb(
-                TURNS_EV_DEALLOCATED, alloc, alloc->app_blob);
+        turns_utils_deinit_allocation_context(alloc);
     }
 
     return status;

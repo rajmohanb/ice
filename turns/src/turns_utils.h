@@ -158,6 +158,10 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
                         turns_rx_channel_data_t *data);
 
 
+int32_t turns_utils_calculate_allocation_relayed_data(
+                        turns_allocation_t *alloc, uint64_t *ingress_data, 
+                        uint64_t *egress_data);
+
 
 /******************************************************************************/
 

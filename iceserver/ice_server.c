@@ -336,6 +336,9 @@ static int32_t ice_server_new_allocation_request(
     event.lifetime = alloc_req->lifetime;
     event.protocol = alloc_req->protocol;
     event.h_alloc = alloc_req->blob;
+
+    event.ingress_bytes = 0;
+    event.egress_bytes = 0;
     
     /**
      * this callback routine must not consume too much time since it is 
@@ -353,13 +356,14 @@ static int32_t ice_server_new_allocation_request(
 
 
 static int32_t ice_server_handle_allocation_events(
-            turns_event_t event, handle h_alloc, handle app_blob)
+            turns_event_t event, turns_alloc_event_params_t *params)
+            //turns_event_t event, handle h_alloc, handle app_blob)
 {
     int bytes = 0;
     mb_ice_server_event_t mb_event;
 
     ICE_LOG(LOG_SEV_DEBUG, 
-            "Received allocation event for allocation %p: ", h_alloc);
+            "Received allocation event for allocation %p: ", params->h_alloc);
 
     if (event == TURNS_EV_DEALLOCATED)
         ICE_LOG(LOG_SEV_DEBUG, "TURNS_EV_DEALLOCATED");
@@ -375,8 +379,11 @@ static int32_t ice_server_handle_allocation_events(
      * need to find an elegant solution 
      */
     mb_event.type = MB_ISEVENT_DEALLOC_NOTF;
-    mb_event.h_alloc = h_alloc;
-    mb_event.app_blob = app_blob;
+    mb_event.h_alloc = params->h_alloc;
+    mb_event.app_blob = params->app_blob;
+
+    mb_event.ingress_bytes = params->ingress_bytes;
+    mb_event.egress_bytes = params->egress_bytes;
     
     /**
      * this callback routine must not consume too much time since it is 
@@ -583,7 +590,7 @@ int main (int argc, char *argv[])
     int32_t status;
     printf ("MindBricks ICE server booting up...\n");
 
-#if 1
+#if 0
     /** daemonize */
     if (daemon(0, 0) == -1)
     {

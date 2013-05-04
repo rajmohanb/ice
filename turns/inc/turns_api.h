@@ -131,6 +131,14 @@ typedef struct
 } turns_new_allocation_params_t;
 
 
+typedef struct
+{
+    handle h_alloc;
+    handle app_blob;
+    uint64_t ingress_bytes;
+    uint64_t egress_bytes;
+} turns_alloc_event_params_t;
+
 
 typedef struct
 {
@@ -217,7 +225,7 @@ typedef int32_t (*turns_new_alloc_cb) (
  * application must not perform any intensive operations within this callback.
  */
 typedef int32_t (*turns_alloc_event_cb) (
-            turns_event_t event, handle h_alloc, handle app_blob);
+            turns_event_t event, turns_alloc_event_params_t *params);
 
 
 
