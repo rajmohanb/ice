@@ -85,8 +85,8 @@ PGconn *iceserver_db_connect(void)
     Oid user_plan_param_types[1] = { 1043 };
     Oid alloc_plan_param_types[2] = { 23, 20 };
     Oid alloc_dealloc_update_plan_param_types[6] = { 1114, 1114, 23, 23, 23, 23 };
-    Oid alloc_insert_plan_param_types[10] = 
-                    { 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
+    Oid alloc_insert_plan_param_types[11] = 
+                    { 1043, 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
@@ -133,11 +133,11 @@ PGconn *iceserver_db_connect(void)
      * for inserting records into the allocation table.
      */
     result = PQprepare(conn, alloc_insert_plan, 
-                "INSERT INTO allocations (username, realm, req_lifetime, "\
-                "allotted_lifetime, bandwidth_used, alloc_at, created_at, "\
-                "updated_at, user_id, alloc_handle) "\
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id",
-                10, alloc_insert_plan_param_types);
+                "INSERT INTO allocations (username, realm, protocol, "\
+                "req_lifetime, allotted_lifetime, bandwidth_used, alloc_at, "\
+                "created_at, updated_at, user_id, alloc_handle) "\
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) "\
+                "RETURNING id", 11, alloc_insert_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -388,41 +388,51 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 {
     int rows, alloc_id;
     ExecStatusType db_status;
-    const char *values[10];
+    const char *values[11];
     PGresult *result;
     char tmp_value1[10] = {0};
     char tmp_value2[15] = {0};
     char tmp_value3[15] = {0};
     char tmp_value4[30] = {0};
     char tmp_value5[12] = {0};
+    char tmp_value6[8] = {0};
 
     values[0] = user->username;
     values[1] = user->realm;
 
+    if (event->protocol == ICE_TRANSPORT_UDP)
+        strncpy(tmp_value6, "UDP", 3); 
+    else if (event->protocol == ICE_TRANSPORT_TCP)
+        strncpy(tmp_value6, "TCP", 3); 
+    else
+        strncpy(tmp_value6, "UNKNOWN", 8); 
+
+    values[2] = tmp_value6;
+
     /** requested lifetime */
     sprintf(tmp_value1, "%d", event->lifetime);
-    values[2] = tmp_value1;
+    values[3] = tmp_value1;
 
     /** allotted lifetime */
     sprintf(tmp_value2, "%d", allotted_lifetime);
-    values[3] = tmp_value2;
+    values[4] = tmp_value2;
 
     strcpy(tmp_value3, "0");
-    values[4] = tmp_value3;
+    values[5] = tmp_value3;
 
     iceserver_get_current_time(tmp_value4);
     ICE_LOG(LOG_SEV_DEBUG, "CURRENT TIME : %s", tmp_value4);
 
-    values[5] = tmp_value4;
     values[6] = tmp_value4;
     values[7] = tmp_value4;
-    values[8] = user->user_id_str;
+    values[8] = tmp_value4;
+    values[9] = user->user_id_str;
 
     sprintf(tmp_value5, "%u", (unsigned int)event->h_alloc);
-    values[9] = tmp_value5;
+    values[10] = tmp_value5;
     ICE_LOG(LOG_SEV_DEBUG, "Allocation handle to DB: %s", tmp_value5);
 
-    result = PQexecPrepared(conn, alloc_insert_plan, 10, values, NULL, NULL, 0);
+    result = PQexecPrepared(conn, alloc_insert_plan, 11, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
     {

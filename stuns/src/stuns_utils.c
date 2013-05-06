@@ -307,7 +307,6 @@ int32_t stuns_utils_process_stun_binding_request(
         return status;
     }
 
-    printf("Now we should send out the response\n");
     status = stuns_utils_send_success_resp(instance, stun_pkt);
     if (status != STUN_OK)
     {
