@@ -332,6 +332,8 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
     bytes = recvfrom(sock_fd, buf, 1500, 0, &client, &addrlen);
     if (bytes == -1) return;
 
+    /** check for EAGAIN or EWOULDBLOCK since the sockets are non blocking? */
+
     /** TODO - connection closed for TCP, remove the socket from list? */
     if (bytes == 0) return;
 

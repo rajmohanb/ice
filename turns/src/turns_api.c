@@ -601,6 +601,13 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
     alloc = (turns_allocation_t *)timer->h_alloc;
     instance = (turns_instance_t *)timer->h_instance;
 
+    if ((!instance) || (timer_id != timer->timer_id))
+    {
+        ICE_LOG (LOG_SEV_INFO, 
+            "[TURN] Some stray TURNS timer %d. Ignoring for now", timer_id);
+        return STUN_OK;
+    }
+
     /** make sure we allocation is valid & alive before injecting the event */
     status = turns_table_does_node_exist(instance->h_table, timer->h_alloc);
     if (status == STUN_NOT_FOUND)

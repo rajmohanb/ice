@@ -85,8 +85,13 @@ void *mb_iceserver_decision_thread(void);
 
 static void iceserver_sig_handler(int signum)
 {
+    static pid_t pid, ppid;
+    pid = getpid();
+    ppid = getppid();
     iceserver_quit = 1;
-    printf("Quiting - Signal : %d\n", signum);
+    printf("Quiting - Signal : %d PID: %d PPID: %d\n", signum, pid, ppid);
+    ICE_LOG(LOG_SEV_ALERT,
+            "Quiting - Signal : %d PID: %d PPID: %d\n", signum, pid, ppid);
     return;
 }
 
@@ -284,6 +289,8 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
     if (g_mb_server.max_fd < sock_fd) g_mb_server.max_fd = sock_fd;
 
     /** need to wake up the waiting pselect */
+    ICE_LOG(LOG_SEV_INFO, 
+            "Added a new relay socket: %d at index %d", sock_fd, i);
 
     return STUN_OK;
 }
@@ -406,7 +413,7 @@ static int32_t iceserver_init_turns(void)
     turns_event_callbacks_t event_cbs;
 
     /** initialize the turns module */
-    status = turns_create_instance(25, 1, &(g_mb_server.h_turns_inst));
+    status = turns_create_instance(1000, 1, &(g_mb_server.h_turns_inst));
     if (status != STUN_OK) return status;
 
     status = turns_instance_set_server_software_name(

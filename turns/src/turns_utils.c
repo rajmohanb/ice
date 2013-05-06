@@ -866,6 +866,13 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
     sock = socket(sa_family, sock_type, 0);
     if (sock == -1) return STUN_NO_RESOURCE;
 
+    /** 
+     * set the socket to non-blocking. This is because on linux, strange 
+     * behavior is observed where select says that "data is available", but
+     * subsequent recvfrom() blocks. This is mentioned in man page as well.
+     */
+    fcntl(sock, F_SETFL, O_NONBLOCK);
+
     addr.sa_family = sa_family;
 
     for (i = TURNS_PORT_RANGE_MIN; i <= TURNS_PORT_RANGE_MAX; i++)
