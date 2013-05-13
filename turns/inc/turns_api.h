@@ -44,7 +44,7 @@ extern "C" {
 
 #define TURNS_SERVER_NONCE_LEN          64
 
-#define TURNS_MMAP_FILE_PATH            "/tmp/mbiceserver"
+#define TURNS_MMAP_FILE_PATH            "/mbiceserver"
 
 #define TURNS_ERROR_REASON_LENGTH       256
 

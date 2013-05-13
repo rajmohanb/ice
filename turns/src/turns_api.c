@@ -56,6 +56,10 @@ int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst)
     status = turns_create_table(max_allocs, &(instance->h_table));
     if (status != STUN_OK) return status;
 
+    /** initialize all the allocations */
+    status = turns_table_init_allocations(instance->h_table);
+    if (status != STUN_OK) return status;
+
     status = stun_txn_create_instance(
                 TURN_MAX_CONCURRENT_SESSIONS, &instance->h_txn_inst);
     if (status != STUN_OK)
@@ -326,6 +330,9 @@ int32_t turns_destroy_instance(handle h_inst)
 
     /** iterate on all allocations and terminate them */
     turns_table_iterate(instance->h_table, cb);
+
+    /** deinitialize all the allocations */
+    turns_table_deinit_allocations(instance->h_table);
 
     /** destory the table */
     turns_destroy_table(instance->h_table);

@@ -431,7 +431,7 @@ static int32_t iceserver_init_turns(void)
     turns_event_callbacks_t event_cbs;
 
     /** initialize the turns module */
-    status = turns_create_instance(25, &(g_mb_server.h_turns_inst));
+    status = turns_create_instance(1000, &(g_mb_server.h_turns_inst));
     if (status != STUN_OK) return status;
 
     status = turns_instance_set_server_software_name(

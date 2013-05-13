@@ -171,7 +171,7 @@ typedef struct
 
     /** username */
     uint32_t username_len;
-    u_char *username;
+    u_char username[TURN_MAX_USERNAME_LEN];
 
     /**
      * hmac key - will always be 16 bytes since 
@@ -219,6 +219,10 @@ typedef struct
 
     /** application server blob identifier */
     handle app_blob;
+
+    /** lock */
+    pthread_mutex_t lock;
+
 } turns_allocation_t;
 
 

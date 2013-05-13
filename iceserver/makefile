@@ -32,7 +32,7 @@ ICE_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_turns.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_encdec.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_txn.a \
 	$(ICE_LIB_DEST_PATH)/lib_stun_msg.a \
-	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lm -lrt -ldl
+	$(ICE_LIB_DEST_PATH)/lib_platform.a -lssl -lcrypto -lpthread -lm -lrt -ldl
 
 POSTGRES_LIB := -lpq
 

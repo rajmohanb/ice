@@ -153,15 +153,26 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
-                "USERNAME attribute: Error retrieving length, sending 401");
+                "USERNAME attribute: Error retrieving length, sending 400");
         *error_code = 400;
         return status;
     }
 
-    username = (u_char *) stun_calloc(1, len);
-    if(username == NULL) return STUN_MEM_ERROR;
+    if (len > TURN_MAX_USERNAME_LEN)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "USERNAME attribute: "\
+                "received length %d more than max supported, sending 400", len);
+        *error_code = 400;
+        return status;
+    }
 
-    status = stun_attr_username_get_username(h_attr, username, &len);
+    /**
+     * at this time, we do not have any information on the 
+     * username for validation. so ust copy what the client 
+     * has provided and pass on to the server app.
+     */
+    len = TURN_MAX_USERNAME_LEN;
+    status = stun_attr_username_get_username(h_attr, alloc->username, &len);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
@@ -170,13 +181,9 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT1;
     }
 
-    /**
-     * at this time, we do not have any information on the username. so
-     * just copy what the client has provided and pass on to the server app.
-     */
-    alloc->username = username;
+    //alloc->username = username;
     alloc->username_len = len;
-    username = NULL;
+    //username = NULL;
     //ICE_LOG(LOG_SEV_DEBUG, "OK: So Username is %s", alloc->username);
 
     num = 1;

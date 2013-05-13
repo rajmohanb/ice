@@ -56,6 +56,13 @@ typedef void (*turns_alloc_iteration_cb)(handle h_alloc, turns_allocation_t *all
 int32_t turns_table_iterate(handle h_table, turns_alloc_iteration_cb iter_cb);
 
 
+int32_t turns_table_init_allocations(handle h_table);
+
+
+int32_t turns_table_deinit_allocations(handle h_table);
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

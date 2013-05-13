@@ -24,6 +24,7 @@ extern "C" {
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <semaphore.h>
+#include <pthread.h>
 #include <sys/mman.h>
 
 
@@ -40,14 +41,13 @@ extern "C" {
 
 typedef struct turns_alloc_node {
     bool_t used;
-    sem_t  lock;
     turns_allocation_t context;
 } turns_alloc_node_t;
 
 
 
 typedef struct {
-    sem_t   mutex;
+    pthread_rwlock_t table_lock;
     uint32_t mmap_len;
     uint32_t max_allocs;
     uint32_t cur_allocs;
@@ -65,8 +65,11 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
 
     if (h_table == NULL) return STUN_INVALID_PARAMS;
 
+    /** remove shared memory object if it existed */
+    shm_unlink(TURNS_MMAP_FILE_PATH);
+
     /** open file for shared memory access */
-    fd = open(TURNS_MMAP_FILE_PATH, O_RDWR | O_CREAT);
+    fd = shm_open(TURNS_MMAP_FILE_PATH, O_RDWR | O_CREAT, S_IRWXU);
     if (fd == -1)
     {
         perror("shared memory open");
@@ -78,8 +81,23 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     size = sizeof(turns_alloc_table_t);
     size += max_allocs * sizeof(turns_alloc_node_t);
 
-    /** write some data TODO - need to optimize? */
+    if (ftruncate(fd, size) < 0)
+    {
+        perror("shared memory ftruncate");
+        ICE_LOG(LOG_SEV_ALERT, "TURNS: Truncating the shared mem file failed");
+        close(fd);
+        return STUN_INT_ERROR;
+    }
+
+    /** write some data TODO - need to optimize? */ 
     for (i = 0; i < size; i++) write(fd, &zero, sizeof(char));
+    //write(fd, &zero, size);
+
+    /**
+     * TODO - the allocation size is desired to be in multiple of the PAGESIZE
+     * since internally mmap deals only with pages, and it is desirable that
+     * they are aligned to the page boundary. Typical page sizes - 4096/8192.
+     */
 
     /** allocate shared memory */
     table = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
@@ -100,6 +118,13 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     table->mmap_len = size;
     table->max_allocs = max_allocs;
     table->cur_allocs = 0;
+
+    /** TODO: Do we need to use non-default attr? */
+    if (pthread_rwlock_init(&table->table_lock, NULL) != 0)
+    {
+        /** TODO - unmmap, etc */
+        return STUN_INT_ERROR;
+    }
 
     ICE_LOG(LOG_SEV_DEBUG, "table = %p", table);
     ICE_LOG(LOG_SEV_DEBUG, "table alloc list = %p", table->alloc_list);
@@ -123,6 +148,8 @@ int32_t turns_destroy_table(handle h_table)
         ICE_LOG(LOG_SEV_ALERT, "Shared memory release failed");
         return STUN_INT_ERROR;
     }
+
+    pthread_rwlock_destroy(&table->table_lock);
 
     return STUN_OK;
 }
@@ -185,6 +212,8 @@ int32_t turns_table_iterate(handle h_table, turns_alloc_iteration_cb iter_cb)
     if (table->cur_allocs == 0) return STUN_OK;
     node = (turns_alloc_node_t *) table->alloc_list;
 
+    pthread_rwlock_rdlock(&table->table_lock);
+
     for (i = 0; i < table->max_allocs; i++)
     {
         if (node->used == true)
@@ -192,6 +221,8 @@ int32_t turns_table_iterate(handle h_table, turns_alloc_iteration_cb iter_cb)
 
         node++;
     }
+
+    pthread_rwlock_unlock(&table->table_lock);
 
     return STUN_OK;
 }
@@ -211,12 +242,15 @@ int32_t turns_table_does_node_exist(handle h_table, turns_allocation_t *alloc)
 
     node = (turns_alloc_node_t *) table->alloc_list;
 
+    pthread_rwlock_rdlock(&table->table_lock);
+
     for (i = 0; i < table->max_allocs; i++)
     {
         if (alloc == &node->context)
         {
             if (node->used == true)
             {
+                pthread_rwlock_unlock(&table->table_lock);
                 ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation context found");
                 return STUN_OK;
             }
@@ -229,6 +263,7 @@ int32_t turns_table_does_node_exist(handle h_table, turns_allocation_t *alloc)
         node++;
     }
 
+    pthread_rwlock_unlock(&table->table_lock);
     ICE_LOG (LOG_SEV_ERROR, 
             "[STUN TXN] Stun txn handle NOT FOUND while searching");
     
@@ -253,6 +288,8 @@ int32_t turns_table_find_node(handle h_table,
 
     node = (turns_alloc_node_t *) table->alloc_list;
 
+    pthread_rwlock_rdlock(&table->table_lock);
+
     for (i = 0; i < table->max_allocs; i++)
     {
         context = &node->context;
@@ -264,6 +301,7 @@ int32_t turns_table_find_node(handle h_table,
             (turns_utils_host_compare(context->client_addr.ip_addr, 
                                       src->ip_addr, src->host_type)))
         {
+            pthread_rwlock_unlock(&table->table_lock);
             ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation context found");
             *alloc = context;
             return STUN_OK;
@@ -272,6 +310,7 @@ int32_t turns_table_find_node(handle h_table,
         node++;
     }
 
+    pthread_rwlock_unlock(&table->table_lock);
     ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation context NOT found");
     
     return STUN_NOT_FOUND;
@@ -291,6 +330,8 @@ turns_allocation_t *turns_table_create_allocation(handle h_table)
 
     node = table->alloc_list;
 
+    pthread_rwlock_wrlock(&table->table_lock);
+
     for(i = 0; i < table->max_allocs; i++)
         if(node->used == false)
             break;
@@ -298,7 +339,11 @@ turns_allocation_t *turns_table_create_allocation(handle h_table)
             node++;
 
     /** should never land here... this has been taken care of above */
-    if (i == table->max_allocs) return NULL;
+    if (i == table->max_allocs)
+    {
+        pthread_rwlock_unlock(&table->table_lock);
+        return NULL;
+    }
 
     /** this node is now taken */
     node->used = true;
@@ -310,6 +355,8 @@ turns_allocation_t *turns_table_create_allocation(handle h_table)
 
     ICE_LOG(LOG_SEV_NOTICE, 
             "Number of allocations now: %d\n", table->cur_allocs);
+
+    pthread_rwlock_unlock(&table->table_lock);
 
     return &node->context;
 }
@@ -330,24 +377,32 @@ int32_t turns_table_delete_allocation(
 
     node = (turns_alloc_node_t *) table->alloc_list;
 
+    pthread_rwlock_wrlock(&table->table_lock);
+
     for (i = 0; i < table->max_allocs; i++)
     {
         if (alloc == &node->context)
         {
             if (node->used == false)
+            {
                 ICE_LOG (LOG_SEV_ERROR, 
                         "[TURNS] Fixme!!!! The allocation is already usused?");
-            
-            node->used = false;
-            table->cur_allocs -= 1;
-            ICE_LOG(LOG_SEV_NOTICE, 
+            }
+            else
+            {
+                node->used = false;
+                table->cur_allocs -= 1;
+                ICE_LOG(LOG_SEV_NOTICE, 
                     "Number of allocations now: %d", table->cur_allocs);
+            }
+            pthread_rwlock_unlock(&table->table_lock);
             return STUN_OK;
         }
 
         node++;
     }
 
+    pthread_rwlock_unlock(&table->table_lock);
     ICE_LOG (LOG_SEV_INFO, 
             "[STUN TXN] Stun txn handle NOT FOUND while searching");
     
@@ -372,25 +427,84 @@ int32_t turns_table_find_node_for_relayed_transport_address(
 
     node = (turns_alloc_node_t *) table->alloc_list;
 
+    pthread_rwlock_rdlock(&table->table_lock);
+
     for (i = 0; i < table->max_allocs; i++)
     {
         context = &node->context;
         if ((context->protocol == protocol) && 
                 (context->relay_sock == (int)transport_param))
         {
+            *alloc = context;
+            pthread_rwlock_unlock(&table->table_lock);
             ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation "\
                     "context found for relayed transport address");
-            *alloc = context;
             return STUN_OK;
         }
 
         node++;
     }
 
+    pthread_rwlock_unlock(&table->table_lock);
     ICE_LOG (LOG_SEV_DEBUG, "[TURNS] Allocation context NOT "\
             "found for relayed transport address");
     
     return STUN_NOT_FOUND;
+}
+
+
+
+int32_t turns_table_init_allocations(handle h_table)
+{
+    int32_t status, i;
+    turns_alloc_node_t *node = NULL;
+    turns_allocation_t *context = NULL;
+    turns_alloc_table_t *table = (turns_alloc_table_t *)h_table;
+    pthread_mutexattr_t mattr;
+
+    if (h_table == NULL) return STUN_INVALID_PARAMS;
+
+    node = (turns_alloc_node_t *) table->alloc_list;
+
+    pthread_mutexattr_init(&mattr);
+    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+
+    for (i = 0; i < table->max_allocs; i++)
+    {
+        context = &node->context;
+
+        // memset(context, 0, sizeof(turns_alloc_node_t));
+        pthread_mutex_init(&context->lock, &mattr);
+
+        node++;
+    }
+
+    return STUN_OK;
+}
+
+
+
+int32_t turns_table_deinit_allocations(handle h_table)
+{
+    int32_t status, i;
+    turns_alloc_node_t *node = NULL;
+    turns_allocation_t *context = NULL;
+    turns_alloc_table_t *table = (turns_alloc_table_t *)h_table;
+
+    if (h_table == NULL) return STUN_INVALID_PARAMS;
+
+    node = (turns_alloc_node_t *) table->alloc_list;
+
+    for (i = 0; i < table->max_allocs; i++)
+    {
+        context = &node->context;
+
+        pthread_mutex_destroy(&context->lock);
+
+        node++;
+    }
+
+    return STUN_OK;
 }
 
 
