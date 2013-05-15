@@ -777,7 +777,8 @@ int32_t turns_utils_init_allocation_context(
 
 int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
 {
-    int32_t status;
+    int32_t status, i;
+    turns_permission_t *perm;
 
     /** stop allocation refresh timer if running */
     status = turns_utils_stop_alloc_timer(alloc);
@@ -785,13 +786,12 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
     /** stop allocation nonce stale timer if running */
     status = turns_utils_stop_nonce_stale_timer(alloc);
 
-    // TODO - crashing if uncommented>
-    // if (alloc->username) stun_free(alloc->username);
-
-    /** TODO:
-     * - stop all timers
-     * -  delete all permissions
-     */
+    /** uninstall all permissions */
+    for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
+    {
+        perm = &alloc->aps_perms[i];
+        turns_utils_uninstall_permission(alloc, perm);
+    }
 
     return status;
 }

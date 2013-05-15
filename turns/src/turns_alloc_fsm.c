@@ -314,8 +314,27 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp;
+#ifdef MB_SMP_SUPORT
+    handle h_origreq = NULL;
+#endif
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
+
+#ifdef MB_SMP_SUPORT
+    status = stun_msg_decode(
+                alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Allocation approved, stun_msg_decode() "\
+                "returned error %d while sending success response", status);
+        error_code = 500;
+        /** TODO: should the state of allocation be moved to unallocated? */
+        goto MB_ERROR_EXIT;
+    }
+
+    alloc->h_req = h_origreq;
+    alloc->stun_msg_len = 0;
+#endif
 
     /** send the error response */
     status = turns_utils_create_error_response(alloc, 

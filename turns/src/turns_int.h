@@ -213,10 +213,6 @@ typedef struct
     /** list of permissions */
     turns_permission_t aps_perms[TURNS_MAX_PERMISSIONS];
 
-    // handle h_perm_txn;
-    // handle h_perm_req;
-    // handle h_perm_resp;
-
     /** application server blob identifier */
     handle app_blob;
 
