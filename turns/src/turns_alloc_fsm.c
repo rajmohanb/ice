@@ -127,6 +127,10 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     uint32_t error_code = 0;
+#ifdef MB_SMP_SUPORT
+    uint32_t raw_msg_len;
+    u_char *raw_msg = NULL;
+#endif
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
 
     /** TODO:
@@ -170,7 +174,33 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
     }
 
     /** if we are here, then allocation request is ok */
+
+#ifdef MB_SMP_SUPORT
+    /** 
+     * Make a copy of the raw stun message that was received within the 
+     * allocation context. This is because this process now needs to interact 
+     * with the decision process and then respond to the client. But the
+     * response from decision process might be handled by some other process, 
+     * so dynamic memory pointers will be invalid within that process. The 
+     * process that will eventually respond to the client can make use of this 
+     * buffered message within the allocation context, decode it and then use 
+     * the decoded message to send the appropriate response.
+     */
+    raw_msg = stun_msg_get_raw_buffer(stun_pkt->h_msg, &raw_msg_len);
+    if (raw_msg == NULL) return STUN_INT_ERROR;
+    if (raw_msg_len > TURN_SERVER_MSG_CACHE_LEN) return STUN_INT_ERROR;
+    /** TODO - need to send some error resp message to the client */
+
+    alloc->stun_msg_len = raw_msg_len;
+    stun_memcpy(alloc->stun_msg, raw_msg, raw_msg_len);
+
+    alloc->h_req = NULL;
+
+    /** free the message since it will not be necessary */
+    stun_msg_destroy(stun_pkt->h_msg);
+#else
     alloc->h_req = stun_pkt->h_msg;
+#endif
 
     /** TODO - need to feed it to transaction module */
 
@@ -186,7 +216,10 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
-    handle h_resp;
+    handle h_resp = NULL;
+#ifdef MB_SMP_SUPORT
+    handle h_origreq = NULL;
+#endif
     uint32_t error_code = 0;
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
@@ -196,6 +229,22 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     alloc->lifetime = alloc->initial_lifetime;
     memcpy(&alloc->hmac_key, &decision->key, TURNS_HMAC_KEY_LEN);
     alloc->app_blob = decision->app_blob;
+
+#ifdef MB_SMP_SUPORT
+    status = stun_msg_decode(
+                alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Allocation approved, stun_msg_decode() "\
+                "returned error %d while sending success response", status);
+        error_code = 500;
+        /** TODO: should the state of allocation be moved to unallocated? */
+        goto MB_ERROR_EXIT;
+    }
+
+    alloc->h_req = h_origreq;
+    alloc->stun_msg_len = 0;
+#endif
 
     /**
      * When the initial alloc request was received, this module had not checked

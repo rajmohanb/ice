@@ -133,7 +133,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     uint32_t num, protocol, resp_code, len;
     int32_t status;
     handle h_attr;
-    u_char *realm, *nonce, *username;
+    u_char *realm, *nonce, *username = NULL;
 
     *error_code = 0;
     resp_code = 0;

@@ -32,7 +32,7 @@ OBJS:=$(SRC:c=o)
 
 .c.o :
 	@echo "[CC] " $< ...
-	$(CC) $(CFLAGS) -o $*.o $<
+	@$(CC) $(CFLAGS) -o $*.o $<
 
 archive:$(OBJS)
 	@echo "Building library " $(LIB)

@@ -57,6 +57,8 @@ extern "C" {
 #define TURNS_CHANNEL_NUMBER_MIN        0x4000
 #define TURNS_CHANNEL_NUMBER_MAX        0x7FFE
 
+#define TURN_SERVER_MSG_CACHE_LEN       384 
+
 
 /******************************************************************************/
 

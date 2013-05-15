@@ -223,6 +223,12 @@ typedef struct
     /** lock */
     pthread_mutex_t lock;
 
+#ifdef MB_SMP_SUPPORT
+    /** copy of stun message, required when interacting with decision process */
+    uint32_t stun_msg_len;
+    u_char  stun_msg[TURN_SERVER_MSG_CACHE_LEN];
+#endif
+
 } turns_allocation_t;
 
 

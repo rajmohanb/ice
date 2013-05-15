@@ -46,7 +46,7 @@ extern "C" {
 #define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
 
 /** number of worker processes that handle the STUN/TURN traffic */
-#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  2
+#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  4
 
 
 typedef struct
