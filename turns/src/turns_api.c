@@ -202,6 +202,7 @@ int32_t turns_instance_set_osa_callbacks(
     instance->nwk_stun_cb = cbs->nwk_stun_cb;
     instance->nwk_data_cb = cbs->nwk_data_cb;
     instance->new_socket_cb = cbs->new_socket_cb;
+    instance->remove_socket_cb = cbs->remove_socket_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
 
@@ -594,6 +595,7 @@ int32_t turns_inject_received_channeldata_msg(
     {
         ICE_LOG(LOG_SEV_ERROR, "Did not find any allocation for the "\
                 "received channeldata message. Hence dropping the message");
+        /** TODO - should we destroy the message? memleak? */
         return status;
     }
 

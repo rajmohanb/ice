@@ -44,7 +44,7 @@ extern "C" {
 
 #define TURNS_SERVER_NONCE_LEN          64
 
-#define TURNS_MMAP_FILE_PATH            "/mbiceserver"
+#define TURNS_MMAP_FILE_PATH            "/mbturnserver"
 
 #define TURNS_ERROR_REASON_LENGTH       256
 
@@ -150,10 +150,18 @@ typedef struct
 
 
 /** 
- * This callback will be called when the TURN stack wants the
+ * This callback will be called when the TURN stack when it wants the
  * application to listen for data on  a new socket.
  */
 typedef int32_t (*turns_new_socket_cb) (handle h_alloc, int sock_id);
+
+
+/** 
+ * This callback will be called when the TURN stack when it is no more 
+ * interested to received data on the specified socket.
+ */
+typedef int32_t (*turns_remove_socket_cb) (handle h_alloc, int sock_id);
+
 
 
 /** 
@@ -197,6 +205,7 @@ typedef struct {
     turns_nwk_send_data_cb nwk_data_cb;
     turns_nwk_send_stun_msg_cb nwk_stun_cb;
     turns_new_socket_cb new_socket_cb;
+    turns_remove_socket_cb remove_socket_cb;
     turns_start_timer_cb start_timer_cb;
     turns_stop_timer_cb  stop_timer_cb;
 } turns_osa_callbacks_t;

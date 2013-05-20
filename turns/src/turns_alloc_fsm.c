@@ -20,6 +20,8 @@ extern "C" {
 /******************************************************************************/
 
 
+#include <pthread.h>
+
 #include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_txn_api.h"
@@ -467,6 +469,8 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
              * TODO - need to come back here... how will this 
              * allocation move to TSALLOC_UNALLOCATED? 
              */
+            status = turns_utils_deinit_allocation_context(alloc);
+
             alloc->state = TSALLOC_UNALLOCATED;
             //alloc->state = TSALLOC_TERMINATING;
         }
@@ -805,6 +809,13 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
     if (!handler)
         return STUN_INVALID_PARAMS;
 
+    /**
+     * The entry to the function handlers happens in this function. And hence
+     * this is the right place to lock and unlock the mutex since any 
+     * modifications of the allocation context is done within the fsm handlers.
+     */
+    pthread_mutex_lock(&alloc->lock);
+
     status = handler(alloc, h_msg);
 
     if (cur_state != alloc->state)
@@ -832,6 +843,8 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
         alloc->instance->alloc_event_cb(
                 TURNS_EV_DEALLOCATED, alloc, alloc->app_blob);
     }
+
+    pthread_mutex_unlock(&alloc->lock);
 
     return status;
 }

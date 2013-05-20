@@ -33,6 +33,7 @@ extern "C" {
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <mqueue.h>
+#include <sys/mman.h>
 
 #include <syslog.h> /** logging */
 
@@ -80,13 +81,13 @@ static iceserver_signal_t signals_list[] =
     { SIGILL, iceserver_sig_handler },
     { SIGABRT, iceserver_sig_handler },
     { SIGBUS, iceserver_sig_handler },
-    { SIGSEGV, iceserver_sig_handler },
+    //{ SIGSEGV, iceserver_sig_handler },
     { SIGCHLD, iceserver_sig_handler },
 }; 
 
 
 /** the global instance of server */ 
-mb_ice_server_t g_mb_server = {0};
+mb_ice_server_t *g_mb_server = NULL;
 stun_log_level_t g_loglevel = LOG_SEV_DEBUG;
 int iceserver_quit = 0;
 
@@ -150,7 +151,7 @@ static void ice_server_timer_expiry_cb (void *timer_id, void *arg)
     timer_event.timer_id = timer_id;
     timer_event.arg = arg;
 
-    bytes = send(g_mb_server.timer_sockpair[1], 
+    bytes = send(g_mb_server->timer_sockpair[1], 
             (u_char *)&timer_event, sizeof(timer_event), 0);
     if (bytes == -1)
         ICE_LOG(LOG_SEV_ERROR, "Error: Sending of timer event failed");
@@ -276,18 +277,72 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
     ICE_LOG(LOG_SEV_DEBUG, 
             "Now need to listen on this socket as well: %d", sock_fd);
 
+    pthread_rwlock_wrlock(&g_mb_server->socklist_lock);
+
     /** add it to the list */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server.relay_sockets[i] == 0)
-            g_mb_server.relay_sockets[i] = sock_fd;
+        if (g_mb_server->relay_sockets[i] == 0)
+            g_mb_server->relay_sockets[i] = sock_fd;
 
-    FD_SET(sock_fd, &g_mb_server.master_rfds);
-    if (g_mb_server.max_fd < sock_fd) g_mb_server.max_fd = sock_fd;
+    FD_SET(sock_fd, &g_mb_server->master_rfds);
+    if (g_mb_server->max_fd < sock_fd) g_mb_server->max_fd = sock_fd;
+
+    pthread_rwlock_unlock(&g_mb_server->socklist_lock);
 
     /** need to wake up the waiting pselect */
+    write(g_mb_server->nwk_wakeup_sockpair[1], NULL, 0);
+    /** TODO - need to check return value */
 
     return STUN_OK;
 }
+
+
+
+int32_t ice_server_get_max_fd(void)
+{
+    uint32_t i;
+
+    return i;
+}
+
+
+
+static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd) 
+{
+    int i;
+    ICE_LOG(LOG_SEV_ERROR, 
+            "Now need to remove this socket from select: %d", sock_fd);
+
+    pthread_rwlock_wrlock(&g_mb_server->socklist_lock);
+
+    /** remove it from the list */
+    for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+        if (g_mb_server->relay_sockets[i] == sock_fd)
+            g_mb_server->relay_sockets[i] = 0;
+
+    if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
+    {
+        pthread_rwlock_unlock(&g_mb_server->socklist_lock);
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Trying to remove socket fd: %d from the relay sock queue. "\
+            "But could not locate it within the relay sock list", sock_fd);
+        return STUN_NOT_FOUND;
+    }
+
+    FD_CLR(sock_fd, &g_mb_server->master_rfds);
+
+    /** TODO - re-calculate the max fd, painful job */
+    // g_mb_server->max_fd = ice_server_get_max_fd();
+    
+    pthread_rwlock_unlock(&g_mb_server->socklist_lock);
+
+    /** need to wake up the waiting pselect */
+    write(g_mb_server->nwk_wakeup_sockpair[1], NULL, 0);
+    /** TODO - need to check return value */
+
+    return STUN_OK;
+}
+
 
 
 static handle ice_server_start_timer (uint32_t duration, handle arg)
@@ -324,8 +379,8 @@ static int mb_worker_get_parent_sock(void)
     int i, mypid = getpid();
 
     for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
-        if (g_mb_server.workers[i].pid == mypid)
-            return g_mb_server.workers[i].sockpair[0];
+        if (g_mb_server->workers[i].pid == mypid)
+            return g_mb_server->workers[i].sockpair[0];
 
     ICE_LOG(LOG_SEV_ALERT, 
             "Unable to find the parent socket for pid: %d", mypid);
@@ -359,7 +414,7 @@ static int32_t ice_server_new_allocation_request(
      * decide whether the allocation is to be approved or not.
      * TODO - make use of NON_BLOCK flag for the message queue
      */
-    ret = mq_send(g_mb_server.qid_worker_db, (char *)&event, sizeof(event), 0);
+    ret = mq_send(g_mb_server->qid_worker_db, (char *)&event, sizeof(event), 0);
     if (ret != 0)
     {
         /** TODO - handle this error! send error resp to turn client? */
@@ -407,7 +462,7 @@ static int32_t ice_server_handle_allocation_events(
      * this allocation request message to the slave thread that will
      * decide how to respond to the specific event.
      */
-    ret = mq_send(g_mb_server.qid_worker_db, 
+    ret = mq_send(g_mb_server->qid_worker_db, 
                     (char *)&mb_event, sizeof(mb_event), 0);
     if (ret != 0)
     {
@@ -431,15 +486,16 @@ static int32_t iceserver_init_turns(void)
     turns_event_callbacks_t event_cbs;
 
     /** initialize the turns module */
-    status = turns_create_instance(5000, &(g_mb_server.h_turns_inst));
+    status = turns_create_instance(
+            MB_ICE_MAX_ALLOCATIONS_COUNT, &(g_mb_server->h_turns_inst));
     if (status != STUN_OK) return status;
 
     status = turns_instance_set_server_software_name(
-            g_mb_server.h_turns_inst, MB_ICE_SERVER, strlen(MB_ICE_SERVER));
+            g_mb_server->h_turns_inst, MB_ICE_SERVER, strlen(MB_ICE_SERVER));
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     /** set the realm */
-    status = turns_instance_set_realm(g_mb_server.h_turns_inst, 
+    status = turns_instance_set_realm(g_mb_server->h_turns_inst, 
                             ICE_SERVER_REALM, strlen(ICE_SERVER_REALM));
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
@@ -447,11 +503,12 @@ static int32_t iceserver_init_turns(void)
     osa_cbs.nwk_stun_cb = ice_server_network_send_msg;
     osa_cbs.nwk_data_cb = ice_server_network_send_data;
     osa_cbs.new_socket_cb = ice_server_add_socket;
+    osa_cbs.remove_socket_cb = ice_server_remove_socket;
     osa_cbs.start_timer_cb = ice_server_start_timer;
     osa_cbs.stop_timer_cb = ice_server_stop_timer;
     
     status = turns_instance_set_osa_callbacks(
-                        g_mb_server.h_turns_inst, &osa_cbs);
+                        g_mb_server->h_turns_inst, &osa_cbs);
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     /** set up event callbacks */
@@ -459,17 +516,17 @@ static int32_t iceserver_init_turns(void)
     event_cbs.alloc_event_cb = ice_server_handle_allocation_events;
 
     status = turns_instance_set_event_callbacks(
-                        g_mb_server.h_turns_inst, &event_cbs);
+                        g_mb_server->h_turns_inst, &event_cbs);
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     status = turns_instance_set_nonce_stale_timer_value(
-                    g_mb_server.h_turns_inst, MB_ICE_SERVER_NONCE_EXPIRY);
+                    g_mb_server->h_turns_inst, MB_ICE_SERVER_NONCE_EXPIRY);
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     return status;
 
 MB_ERROR_EXIT:
-    status = turns_destroy_instance(g_mb_server.h_turns_inst);
+    status = turns_destroy_instance(g_mb_server->h_turns_inst);
     return status;
 }
 
@@ -480,7 +537,7 @@ static int32_t iceserver_deinit_turns(void)
     int32_t status;
 
     /** de-initialize the turns module */
-    status = turns_destroy_instance(g_mb_server.h_turns_inst);
+    status = turns_destroy_instance(g_mb_server->h_turns_inst);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Deinitialization of the "\
@@ -498,11 +555,11 @@ static int32_t iceserver_init_stuns(void)
     stuns_osa_callbacks_t osa_cbs;
 
     /** init the stuns module */
-    status = stuns_create_instance(&(g_mb_server.h_stuns_inst));
+    status = stuns_create_instance(&(g_mb_server->h_stuns_inst));
     if (status != STUN_OK) return status;
 
     status = stuns_instance_set_server_software_name(
-            g_mb_server.h_stuns_inst, MB_ICE_SERVER, strlen(MB_ICE_SERVER));
+            g_mb_server->h_stuns_inst, MB_ICE_SERVER, strlen(MB_ICE_SERVER));
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     /** set up os callbacks */
@@ -511,13 +568,13 @@ static int32_t iceserver_init_stuns(void)
     osa_cbs.stop_timer_cb = ice_server_stop_timer;
     
     status = stuns_instance_set_osa_callbacks(
-                        g_mb_server.h_stuns_inst, &osa_cbs);
+                        g_mb_server->h_stuns_inst, &osa_cbs);
     if (status != STUN_OK) goto MB_ERROR_EXIT;
 
     return status;
 
 MB_ERROR_EXIT:
-    status = stuns_destroy_instance(g_mb_server.h_stuns_inst);
+    status = stuns_destroy_instance(g_mb_server->h_stuns_inst);
     return status;
 }
 
@@ -527,7 +584,7 @@ static int32_t iceserver_deinit_stuns(void)
     int32_t status;
 
     /** de-init the stuns module */
-    status = stuns_destroy_instance(g_mb_server.h_stuns_inst);
+    status = stuns_destroy_instance(g_mb_server->h_stuns_inst);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Deinitialization of the "\
@@ -573,10 +630,17 @@ static int32_t worker_init(void)
     /** TODO */
     /** should we add the local socketpair() connected socket to the fd list? */
 
-    /** Add the message queue to the master fd set */
-    FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
-    if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
-        g_mb_server.max_fd = g_mb_server.qid_db_worker;
+#if 0
+Note: This has already been done in the master process
+    /** add the message queue to the master fd set */
+    FD_SET(g_mb_server->qid_db_worker, &g_mb_server->master_rfds);
+    if (g_mb_server->qid_db_worker > g_mb_server->max_fd)
+        g_mb_server->max_fd = g_mb_server->qid_db_worker;
+#endif
+
+    /** add the timer socket to the listener fd set */
+
+    /** add the IPC interface for communication with the parent process */
 
     return STUN_OK;
 }
@@ -603,18 +667,18 @@ static void ice_server_run(void)
 
 static int32_t iceserver_setup_db_worker_ipcs(void)
 {
-    g_mb_server.qid_db_worker = mq_open(
+    g_mb_server->qid_db_worker = mq_open(
             MQ_DB_WORKER, O_CREAT | O_EXCL | O_RDWR | O_NONBLOCK, 0660, NULL);
-    if (g_mb_server.qid_db_worker == (mqd_t) -1)
+    if (g_mb_server->qid_db_worker == (mqd_t) -1)
     {
         perror ("mq_open");
         ICE_LOG(LOG_SEV_ALERT, "Creation of DB-to-worker message queue failed");
         return STUN_INT_ERROR;
     }
 
-    g_mb_server.qid_worker_db = mq_open(
+    g_mb_server->qid_worker_db = mq_open(
             MQ_WORKER_DB, O_CREAT | O_EXCL | O_RDWR | O_NONBLOCK, 0660, NULL);
-    if (g_mb_server.qid_worker_db == (mqd_t) -1)
+    if (g_mb_server->qid_worker_db == (mqd_t) -1)
     {
         perror ("mq_open");
         ICE_LOG(LOG_SEV_ALERT, "Creation of Worker-to-DB message queue failed");
@@ -634,7 +698,7 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
 
     /** for communication between the db process and the master process */
     if (socketpair(AF_UNIX, 
-                SOCK_STREAM, 0, g_mb_server.db_lookup.sockpair) == -1)
+                SOCK_STREAM, 0, g_mb_server->db_lookup.sockpair) == -1)
     {
         perror ("process socketpair");
         ICE_LOG (LOG_SEV_ALERT, 
@@ -644,13 +708,13 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
 
     ICE_LOG(LOG_SEV_DEBUG, 
             "Create DB lookup process socket: %d to fd_set", 
-            g_mb_server.thread_sockpair[0]);
+            g_mb_server->db_lookup.sockpair[0]);
 
     /** communication between master and each of the worker processes */
     for (count = 0; count < MB_ICE_SERVER_NUM_WORKER_PROCESSES; count++)
     {
         if (socketpair(AF_UNIX, SOCK_STREAM, 
-                    0, g_mb_server.workers[count].sockpair) == -1)
+                    0, g_mb_server->workers[count].sockpair) == -1)
         {
             perror ("process socketpair");
             ICE_LOG (LOG_SEV_ALERT, "process socketpair() "\
@@ -671,26 +735,41 @@ static int32_t iceserver_prepare_listener_fdset(void)
     /** add stun packet listener sockets */
     for(i = 0; i < 2; i++)
     {
-        if (g_mb_server.intf[i].sockfd)
-            FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
-        if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
-            g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
+        if (g_mb_server->intf[i].sockfd)
+            FD_SET(g_mb_server->intf[i].sockfd, &g_mb_server->master_rfds);
+        if (g_mb_server->max_fd < g_mb_server->intf[i].sockfd)
+            g_mb_server->max_fd = g_mb_server->intf[i].sockfd;
     }
 
+#if 0
+    /** NOTE: Following are required to be done by the master process */
+
     /** add ipc fds for db process */
-    FD_SET(g_mb_server.db_lookup.sockpair[1], &g_mb_server.master_rfds);
-    if (g_mb_server.max_fd < g_mb_server.db_lookup.sockpair[1])
-        g_mb_server.max_fd = g_mb_server.db_lookup.sockpair[1];
+    FD_SET(g_mb_server->db_lookup.sockpair[1], &g_mb_server->master_rfds);
+    if (g_mb_server->max_fd < g_mb_server->db_lookup.sockpair[1])
+        g_mb_server->max_fd = g_mb_server->db_lookup.sockpair[1];
 
 
     /** add ipc fds for worker processes */
     for(i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
     {
-        if (g_mb_server.workers[i].sockpair[1])
-            FD_SET(g_mb_server.workers[i].sockpair[1], &g_mb_server.master_rfds);
-        if (g_mb_server.max_fd < g_mb_server.workers[i].sockpair[1])
-            g_mb_server.max_fd = g_mb_server.workers[i].sockpair[1];
+        if (g_mb_server->workers[i].sockpair[1])
+            FD_SET(g_mb_server->workers[i].sockpair[1], &g_mb_server->master_rfds);
+        if (g_mb_server->max_fd < g_mb_server->workers[i].sockpair[1])
+            g_mb_server->max_fd = g_mb_server->workers[i].sockpair[1];
     }
+#endif
+
+    /** add the DB to worker processes message queue */
+    FD_SET(g_mb_server->qid_db_worker, &g_mb_server->master_rfds);
+    if (g_mb_server->qid_db_worker > g_mb_server->max_fd)
+        g_mb_server->max_fd = g_mb_server->qid_db_worker;
+
+    /** add the network event wakeup socket */
+    FD_SET(g_mb_server->nwk_wakeup_sockpair[0], &g_mb_server->master_rfds);
+    if (g_mb_server->max_fd < g_mb_server->nwk_wakeup_sockpair[0])
+        g_mb_server->max_fd = g_mb_server->nwk_wakeup_sockpair[0];
+
 
     return STUN_OK;
 }
@@ -748,7 +827,7 @@ static int32_t iceserver_launch_workers(void)
     }
     else
     {
-        g_mb_server.db_lookup.pid = child_pid;
+        g_mb_server->db_lookup.pid = child_pid;
         ICE_LOG(LOG_SEV_ALERT, "DB worker spawned. PID: %d", child_pid);
         printf("DB worker spawned. PID: %d\n", child_pid);
     }
@@ -771,7 +850,7 @@ static int32_t iceserver_launch_workers(void)
         }
         else
         {
-            g_mb_server.workers[count].pid = child_pid;
+            g_mb_server->workers[count].pid = child_pid;
             ICE_LOG(LOG_SEV_ALERT, "Worker spawned. PID: %d", child_pid);
             printf("Worker[%d] spawned. PID: %d\n", count, child_pid);
         }
@@ -792,6 +871,73 @@ MB_ERROR_EXIT:
 }
 
 
+
+mb_ice_server_t* iceserver_init_globals(void)
+{
+    uint32_t fd, i, size;
+    char zero = 0;
+    mb_ice_server_t *data = NULL;
+
+    /** remove shared memory object if it exists */
+    shm_unlink(MB_ICE_SERVER_MMAP_FILE_PATH);
+
+    /** open file for shared memory access */
+    fd = shm_open(MB_ICE_SERVER_MMAP_FILE_PATH, O_RDWR | O_CREAT, S_IRWXU);
+    if (fd == -1)
+    {
+        perror("ICE SERVER shared memory open");
+        ICE_LOG(LOG_SEV_ALERT, 
+                "ICE SERVER: opening the shared memory file failed");
+        return data;
+    }
+
+    size = sizeof(mb_ice_server_t);
+    if (ftruncate(fd, size) < 0)
+    {
+        perror("ICE SERVER: shared memory ftruncate");
+        ICE_LOG(LOG_SEV_ALERT, 
+                "ICE SERVER: Truncating the shared mem file failed");
+        close(fd);
+        return data;
+    }
+
+    /** write some data TODO - need to optimize? */ 
+    for (i = 0; i < size; i++) write(fd, &zero, sizeof(char));
+    //write(fd, &zero, size);
+
+    /**
+     * TODO - the allocation size is desired to be in multiple of the PAGESIZE
+     * since internally mmap deals only with pages, and it is desirable that
+     * they are aligned to the page boundary. Typical page sizes - 4096/8192.
+     */
+
+    /** allocate shared memory */
+    data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (data == (void *) -1)
+    {
+        perror("ICE SERVER shared mem mmap:");
+        ICE_LOG(LOG_SEV_ALERT,
+                "ICE SERVER: allocation of shared memory failed");
+        return data;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, 
+            "ICE SERVER Allocated shared memory of size: [%d] bytes", size);
+
+    close(fd);
+
+    /** TODO: Do we need to use non-default attr? */
+    if (pthread_rwlock_init(&data->socklist_lock, NULL) != 0)
+    {
+        /** TODO - unmmap, etc */
+        return NULL;
+    }
+
+    return data;
+}
+
+
+
 int main (int argc, char *argv[])
 {
     int32_t status, i;
@@ -807,7 +953,16 @@ int main (int argc, char *argv[])
         printf("Could not be daemonized\n");
         exit(-1);
     }
+    printf("Running as a daemon in the background\n");
 #endif
+
+    g_mb_server = iceserver_init_globals();
+    if (g_mb_server == NULL)
+    {
+        ICE_LOG(LOG_SEV_ALERT,
+                "ICE SERVER: Initialization of the global data failed");
+        exit(-1);
+    }
 
     /** set up logging */
     iceserver_init_log();
@@ -857,7 +1012,7 @@ int main (int argc, char *argv[])
         return -1;
     }
 
-    /** prepare the socket listener set */
+    /** prepare the socket listener set used by signaling worker processes */
     if (iceserver_prepare_listener_fdset() != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, "Preparation of socket listener fdset failed");
@@ -873,7 +1028,18 @@ int main (int argc, char *argv[])
         return -1;
     }
 
-    /** TODO - now wait for events from all the spawned processes */
+    /** 
+     * TODO - now wait for events from all the spawned processes. Currently
+     * waiting for child exit event only. But since we have the pipes setup as
+     * IPC between the master and each of the child processes, we can make 
+     * use of the same for sending any commands to child processes and
+     * receiving events from child processes.
+     */
+
+    /**
+     * TODO - if a single worker process dies, then fork and recreate that
+     * specific instance of worker process (either signaling or db).
+     */
     options = WEXITED;
     if (waitid(P_ALL, 0, &siginfo, options) == -1)
     {
@@ -888,9 +1054,9 @@ int main (int argc, char *argv[])
 
     /** TODO - kill all worker processes */
     for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
-        kill(g_mb_server.workers[i].pid, SIGTERM);
+        kill(g_mb_server->workers[i].pid, SIGTERM);
 
-    kill(g_mb_server.db_lookup.pid, SIGTERM);
+    kill(g_mb_server->db_lookup.pid, SIGTERM);
 
     /** de-init turns, stun and transport */
     iceserver_deinit_stuns();
@@ -900,8 +1066,8 @@ int main (int argc, char *argv[])
     /** TODO - close all sockets */
 
     /** TODO - close all message queues */
-    mq_close(g_mb_server.qid_worker_db);
-    mq_close(g_mb_server.qid_db_worker);
+    mq_close(g_mb_server->qid_worker_db);
+    mq_close(g_mb_server->qid_db_worker);
     mq_unlink(MQ_WORKER_DB);
     mq_unlink(MQ_DB_WORKER);
 

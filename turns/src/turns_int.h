@@ -132,6 +132,7 @@ typedef struct
     turns_nwk_send_data_cb nwk_data_cb;
     turns_nwk_send_stun_msg_cb nwk_stun_cb;
     turns_new_socket_cb new_socket_cb;
+    turns_remove_socket_cb remove_socket_cb;
     turns_start_timer_cb start_timer_cb;
     turns_stop_timer_cb stop_timer_cb;
 

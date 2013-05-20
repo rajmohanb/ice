@@ -780,6 +780,13 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
     int32_t status, i;
     turns_permission_t *perm;
 
+    /** notify the application to stop listening on the relay socket */
+    alloc->instance->remove_socket_cb(alloc, alloc->relay_sock);
+
+    /** close the relay socket */
+    close(alloc->relay_sock);
+    alloc->relay_sock = 0;
+
     /** stop allocation refresh timer if running */
     status = turns_utils_stop_alloc_timer(alloc);
 
@@ -869,6 +876,8 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
 
     context->relay_addr.port = i;
     context->relay_sock = sock;
+
+    ICE_LOG(LOG_SEV_ERROR, "Bound to a new relay socket fd %d", sock);
 
     return STUN_OK;
 }

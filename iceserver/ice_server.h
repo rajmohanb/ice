@@ -46,7 +46,11 @@ extern "C" {
 #define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
 
 /** number of worker processes that handle the STUN/TURN traffic */
-#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  4
+#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  3
+
+#define MB_ICE_MAX_ALLOCATIONS_COUNT    5000
+
+#define MB_ICE_SERVER_MMAP_FILE_PATH    "/mbiceserver"
 
 
 typedef struct
@@ -110,16 +114,18 @@ typedef struct
     handle h_turns_inst;
     handle h_stuns_inst;
 
-    /** internal communication between main thread and decision process */
-    int     thread_sockpair[2];
+    int timer_sockpair[2];
 
-    int     timer_sockpair[2];
-
-    fd_set  master_rfds;
+    /** socketpair for waking up the worker processes waiting on nwk events */
+    int nwk_wakeup_sockpair[2];
 
     /** data sockets on which to listen */
+    pthread_rwlock_t socklist_lock;
     int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    /** master fd set used for listening - used by signaling workers only */
+    fd_set  master_rfds;
     int max_fd;
+
 
     mb_ice_server_intf_t intf[2];
 
