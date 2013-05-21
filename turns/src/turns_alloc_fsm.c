@@ -350,7 +350,8 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
                 alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
                 alloc->client_addr.port, alloc->transport_param, alloc->hmac_key);
 
-        ICE_LOG(LOG_SEV_DEBUG, "Sent the allocation success response");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the allocation error %d response", decision->code);
     }
     else
     {

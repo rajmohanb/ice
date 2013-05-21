@@ -28,11 +28,13 @@ extern "C" {
 #include <sys/stat.h>
 #include <mqueue.h>
 
+#include <pthread.h>
 #include <errno.h>
 
 #include <stun_base.h>
 #include <msg_layer_api.h>
 #include <stun_enc_dec_api.h>
+#include <stuns_api.h>
 #include <turns_api.h>
 #include <ice_server.h>
 
@@ -69,6 +71,8 @@ int32_t mb_ice_server_get_local_interface(void)
 
         s = socket(ifa->ifa_addr->sa_family, SOCK_DGRAM, 0);
         if (s == -1) continue;
+
+        fcntl(s, F_SETFL, O_NONBLOCK);
 
         if (bind(s, ifa->ifa_addr, sizeof(struct sockaddr)) == -1)
         {
@@ -152,9 +156,13 @@ int32_t mb_ice_server_setup_nwk_wakeup_interface(void)
     {
         perror ("Network Wakeup Socketpair");
         ICE_LOG (LOG_SEV_ALERT, 
-                "Network Wakeup Socketpair() returned error for DB process");
+                "Network Wakeup Socketpair() returnd error for worker process");
         return STUN_INT_ERROR;
     }
+
+    printf("Network wakeup sockets: %d and %d\n", 
+                                g_mb_server->nwk_wakeup_sockpair[0], 
+                                g_mb_server->nwk_wakeup_sockpair[1]);
 
     return STUN_OK;
 }
@@ -469,11 +477,11 @@ void mb_ice_server_process_approval(mqd_t mqdes)
 void mb_ice_server_process_nwk_wakeup_event(int fd)
 {
     int n;
-    char tmpbuf[1];
+    char tmpbuf;
 
     ICE_LOG(LOG_SEV_ERROR, "PID: %d Waking up from network event", getpid());
 
-    n = read(fd, tmpbuf, sizeof(tmpbuf));
+    n = read(fd, &tmpbuf, sizeof(tmpbuf));
     if (n <= -1)
     {
         perror("Network Wakeup Read");
@@ -489,25 +497,31 @@ void mb_ice_server_process_nwk_wakeup_event(int fd)
 
 int32_t iceserver_process_messages(void)
 {
-    int i, ret;
+    int i, ret, max_fd;
     fd_set rfds;
 
     pthread_rwlock_rdlock(&g_mb_server->socklist_lock);
 
     /** make a copy of the read socket fds set */
     rfds = g_mb_server->master_rfds;
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "About to enter pselect max_fd - %d", (g_mb_server->max_fd+1));
+    max_fd = g_mb_server->max_fd;
 
-    ret = pselect((g_mb_server->max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
+    pthread_rwlock_unlock(&g_mb_server->socklist_lock);
+
+    ICE_LOG(LOG_SEV_DEBUG, "About to enter pselect max_fd - %d", (max_fd+1));
+    printf("Worker Process %d: Before select: max_fd %d\n", getpid(), max_fd);
+
+    ret = pselect((max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
+
+    ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);
+
+    if (ret == -1 && errno == EINTR) return STUN_OK;
+
     if (ret == -1)
     {
         perror("pselect");
         return STUN_TRANSPORT_FAIL;
     }
-    ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);
-    
-    pthread_rwlock_unlock(&g_mb_server->socklist_lock);
 
     for (i = 0; i < ret; i++)
     {
@@ -519,7 +533,7 @@ int32_t iceserver_process_messages(void)
             mb_ice_server_process_approval(g_mb_server->qid_db_worker);
         else if (FD_ISSET(g_mb_server->timer_sockpair[0], &rfds))
             mb_ice_server_process_timer_event(g_mb_server->timer_sockpair[0]);
-        else if (FD_ISSET(g_mb_server->nwk_wakeup_sockpair[1], &rfds))
+        else if (FD_ISSET(g_mb_server->nwk_wakeup_sockpair[0], &rfds))
             mb_ice_server_process_nwk_wakeup_event(
                             g_mb_server->nwk_wakeup_sockpair[0]);
         else

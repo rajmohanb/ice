@@ -274,6 +274,7 @@ static int32_t ice_server_network_send_msg(handle h_msg,
 static int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
 {
     int i;
+    char ch;
     ICE_LOG(LOG_SEV_DEBUG, 
             "Now need to listen on this socket as well: %d", sock_fd);
 
@@ -290,7 +291,8 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
     pthread_rwlock_unlock(&g_mb_server->socklist_lock);
 
     /** need to wake up the waiting pselect */
-    write(g_mb_server->nwk_wakeup_sockpair[1], NULL, 0);
+    i = send(g_mb_server->nwk_wakeup_sockpair[1], &ch, 1, 0);
+    printf("Add socket: To wake up wrote %d bytes of data\n", i);
     /** TODO - need to check return value */
 
     return STUN_OK;
@@ -310,6 +312,7 @@ int32_t ice_server_get_max_fd(void)
 static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd) 
 {
     int i;
+    char ch;
     ICE_LOG(LOG_SEV_ERROR, 
             "Now need to remove this socket from select: %d", sock_fd);
 
@@ -337,7 +340,8 @@ static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd)
     pthread_rwlock_unlock(&g_mb_server->socklist_lock);
 
     /** need to wake up the waiting pselect */
-    write(g_mb_server->nwk_wakeup_sockpair[1], NULL, 0);
+    i = send(g_mb_server->nwk_wakeup_sockpair[1], &ch, 1, 0);
+    printf("Remove socket: To wake up wrote %d bytes of data\n", i);
     /** TODO - need to check return value */
 
     return STUN_OK;
