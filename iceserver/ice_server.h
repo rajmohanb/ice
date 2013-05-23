@@ -46,7 +46,7 @@ extern "C" {
 #define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
 
 /** number of worker processes that handle the STUN/TURN traffic */
-#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  3
+#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  1
 
 #define MB_ICE_MAX_ALLOCATIONS_COUNT    5000
 
@@ -111,19 +111,21 @@ typedef struct
 
 typedef struct
 {
+    mb_iceserver_worker_t workers[MB_ICE_SERVER_NUM_WORKER_PROCESSES];
+} mb_iceserver_worker_list_t;
+
+
+typedef struct
+{
     handle h_turns_inst;
     handle h_stuns_inst;
 
     int timer_sockpair[2];
 
-    /** socketpair for waking up the worker processes waiting on nwk events */
-    int nwk_wakeup_sockpair[2];
-
     /** data sockets on which to listen */
-    pthread_rwlock_t socklist_lock;
     int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
     /** master fd set used for listening - used by signaling workers only */
-    fd_set  master_rfds;
+    fd_set master_rfds;
     int max_fd;
 
 
@@ -132,8 +134,10 @@ typedef struct
     /** database lookup process */
     mb_iceserver_worker_t db_lookup;
 
+#if 0
     /** worker processes */
     mb_iceserver_worker_t workers[MB_ICE_SERVER_NUM_WORKER_PROCESSES];
+#endif
 
     /** communication from worker processes to DB processes */
     mqd_t qid_worker_db;

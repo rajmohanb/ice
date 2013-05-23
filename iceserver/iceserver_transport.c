@@ -39,7 +39,7 @@ extern "C" {
 #include <ice_server.h>
 
 
-extern mb_ice_server_t *g_mb_server;
+extern mb_ice_server_t g_mb_server;
 
 
 
@@ -83,22 +83,22 @@ int32_t mb_ice_server_get_local_interface(void)
         }
         else
         {
-            memcpy(&(g_mb_server->intf[count].addr), 
+            memcpy(&(g_mb_server.intf[count].addr), 
                             ifa->ifa_addr, sizeof(struct sockaddr));
-            g_mb_server->intf[count].sockfd = s;
+            g_mb_server.intf[count].sockfd = s;
             count++;
         }
     }
 
     if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 
-    ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server->intf[0].sockfd);
-    ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server->intf[1].sockfd);
+    ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server.intf[0].sockfd);
+    ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server.intf[1].sockfd);
     return STUN_OK;
 
 MB_ERROR_EXIT:
 
-    while(count > 0) { close(g_mb_server->intf[count].sockfd); count--; }
+    while(count > 0) { close(g_mb_server.intf[count].sockfd); count--; }
     return STUN_TRANSPORT_FAIL;
 }
 
@@ -116,7 +116,7 @@ int32_t mb_ice_server_init_timer_comm(void)
     memset(&loopback_addr, 0, sizeof(loopback_addr));
 
     /** for loopback, look at the first address type to know - IPv4 or IPv6 */
-    if (g_mb_server->intf[0].addr.sa_family == AF_INET)
+    if (g_mb_server.intf[0].addr.sa_family == AF_INET)
     {
         loopback_addr.sin_family = AF_UNIX;
         //loopback_addr.sin_port = htons(MB_ICE_SERVER_TIMER_PORT);
@@ -147,47 +147,22 @@ int32_t mb_ice_server_init_timer_comm(void)
 
 
 
-int32_t mb_ice_server_setup_nwk_wakeup_interface(void)
-{
-    int32_t status;
-
-    if (socketpair(AF_UNIX, SOCK_STREAM, 
-                        0, g_mb_server->nwk_wakeup_sockpair) == -1)
-    {
-        perror ("Network Wakeup Socketpair");
-        ICE_LOG (LOG_SEV_ALERT, 
-                "Network Wakeup Socketpair() returnd error for worker process");
-        return STUN_INT_ERROR;
-    }
-
-    printf("Network wakeup sockets: %d and %d\n", 
-                                g_mb_server->nwk_wakeup_sockpair[0], 
-                                g_mb_server->nwk_wakeup_sockpair[1]);
-
-    return STUN_OK;
-}
-
-
-
 int32_t iceserver_init_transport(void)
 {
     int32_t status, i;
 
     /** reset */
-    g_mb_server->max_fd = 0;
-    FD_ZERO(&g_mb_server->master_rfds);
-    memset(g_mb_server->relay_sockets, 0, 
+    g_mb_server.max_fd = 0;
+    FD_ZERO(&g_mb_server.master_rfds);
+    memset(g_mb_server.relay_sockets, 0, 
                 (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
     status = mb_ice_server_get_local_interface();
-    if (status != STUN_OK) return status;
+    // if (status != STUN_OK) return status;
 
     /** setup internal timer communication */
     // status = mb_ice_server_init_timer_comm();
     
-    /** setup an interface to wake up worker tasks waiting on network events */
-    status = mb_ice_server_setup_nwk_wakeup_interface();
-
     return status;
 }
 
@@ -196,8 +171,8 @@ int32_t iceserver_init_transport(void)
 int32_t iceserver_deinit_transport(void)
 {
     /** close the listening sockets */
-    if (g_mb_server->intf[0].sockfd) close(g_mb_server->intf[0].sockfd);
-    if (g_mb_server->intf[1].sockfd) close(g_mb_server->intf[1].sockfd);
+    if (g_mb_server.intf[0].sockfd) close(g_mb_server.intf[0].sockfd);
+    if (g_mb_server.intf[1].sockfd) close(g_mb_server.intf[1].sockfd);
 
     return STUN_OK;
 }
@@ -258,7 +233,7 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
         }
 
         status = turns_inject_received_channeldata_msg(
-                                    g_mb_server->h_turns_inst, &data);
+                                    g_mb_server.h_turns_inst, &data);
     }
     else if ((*buf & 0xc0) == 0xc0)
     {
@@ -311,7 +286,7 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
         if((method == STUN_METHOD_BINDING) && (msg_type == STUN_REQUEST))
         {
             /** hand over to the stun server module */
-            status = stuns_inject_received_msg(g_mb_server->h_stuns_inst, &pkt);
+            status = stuns_inject_received_msg(g_mb_server.h_stuns_inst, &pkt);
         }
         else
         {
@@ -339,7 +314,7 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
             }
 
             /** hand over to the turns module for further processing */
-            status = turns_inject_received_msg(g_mb_server->h_turns_inst, &pkt);
+            status = turns_inject_received_msg(g_mb_server.h_turns_inst, &pkt);
         }
     }
 
@@ -357,11 +332,9 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
     socklen_t addrlen = sizeof(client);
     turns_rx_channel_data_t data;
 
-    pthread_rwlock_rdlock(&g_mb_server->socklist_lock);
-
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server->relay_sockets[i])
-            if (FD_ISSET(g_mb_server->relay_sockets[i], read_fds))
+        if (g_mb_server.relay_sockets[i])
+            if (FD_ISSET(g_mb_server.relay_sockets[i], read_fds))
                 break;
 
     if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
@@ -371,10 +344,8 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
         return;
     }
 
-    sock_fd = g_mb_server->relay_sockets[i];
+    sock_fd = g_mb_server.relay_sockets[i];
 
-    pthread_rwlock_unlock(&g_mb_server->socklist_lock);
- 
     bytes = recvfrom(sock_fd, buf, 1500, 0, &client, &addrlen);
     if (bytes == -1) return;
 
@@ -401,7 +372,7 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
                 (char *)data.src.ip_addr, ICE_IP_ADDR_MAX_LEN);
     }
 
-    status = turns_inject_received_udp_msg(g_mb_server->h_turns_inst, &data);
+    status = turns_inject_received_udp_msg(g_mb_server.h_turns_inst, &data);
 
     return;
 }
@@ -412,7 +383,7 @@ void mb_ice_server_process_timer_event(int fd)
     int32_t bytes, status;
     mb_ice_server_timer_event_t timer_event;
 
-    bytes = recv(g_mb_server->timer_sockpair[0], 
+    bytes = recv(g_mb_server.timer_sockpair[0], 
                 &timer_event, sizeof(timer_event), 0);
     if (bytes == -1)
         ICE_LOG(LOG_SEV_ERROR, "Receiving of timer event failed");
@@ -466,7 +437,7 @@ void mb_ice_server_process_approval(mqd_t mqdes)
     turns_resp.app_blob = resp->app_blob;
 
     status = turns_inject_allocation_decision(
-                        g_mb_server->h_turns_inst, (void *)&turns_resp);
+                        g_mb_server.h_turns_inst, (void *)&turns_resp);
 
     free(buffer);
     return;
@@ -495,23 +466,86 @@ void mb_ice_server_process_nwk_wakeup_event(int fd)
 
 
 
-int32_t iceserver_process_messages(void)
+static int32_t mb_ice_server_process_control_info(int fd)
 {
-    int i, ret, max_fd;
+    int bytes, i;
+    struct msghdr msgh;
+    struct iovec iov[1];
+    struct cmsghdr *cmsgp = NULL;
+    char buf[CMSG_SPACE(sizeof(int))];
+    char dbuf[80];
+
+    /** TODO - are these really necessary? performance? */
+    memset(&msgh, 0, sizeof(msgh));
+    memset(buf, 0, sizeof(buf));
+
+    /** because we are making use of stream/connected sockets */
+    msgh.msg_name = NULL;
+    msgh.msg_namelen = 0;
+
+    msgh.msg_iov = iov;
+    msgh.msg_iovlen = 1;
+
+    iov[0].iov_base = dbuf;
+    iov[0].iov_len = sizeof(dbuf);
+
+    msgh.msg_control = buf;
+    msgh.msg_controllen = sizeof(buf);
+
+    do
+    {
+        bytes = recvmsg(fd, &msgh, 0);
+    } while((bytes == -1) && (errno == EINTR));
+
+    /** walk thru the control structure looking for a socket descriptor */
+    for (cmsgp = CMSG_FIRSTHDR(&msgh); 
+            cmsgp != NULL; cmsgp = CMSG_NXTHDR(&msgh, cmsgp))
+    {
+        if (cmsgp->cmsg_level == SOL_SOCKET && cmsgp->cmsg_type == SCM_RIGHTS)
+        {
+            int rcvd_fd = *(int *) CMSG_DATA(cmsgp); 
+            ICE_LOG(LOG_SEV_ALERT,
+                    "Received ancillary file descriptor: %d", rcvd_fd);
+
+            /** add it to the list */
+            for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+                if (g_mb_server.relay_sockets[i] == 0)
+                {
+                    g_mb_server.relay_sockets[i] = rcvd_fd;
+                    break;
+                }
+
+            if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Ran out of available relay "\
+                        "sockets!!! Could not add the received ancillary "\
+                        "socket descriptor %d to relay socket list", rcvd_fd);
+                return STUN_NO_RESOURCE;
+            }
+
+            FD_SET(rcvd_fd, &g_mb_server.master_rfds);
+            if (g_mb_server.max_fd < rcvd_fd) g_mb_server.max_fd = rcvd_fd;
+        }
+    }
+}
+
+
+
+int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
+{
+    int i, ret;
     fd_set rfds;
 
-    pthread_rwlock_rdlock(&g_mb_server->socklist_lock);
-
     /** make a copy of the read socket fds set */
-    rfds = g_mb_server->master_rfds;
-    max_fd = g_mb_server->max_fd;
+    rfds = g_mb_server.master_rfds;
 
-    pthread_rwlock_unlock(&g_mb_server->socklist_lock);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
 
-    ICE_LOG(LOG_SEV_DEBUG, "About to enter pselect max_fd - %d", (max_fd+1));
-    printf("Worker Process %d: Before select: max_fd %d\n", getpid(), max_fd);
+    printf("Worker %d: About to enter pselect max_fd - %d\n", 
+                                    worker->pid, (g_mb_server.max_fd+1));
 
-    ret = pselect((max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
+    ret = pselect((g_mb_server.max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
 
     ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);
 
@@ -525,17 +559,16 @@ int32_t iceserver_process_messages(void)
 
     for (i = 0; i < ret; i++)
     {
-        if (FD_ISSET(g_mb_server->intf[0].sockfd, &rfds))
-            mb_ice_server_process_signaling_msg(&g_mb_server->intf[0]);
-        else if (FD_ISSET(g_mb_server->intf[1].sockfd, &rfds))
-            mb_ice_server_process_signaling_msg(&g_mb_server->intf[1]);
-        else if (FD_ISSET(g_mb_server->qid_db_worker, &rfds))
-            mb_ice_server_process_approval(g_mb_server->qid_db_worker);
-        else if (FD_ISSET(g_mb_server->timer_sockpair[0], &rfds))
-            mb_ice_server_process_timer_event(g_mb_server->timer_sockpair[0]);
-        else if (FD_ISSET(g_mb_server->nwk_wakeup_sockpair[0], &rfds))
-            mb_ice_server_process_nwk_wakeup_event(
-                            g_mb_server->nwk_wakeup_sockpair[0]);
+        if (FD_ISSET(g_mb_server.intf[0].sockfd, &rfds))
+            mb_ice_server_process_signaling_msg(&g_mb_server.intf[0]);
+        else if (FD_ISSET(g_mb_server.intf[1].sockfd, &rfds))
+            mb_ice_server_process_signaling_msg(&g_mb_server.intf[1]);
+        else if (FD_ISSET(g_mb_server.qid_db_worker, &rfds))
+            mb_ice_server_process_approval(g_mb_server.qid_db_worker);
+        else if (FD_ISSET(g_mb_server.timer_sockpair[0], &rfds))
+            mb_ice_server_process_timer_event(g_mb_server.timer_sockpair[0]);
+        else if (FD_ISSET(worker->sockpair[0], &rfds))
+            mb_ice_server_process_control_info(worker->sockpair[0]);
         else
             mb_ice_server_process_media_msg(&rfds);
     }

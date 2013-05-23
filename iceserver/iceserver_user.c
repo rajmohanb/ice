@@ -57,7 +57,7 @@ typedef struct
 } mb_iceserver_alloc_record_t;
 
 
-extern mb_ice_server_t *g_mb_server;
+extern mb_ice_server_t g_mb_server;
 extern int iceserver_quit;
 
 static char *mb_transports[] = 
@@ -578,7 +578,7 @@ int32_t mb_iceserver_handle_new_allocation(
     decision.blob = event->h_alloc;
 
     /** post */
-    retval = mq_send(g_mb_server->qid_db_worker, 
+    retval = mq_send(g_mb_server.qid_db_worker, 
                     (char *)&decision, sizeof(decision), 0);
 
     if (retval == -1)
@@ -656,7 +656,7 @@ int32_t mb_ice_server_db_process_msg_from_worker(PGconn *conn, mqd_t mqdes)
 
     if (dbmsg == NULL)
     {
-        mq_getattr(g_mb_server->qid_worker_db, &attr);
+        mq_getattr(g_mb_server.qid_worker_db, &attr);
         dbmsg = (char *) stun_malloc(attr.mq_msgsize);
     }
 
@@ -696,18 +696,18 @@ void *mb_iceserver_decision_thread(void)
 
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: In am in the decision process now");
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: Unix domain socket is : %d", 
-                                        g_mb_server->db_lookup.sockpair[1]);
+                                        g_mb_server.db_lookup.sockpair[1]);
 
     printf("Message QUeue ID: Worker->DB: %d DB->Worker: %d\n", 
-                    g_mb_server->qid_worker_db, g_mb_server->qid_db_worker);
+                    g_mb_server.qid_worker_db, g_mb_server.qid_db_worker);
 
     /** setup the sockets for listening */
     FD_ZERO(&rfds);
-    FD_SET(g_mb_server->db_lookup.sockpair[1], &rfds);
-    max_fd = g_mb_server->db_lookup.sockpair[1];
-    FD_SET(g_mb_server->qid_worker_db, &rfds);
-    if (g_mb_server->qid_worker_db > max_fd)
-        max_fd = g_mb_server->qid_worker_db;
+    FD_SET(g_mb_server.db_lookup.sockpair[1], &rfds);
+    max_fd = g_mb_server.db_lookup.sockpair[1];
+    FD_SET(g_mb_server.qid_worker_db, &rfds);
+    if (g_mb_server.qid_worker_db > max_fd)
+        max_fd = g_mb_server.qid_worker_db;
 
     max_fd++;
 
@@ -736,12 +736,12 @@ void *mb_iceserver_decision_thread(void)
     
         for (i = 0; i < ret; i++)
         {
-            if (FD_ISSET(g_mb_server->db_lookup.sockpair[1], &rfds))
+            if (FD_ISSET(g_mb_server.db_lookup.sockpair[1], &rfds))
                 mb_ice_server_db_process_msg_from_master(
-                            conn, &g_mb_server->db_lookup.sockpair[1]);
+                            conn, &g_mb_server.db_lookup.sockpair[1]);
             else
                 mb_ice_server_db_process_msg_from_worker(
-                            conn, g_mb_server->qid_worker_db);
+                            conn, g_mb_server.qid_worker_db);
         }
    }
 
