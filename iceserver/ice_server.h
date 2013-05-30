@@ -46,7 +46,7 @@ extern "C" {
 #define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
 
 /** number of worker processes that handle the STUN/TURN traffic */
-#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  1
+#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  2
 
 #define MB_ICE_MAX_ALLOCATIONS_COUNT    5000
 
@@ -89,6 +89,13 @@ typedef struct
     char hmac_key[MB_ICE_SERVER_HMAC_KEY_LEN];
     handle app_blob;
 } mb_ice_server_alloc_decision_t;
+
+
+typedef struct
+{
+    int sock_fd;
+    bool op_type; /** add = true, remove = false */
+} mb_ice_server_ancillary_data_t;
 
 
 typedef struct

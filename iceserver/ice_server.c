@@ -362,22 +362,43 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
 
 int32_t ice_server_get_max_fd(void)
 {
-    uint32_t max_fd = 0;
+    uint32_t i, max_fd = 0;
+    mb_iceserver_worker_t *worker;
 
     /** TODO - 
-     * this should be optimized, recalculating max_fd every 
-     * time a relay socket is removed is expensive.
+     * this should be optimized, recalculating the max_fd by traversing all 
+     * sockets every time a relay socket is removed is expensive.
      */
 
     /** first interface sockets */
+    for(i = 0; i < 2; i++)
+    {
+        if (g_mb_server.intf[i].sockfd > max_fd)
+            max_fd = g_mb_server.intf[i].sockfd;
+    }
 
     /** next DB message queue */
+    if (g_mb_server.qid_db_worker > max_fd)
+        max_fd = g_mb_server.qid_db_worker;
 
     /** timer interface */
+    if (g_mb_server.timer_sockpair[0] > max_fd)
+        max_fd = g_mb_server.timer_sockpair[0];
 
     /** socketpair with the master process */
+    for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
+    {
+        worker = &gaps_workers->workers[i];
+        if (worker->pid != pid) continue;
+
+        if (worker->sockpair[0] > max_fd) max_fd = worker->sockpair[0];
+        break;
+    }
 
     /** and at last, relay sockets */
+    for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+        if (g_mb_server.relay_sockets[i] > max_fd)
+            max_fd = g_mb_server.relay_sockets[i];
 
     return max_fd;
 }
@@ -386,7 +407,7 @@ int32_t ice_server_get_max_fd(void)
 
 static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd) 
 {
-    int i;
+    int32_t i, status;
     ICE_LOG(LOG_SEV_ERROR, 
             "Now need to remove this socket from select: %d", sock_fd);
 
@@ -413,6 +434,7 @@ static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd)
         g_mb_server.max_fd = ice_server_get_max_fd();
     
     /** send ancillary data to other worker processes */
+    status = ice_server_share_with_other_workers(sock_fd);
     /** TODO - need to check return value */
 
     return STUN_OK;
