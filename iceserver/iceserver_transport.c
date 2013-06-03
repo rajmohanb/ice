@@ -474,6 +474,8 @@ static int32_t mb_ice_server_process_control_info(int fd)
     struct cmsghdr *cmsgp = NULL;
     char buf[CMSG_SPACE(sizeof(int))];
     char dbuf[80];
+    mb_ice_server_aux_data_t aux_data;
+    pid_t mypid = getpid();
 
     /** TODO - are these really necessary? performance? */
     memset(&msgh, 0, sizeof(msgh));
@@ -486,8 +488,9 @@ static int32_t mb_ice_server_process_control_info(int fd)
     msgh.msg_iov = iov;
     msgh.msg_iovlen = 1;
 
-    iov[0].iov_base = dbuf;
-    iov[0].iov_len = sizeof(dbuf);
+    /** initialize I/O vector to read data into our dbuf[] array */
+    iov[0].iov_base = (char *) &aux_data;
+    iov[0].iov_len = sizeof(aux_data);
 
     msgh.msg_control = buf;
     msgh.msg_controllen = sizeof(buf);
@@ -497,36 +500,84 @@ static int32_t mb_ice_server_process_control_info(int fd)
         bytes = recvmsg(fd, &msgh, 0);
     } while((bytes == -1) && (errno == EINTR));
 
-    /** walk thru the control structure looking for a socket descriptor */
-    for (cmsgp = CMSG_FIRSTHDR(&msgh); 
-            cmsgp != NULL; cmsgp = CMSG_NXTHDR(&msgh, cmsgp))
+    if (aux_data.op_type == 1)
     {
-        if (cmsgp->cmsg_level == SOL_SOCKET && cmsgp->cmsg_type == SCM_RIGHTS)
+        /** walk thru the control structure looking for a socket descriptor */
+        for (cmsgp = CMSG_FIRSTHDR(&msgh); 
+                cmsgp != NULL; cmsgp = CMSG_NXTHDR(&msgh, cmsgp))
         {
-            int rcvd_fd = *(int *) CMSG_DATA(cmsgp); 
-            ICE_LOG(LOG_SEV_ALERT,
-                    "Received ancillary file descriptor: %d", rcvd_fd);
+            if (cmsgp->cmsg_level == SOL_SOCKET && 
+                                cmsgp->cmsg_type == SCM_RIGHTS)
+            {
+                int rcvd_fd = *(int *) CMSG_DATA(cmsgp); 
+                ICE_LOG(LOG_SEV_ALERT,
+                        "Received ancillary file descriptor: %d", rcvd_fd);
 
-            /** add it to the list */
-            for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-                if (g_mb_server.relay_sockets[i] == 0)
+                printf("worker %d: Add aux socket %d\n", mypid, rcvd_fd);
+
+                /** add it to the list */
+                for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+                    if (g_mb_server.relay_sockets[i] == 0)
+                    {
+                        g_mb_server.relay_sockets[i] = rcvd_fd;
+                        break;
+                    }
+
+                if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
                 {
-                    g_mb_server.relay_sockets[i] = rcvd_fd;
-                    break;
+                    ICE_LOG(LOG_SEV_ERROR, "Ran out of available relay "\
+                            "sockets!!! Could not add the received ancillary "\
+                            "socket descriptor %d to relay socket list", 
+                            rcvd_fd);
+                    return STUN_NO_RESOURCE;
                 }
 
-            if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
-            {
-                ICE_LOG(LOG_SEV_ERROR, "Ran out of available relay "\
-                        "sockets!!! Could not add the received ancillary "\
-                        "socket descriptor %d to relay socket list", rcvd_fd);
-                return STUN_NO_RESOURCE;
+                FD_SET(rcvd_fd, &g_mb_server.master_rfds);
+                if (g_mb_server.max_fd < rcvd_fd) g_mb_server.max_fd = rcvd_fd;
             }
-
-            FD_SET(rcvd_fd, &g_mb_server.master_rfds);
-            if (g_mb_server.max_fd < rcvd_fd) g_mb_server.max_fd = rcvd_fd;
         }
     }
+    else if (aux_data.op_type == 0)
+    {
+        ICE_LOG(LOG_SEV_ALERT,
+                "Need to remove ancillary file descriptor: %d", 
+                aux_data.sock_fd);
+
+        printf("worker %d: Remove aux socket %d\n", mypid, aux_data.sock_fd);
+
+        /** close and remove the socket from the list */
+        for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+            if (g_mb_server.relay_sockets[i] == aux_data.sock_fd)
+            {
+                g_mb_server.relay_sockets[i] = 0;
+                break;
+            }
+
+        if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                "Trying to remove socket fd: %d from the relay sock queue. "\
+                "But could not locate it within the relay sock list", 
+                aux_data.sock_fd);
+            return STUN_NOT_FOUND;
+        }
+
+        FD_CLR(aux_data.sock_fd, &g_mb_server.master_rfds);
+
+        /** re-calculate the max fd, painful job */
+        if (g_mb_server.max_fd == aux_data.sock_fd)
+            g_mb_server.max_fd = ice_server_get_max_fd();
+
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_CRITICAL,
+                "Some unknown ancillary data operation %d received", 
+                aux_data.op_type);
+        return STUN_INT_ERROR;
+    }
+
+    return STUN_OK;
 }
 
 

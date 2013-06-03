@@ -201,7 +201,13 @@ static int32_t ice_server_network_send_data(u_char *data,
     }
 
     sent_bytes = sendto(sock_fd, data, data_len, 0, &dest, sizeof(dest));
-    if (sent_bytes == -1) perror("sendto");
+    if (sent_bytes == -1)
+    {
+        printf("ERROR: Worker %d Sending of relay data on socket fd %d failed\n", getpid(), sock_fd);
+        perror("sendto");
+    }
+
+    printf("Worker %d: Sent TURN DATA message of %d bytes\n", getpid(), sent_bytes);
 
     return sent_bytes;
 }
@@ -268,26 +274,36 @@ static int32_t ice_server_network_send_msg(handle h_msg,
     }
 
     sent_bytes = sendto(sock_fd, buf, buf_len, 0, &dest, sizeof(dest));
-    if (sent_bytes == -1) perror("sendto");
+    if (sent_bytes == -1)
+    {
+        printf("ERROR: Worker %d Sending of TURN message on socker fd %d failed\n", getpid(), sock_fd);
+        perror("sendto");
+    }
+
+    printf("Worker %d: Sent TURN message of %d bytes\n", getpid(), sent_bytes);
 
     return sent_bytes;
 }
 
 
 
-int32_t ice_server_share_with_other_workers(int sock_fd)
+int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
 {
     struct msghdr msgh;
     struct iovec iov[1];
     struct cmsghdr *cmsgp = NULL;
     char buf[CMSG_SPACE(sizeof(sock_fd))];
-    int bytes, i, er = 0;
+    int bytes, i;
     pid_t pid;
     mb_iceserver_worker_t *worker;
+    mb_ice_server_aux_data_t aux_data;
 
     /** TODO - are these really necessary? performance? */
     memset(&msgh, 0, sizeof(msgh));
     memset(buf, 0, sizeof(buf));
+
+    aux_data.sock_fd = sock_fd;
+    aux_data.op_type = op_type;
 
     /** because we are making use of stream/connected sockets */
     msgh.msg_name = NULL;
@@ -296,8 +312,8 @@ int32_t ice_server_share_with_other_workers(int sock_fd)
     msgh.msg_iov = iov;
     msgh.msg_iovlen = 1;
 
-    iov[0].iov_base = &er;
-    iov[0].iov_len = sizeof(er);
+    iov[0].iov_base = (char *) &aux_data;
+    iov[0].iov_len = sizeof(aux_data);
 
     msgh.msg_control = buf;
     msgh.msg_controllen = sizeof(buf);
@@ -328,11 +344,85 @@ int32_t ice_server_share_with_other_workers(int sock_fd)
 
 
 
+static int32_t ice_server_create_socket(handle h_alloc, 
+        stun_inet_addr_type_t addr_family, char *ip_addr, 
+        stun_transport_protocol_type_t tport_proto, int *port, int *sock_fd)
+{
+    int i, sock, sock_type, ret;
+    struct sockaddr addr;
+    unsigned short sa_family;
+
+    if (addr_family == STUN_INET_ADDR_IPV4)
+        sa_family = AF_INET;
+    else if (addr_family == STUN_INET_ADDR_IPV6)
+        sa_family = AF_INET6;
+    else
+        return STUN_INT_ERROR;
+
+    if (sa_family == AF_INET)
+    {
+        ret = inet_pton(AF_INET, (char *)ip_addr, 
+                    &(((struct sockaddr_in *)&addr)->sin_addr));
+        if (ret != 1) return STUN_INT_ERROR;
+    }
+    else
+    {
+        ret = inet_pton(AF_INET, (char *)ip_addr, 
+                    &(((struct sockaddr_in6 *)&addr)->sin6_addr));
+        if (ret != 1) return STUN_INT_ERROR;
+    }
+
+    if (tport_proto == ICE_TRANSPORT_UDP)
+        sock_type = SOCK_DGRAM;
+    else if (tport_proto == ICE_TRANSPORT_TCP)
+        sock_type = SOCK_STREAM;
+    else
+        return STUN_INT_ERROR;
+
+
+    sock = socket(sa_family, sock_type, 0);
+    if (sock == -1) return STUN_NO_RESOURCE;
+
+    for (i = TURNS_PORT_RANGE_MIN; i <= TURNS_PORT_RANGE_MAX; i++)
+    {
+        if (sa_family == AF_INET)
+            ((struct sockaddr_in *)&addr)->sin_port = htons(i);
+        else
+            ((struct sockaddr_in6 *)&addr)->sin6_port = htons(i);
+
+        /** TODO - do we need to abstract the 'bind' to make it portable? */
+        ret = bind(sock, (struct sockaddr *) &addr, sizeof(addr));
+        if (ret == -1)
+        {
+            ICE_LOG(LOG_SEV_DEBUG, "binding to port [%d] failed... "\
+                   "perhaps port already being used? continuing the search", i);
+            continue;
+        }
+
+        break;
+    }
+
+    if (i == TURNS_PORT_RANGE_MAX)
+    {
+        close(sock);
+        return STUN_NO_RESOURCE;
+    }
+
+    *port = i;
+    *sock_fd = sock;
+
+    return STUN_OK;
+}
+
+
+
 static int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
 {
     int32_t i, status;
     ICE_LOG(LOG_SEV_DEBUG, 
             "Now need to listen on this socket as well: %d", sock_fd);
+
+    printf("worker %d: TURNS wants app to listen on socket %d\n", getpid(), sock_fd);
 
     /** add it to the list */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
@@ -352,7 +442,7 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
     if (g_mb_server.max_fd < sock_fd) g_mb_server.max_fd = sock_fd;
 
     /** send ancillary data to other worker processes */
-    status = ice_server_share_with_other_workers(sock_fd);
+    status = ice_server_share_with_other_workers(sock_fd, 1);
     /** TODO - need to check return value */
 
     return status;
@@ -364,6 +454,7 @@ int32_t ice_server_get_max_fd(void)
 {
     uint32_t i, max_fd = 0;
     mb_iceserver_worker_t *worker;
+    int mypid = getpid();
 
     /** TODO - 
      * this should be optimized, recalculating the max_fd by traversing all 
@@ -389,7 +480,7 @@ int32_t ice_server_get_max_fd(void)
     for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
     {
         worker = &gaps_workers->workers[i];
-        if (worker->pid != pid) continue;
+        if (worker->pid != mypid) continue;
 
         if (worker->sockpair[0] > max_fd) max_fd = worker->sockpair[0];
         break;
@@ -434,7 +525,7 @@ static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd)
         g_mb_server.max_fd = ice_server_get_max_fd();
     
     /** send ancillary data to other worker processes */
-    status = ice_server_share_with_other_workers(sock_fd);
+    status = ice_server_share_with_other_workers(sock_fd, 0);
     /** TODO - need to check return value */
 
     return STUN_OK;

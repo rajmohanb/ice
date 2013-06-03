@@ -93,9 +93,9 @@ typedef struct
 
 typedef struct
 {
+    int op_type; /** 1 - add , 0 - remove */ /** TODO - can expand this? */
     int sock_fd;
-    bool op_type; /** add = true, remove = false */
-} mb_ice_server_ancillary_data_t;
+} mb_ice_server_aux_data_t;
 
 
 typedef struct
@@ -124,6 +124,14 @@ typedef struct
 
 typedef struct
 {
+    int relay_id;
+    int relay_sock;
+    int relay_port;
+} mb_ice_server_relay_socket;
+
+
+typedef struct
+{
     handle h_turns_inst;
     handle h_stuns_inst;
 
@@ -131,6 +139,7 @@ typedef struct
 
     /** data sockets on which to listen */
     int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    //mb_ice_server_relay_socket relays[MB_ICE_SERVER_DATA_SOCK_LIMIT];
     /** master fd set used for listening - used by signaling workers only */
     fd_set master_rfds;
     int max_fd;
