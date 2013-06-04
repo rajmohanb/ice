@@ -24,7 +24,9 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#ifndef MB_STATELESS_TURN_SERVER
 #include "stun_txn_api.h"
+#endif
 #include "turns_api.h"
 #include "turns_int.h"
 #include "turns_utils.h"

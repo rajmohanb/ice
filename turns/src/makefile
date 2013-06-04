@@ -22,11 +22,11 @@ LIB := lib_turns.a
 SRC = turns_api.c turns_table.c turns_alloc_fsm.c turns_utils.c
 
 # Include header files
-INCLUDE := -I. -I ../../ -I ../inc -I ../../stun/txn/inc -I ../../stun/msg_layer/inc \
-	-I $(ICE_APP_INCLUDE_PATH)
+INCLUDE := -I. -I ../../ -I ../inc -I ../../stun/txn/inc \
+	-I ../../stun/msg_layer/inc -I $(ICE_APP_INCLUDE_PATH)
 
 CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DMB_ENABLE_TURN \
-		  -DMB_ENABLE_ICE -DMB_SMP_SUPPORT $(INCLUDE)
+		  -DMB_ENABLE_ICE -DMB_SMP_SUPPORT -DMB_STATELESS_TURN_SERVER $(INCLUDE)
 
 OBJS:=$(SRC:c=o)
 

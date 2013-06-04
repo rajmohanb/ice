@@ -114,8 +114,10 @@ typedef struct
 
 typedef struct 
 {
+#ifndef MB_STATELESS_TURN_SERVER
     /** transaction instance handle */
     handle h_txn_inst;
+#endif
 
     /** list of allocations */
     handle  h_table;

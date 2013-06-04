@@ -27,7 +27,9 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#ifndef MB_STATELESS_TURN_SERVER
 #include "stun_txn_api.h"
+#endif
 #include "turns_api.h"
 #include "turns_int.h"
 #include "turns_alloc_fsm.h"
@@ -60,6 +62,7 @@ int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst)
     status = turns_table_init_allocations(instance->h_table);
     if (status != STUN_OK) return status;
 
+#ifndef MB_STATELESS_TURN_SERVER
     status = stun_txn_create_instance(
                 TURN_MAX_CONCURRENT_SESSIONS, &instance->h_txn_inst);
     if (status != STUN_OK)
@@ -68,6 +71,10 @@ int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst)
                 "TURNS: Failed to create transaction instance");
         goto MB_ERROR_EXIT;
     }
+#else
+    ICE_LOG(LOG_SEV_INFO, 
+            "Transaction layer disabled. Running as a stateless server");
+#endif
 
     /** TODO - reserve a block of ports now itself? */
         
@@ -82,6 +89,7 @@ MB_ERROR_EXIT:
 }
 
 
+#ifndef MB_STATELESS_TURN_SERVER
 
 int32_t turns_nwk_cb_fxn (handle h_msg, handle h_param)
 {
@@ -178,6 +186,7 @@ int32_t turns_stop_txn_timer(handle timer_id)
 
     return status;
 }
+#endif /** MB_STATELESS_TURN_SERVER */
 
 
 
@@ -185,8 +194,10 @@ int32_t turns_instance_set_osa_callbacks(
                         handle h_inst, turns_osa_callbacks_t *cbs)
 {
     turns_instance_t *instance;
+    int32_t status = STUN_OK;
+#ifndef MB_STATELESS_TURN_SERVER
     stun_txn_instance_callbacks_t app_cbs;
-    int32_t status;
+#endif
 
     if ((h_inst == NULL) || (cbs == NULL))
         return STUN_INVALID_PARAMS;
@@ -206,12 +217,14 @@ int32_t turns_instance_set_osa_callbacks(
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
 
+#ifndef MB_STATELESS_TURN_SERVER
     /** propagate app callbacks to stun txn */
     app_cbs.nwk_cb = turns_nwk_cb_fxn;
     app_cbs.start_timer_cb = turns_start_txn_timer;
     app_cbs.stop_timer_cb = turns_stop_txn_timer;
 
     status = stun_txn_instance_set_callbacks(instance->h_txn_inst, &app_cbs);
+#endif
 
     return status;
 }
@@ -338,7 +351,9 @@ int32_t turns_destroy_instance(handle h_inst)
     /** destory the table */
     turns_destroy_table(instance->h_table);
 
+#ifndef MB_STATELESS_TURN_SERVER
     stun_txn_destroy_instance(instance->h_txn_inst);
+#endif
     
     if (instance->client_name) stun_free(instance->client_name);
     if (instance->realm) stun_free(instance->realm);
@@ -643,6 +658,7 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
 
     switch (timer->type)
     {
+#ifndef MB_STATELESS_TURN_SERVER
 #if 0
         case TURN_STUN_TXN_TIMER:
         {
@@ -658,6 +674,7 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
             break;
         }
 #endif
+#endif /** MB_STATELESS_TURN_SERVER */
 
         case TURNS_ALLOC_TIMER:
             if (alloc->alloc_timer_params.timer_id == timer->timer_id)
