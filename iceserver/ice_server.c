@@ -887,7 +887,7 @@ static void ice_server_run(void)
     mb_iceserver_worker_t *worker;
     ICE_LOG(LOG_SEV_DEBUG, "Run Lola run");
 
-    sleep(15);
+    // sleep(15);
 
     worker = worker_init();
     if (worker == NULL)
