@@ -114,7 +114,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
             "Allocated shared memory of size: [%d] bytes", size);
 
     close(fd);
-    table->alloc_list = (void *) (table + sizeof(turns_alloc_table_t));
+    table->alloc_list = (void *)(((char *)table) + sizeof(turns_alloc_table_t));
     table->mmap_len = size;
     table->max_allocs = max_allocs;
     table->cur_allocs = 0;
