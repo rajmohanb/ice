@@ -24,10 +24,17 @@ extern "C" {
 #include <ifaddrs.h>
 #include <sys/select.h>
 #include <arpa/inet.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <mqueue.h>
+
+#include <pthread.h>
+#include <errno.h>
 
 #include <stun_base.h>
 #include <msg_layer_api.h>
 #include <stun_enc_dec_api.h>
+#include <stuns_api.h>
 #include <turns_api.h>
 #include <ice_server.h>
 
@@ -64,6 +71,8 @@ int32_t mb_ice_server_get_local_interface(void)
 
         s = socket(ifa->ifa_addr->sa_family, SOCK_DGRAM, 0);
         if (s == -1) continue;
+
+        fcntl(s, F_SETFL, O_NONBLOCK);
 
         if (bind(s, ifa->ifa_addr, sizeof(struct sockaddr)) == -1)
         {
@@ -142,22 +151,30 @@ int32_t iceserver_init_transport(void)
 {
     int32_t status, i;
 
-    status = mb_ice_server_get_local_interface();
-    if (status != STUN_OK) return status;
+    /** reset */
+    g_mb_server.max_fd = 0;
+    FD_ZERO(&g_mb_server.master_rfds);
+    memset(g_mb_server.relay_sockets, 0, 
+                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
-    /** add main signaling listener sockets */
-    for(i = 0; i < 2; i++)
-    {
-        if (g_mb_server.intf[i].sockfd)
-            FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
-        if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
-            g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
-    }
+    status = mb_ice_server_get_local_interface();
+    // if (status != STUN_OK) return status;
 
     /** setup internal timer communication */
     // status = mb_ice_server_init_timer_comm();
-
+    
     return status;
+}
+
+
+
+int32_t iceserver_deinit_transport(void)
+{
+    /** close the listening sockets */
+    if (g_mb_server.intf[0].sockfd) close(g_mb_server.intf[0].sockfd);
+    if (g_mb_server.intf[1].sockfd) close(g_mb_server.intf[1].sockfd);
+
+    return STUN_OK;
 }
 
 
@@ -328,7 +345,7 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
     }
 
     sock_fd = g_mb_server.relay_sockets[i];
- 
+
     bytes = recvfrom(sock_fd, buf, 1500, 0, &client, &addrlen);
     if (bytes == -1) return;
 
@@ -382,54 +399,216 @@ void mb_ice_server_process_timer_event(int fd)
 }
 
 
-void mb_ice_server_process_approval(int fd)
+void mb_ice_server_process_approval(mqd_t mqdes)
 {
     int32_t bytes, status;
-    mb_ice_server_alloc_decision_t resp;
+    mb_ice_server_alloc_decision_t *resp;
+    struct mq_attr attr;
+    char *buffer = NULL;
     turns_allocation_decision_t turns_resp;
 
-    bytes = recv(g_mb_server.thread_sockpair[0], &resp, sizeof(resp), 0);
-    if (bytes == -1) return;
+    /** TODO - need to optimize so that we do not allocate memory every time */
+
+    mq_getattr(mqdes, &attr);
+    buffer = (char *) stun_malloc(attr.mq_msgsize);
+
+    bytes = mq_receive(mqdes, buffer, attr.mq_msgsize, 0);
+    if (bytes == -1)
+    {
+        perror("Worker mq_receive");
+        ICE_LOG(LOG_SEV_ERROR, "Worker Retrieving msg from msg queue failed");
+        free(buffer);
+        return;
+    }
+
     if (bytes == 0) return;
+
+    resp = (mb_ice_server_alloc_decision_t *) buffer;
 
     /** 
      * TODO - The 'mb_ice_server_alloc_decision_t' must be converted to 
      * 'turns_allocation_decision_t' before injecting. But for now using 
      * the same since both the structures have same contents 
      */
-    turns_resp.blob = resp.blob;
-    turns_resp.approved = resp.approved;
-    turns_resp.lifetime = resp.lifetime;
-    turns_resp.code = resp.code;
-    strncpy(turns_resp.reason, resp.reason, TURNS_ERROR_REASON_LENGTH);
-    memcpy(turns_resp.key, resp.hmac_key, 16);
-    turns_resp.app_blob = resp.app_blob;
+    turns_resp.blob = resp->blob;
+    turns_resp.approved = resp->approved;
+    turns_resp.lifetime = resp->lifetime;
+    turns_resp.code = resp->code;
+    strncpy(turns_resp.reason, resp->reason, TURNS_ERROR_REASON_LENGTH);
+    memcpy(turns_resp.key, resp->hmac_key, 16);
+    turns_resp.app_blob = resp->app_blob;
 
     status = turns_inject_allocation_decision(
                         g_mb_server.h_turns_inst, (void *)&turns_resp);
+
+    free(buffer);
+    return;
+}
+
+
+
+void mb_ice_server_process_nwk_wakeup_event(int fd)
+{
+    int n;
+    char tmpbuf;
+
+    ICE_LOG(LOG_SEV_ERROR, "PID: %d Waking up from network event", getpid());
+
+    n = read(fd, &tmpbuf, sizeof(tmpbuf));
+    if (n <= -1)
+    {
+        perror("Network Wakeup Read");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Reading from network wakeup event socket failed");
+        return;
+    }
 
     return;
 }
 
 
 
-int32_t iceserver_process_messages(void)
+static int32_t mb_ice_server_process_control_info(int fd)
+{
+    int bytes, i;
+    struct msghdr msgh;
+    struct iovec iov[1];
+    struct cmsghdr *cmsgp = NULL;
+    char buf[CMSG_SPACE(sizeof(int))];
+    char dbuf[80];
+    mb_ice_server_aux_data_t aux_data;
+    pid_t mypid = getpid();
+
+    /** TODO - are these really necessary? performance? */
+    memset(&msgh, 0, sizeof(msgh));
+    memset(buf, 0, sizeof(buf));
+
+    /** because we are making use of stream/connected sockets */
+    msgh.msg_name = NULL;
+    msgh.msg_namelen = 0;
+
+    msgh.msg_iov = iov;
+    msgh.msg_iovlen = 1;
+
+    /** initialize I/O vector to read data into our dbuf[] array */
+    iov[0].iov_base = (char *) &aux_data;
+    iov[0].iov_len = sizeof(aux_data);
+
+    msgh.msg_control = buf;
+    msgh.msg_controllen = sizeof(buf);
+
+    do
+    {
+        bytes = recvmsg(fd, &msgh, 0);
+    } while((bytes == -1) && (errno == EINTR));
+
+    if (aux_data.op_type == 1)
+    {
+        /** walk thru the control structure looking for a socket descriptor */
+        for (cmsgp = CMSG_FIRSTHDR(&msgh); 
+                cmsgp != NULL; cmsgp = CMSG_NXTHDR(&msgh, cmsgp))
+        {
+            if (cmsgp->cmsg_level == SOL_SOCKET && 
+                                cmsgp->cmsg_type == SCM_RIGHTS)
+            {
+                int rcvd_fd = *(int *) CMSG_DATA(cmsgp); 
+                ICE_LOG(LOG_SEV_ALERT,
+                        "Received ancillary file descriptor: %d", rcvd_fd);
+
+                printf("worker %d: Add aux socket %d\n", mypid, rcvd_fd);
+
+                /** add it to the list */
+                for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+                    if (g_mb_server.relay_sockets[i] == 0)
+                    {
+                        g_mb_server.relay_sockets[i] = rcvd_fd;
+                        break;
+                    }
+
+                if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
+                {
+                    ICE_LOG(LOG_SEV_ERROR, "Ran out of available relay "\
+                            "sockets!!! Could not add the received ancillary "\
+                            "socket descriptor %d to relay socket list", 
+                            rcvd_fd);
+                    return STUN_NO_RESOURCE;
+                }
+
+                FD_SET(rcvd_fd, &g_mb_server.master_rfds);
+                if (g_mb_server.max_fd < rcvd_fd) g_mb_server.max_fd = rcvd_fd;
+            }
+        }
+    }
+    else if (aux_data.op_type == 0)
+    {
+        ICE_LOG(LOG_SEV_ALERT,
+                "Need to remove ancillary file descriptor: %d", 
+                aux_data.sock_fd);
+
+        printf("worker %d: Remove aux socket %d\n", mypid, aux_data.sock_fd);
+
+        /** close and remove the socket from the list */
+        for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
+            if (g_mb_server.relay_sockets[i] == aux_data.sock_fd)
+            {
+                g_mb_server.relay_sockets[i] = 0;
+                break;
+            }
+
+        if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                "Trying to remove socket fd: %d from the relay sock queue. "\
+                "But could not locate it within the relay sock list", 
+                aux_data.sock_fd);
+            return STUN_NOT_FOUND;
+        }
+
+        FD_CLR(aux_data.sock_fd, &g_mb_server.master_rfds);
+
+        /** re-calculate the max fd, painful job */
+        if (g_mb_server.max_fd == aux_data.sock_fd)
+            g_mb_server.max_fd = ice_server_get_max_fd();
+
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_CRITICAL,
+                "Some unknown ancillary data operation %d received", 
+                aux_data.op_type);
+        return STUN_INT_ERROR;
+    }
+
+    return STUN_OK;
+}
+
+
+
+int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
 {
     int i, ret;
     fd_set rfds;
 
     /** make a copy of the read socket fds set */
     rfds = g_mb_server.master_rfds;
+
     ICE_LOG(LOG_SEV_DEBUG, 
             "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
 
+    printf("Worker %d: About to enter pselect max_fd - %d\n", 
+                                    worker->pid, (g_mb_server.max_fd+1));
+
     ret = pselect((g_mb_server.max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
+
+    ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);
+
+    if (ret == -1 && errno == EINTR) return STUN_OK;
+
     if (ret == -1)
     {
         perror("pselect");
         return STUN_TRANSPORT_FAIL;
     }
-    ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);
 
     for (i = 0; i < ret; i++)
     {
@@ -437,10 +616,12 @@ int32_t iceserver_process_messages(void)
             mb_ice_server_process_signaling_msg(&g_mb_server.intf[0]);
         else if (FD_ISSET(g_mb_server.intf[1].sockfd, &rfds))
             mb_ice_server_process_signaling_msg(&g_mb_server.intf[1]);
-        else if (FD_ISSET(g_mb_server.thread_sockpair[0], &rfds))
-            mb_ice_server_process_approval(g_mb_server.thread_sockpair[0]);
+        else if (FD_ISSET(g_mb_server.qid_db_worker, &rfds))
+            mb_ice_server_process_approval(g_mb_server.qid_db_worker);
         else if (FD_ISSET(g_mb_server.timer_sockpair[0], &rfds))
             mb_ice_server_process_timer_event(g_mb_server.timer_sockpair[0]);
+        else if (FD_ISSET(worker->sockpair[0], &rfds))
+            mb_ice_server_process_control_info(worker->sockpair[0]);
         else
             mb_ice_server_process_media_msg(&rfds);
     }

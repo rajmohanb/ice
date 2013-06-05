@@ -296,21 +296,22 @@ int32_t stuns_utils_process_stun_binding_request(
                         &h_unknown, 1);
         if (status != STUN_OK)
         {
-            printf("Unable to send error response: [420]\n");
+            ICE_LOG(LOG_SEV_WARNING, 
+                    "STUNS: Unable to send error response: [420]");
             return status;
         }
     }
     else if ((status != STUN_NOT_FOUND) && (status != STUN_OK))
     {
         /** TODO */
-        printf ("Some critical error \n");
+        ICE_LOG(LOG_SEV_ERROR, "STUNS: Some critical error ");
         return status;
     }
 
     status = stuns_utils_send_success_resp(instance, stun_pkt);
     if (status != STUN_OK)
     {
-        printf("Error while sending success response\n");
+        ICE_LOG(LOG_SEV_ERROR, "STUNS: Error while sending success response");
     }
 
     return status;

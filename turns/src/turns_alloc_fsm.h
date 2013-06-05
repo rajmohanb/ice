@@ -62,6 +62,9 @@ int32_t turns_channel_bind_req(turns_allocation_t *alloc, handle h_msg);
 int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg);
 
 
+int32_t turns_terminate_allocation (turns_allocation_t *alloc, handle h_msg);
+
+
 int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg);
 
 

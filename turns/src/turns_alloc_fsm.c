@@ -20,9 +20,13 @@ extern "C" {
 /******************************************************************************/
 
 
+#include <pthread.h>
+
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#ifndef MB_STATELESS_TURN_SERVER
 #include "stun_txn_api.h"
+#endif
 #include "turns_api.h"
 #include "turns_int.h"
 #include "turns_utils.h"
@@ -36,6 +40,7 @@ static turns_alloc_fsm_handler
 {
     /** TSALLOC_UNALLOCATED */
     {
+        turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
@@ -65,6 +70,7 @@ static turns_alloc_fsm_handler
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
+        turns_ignore_msg,
     },
     /** TSALLOC_PENDING */
     {
@@ -81,6 +87,7 @@ static turns_alloc_fsm_handler
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
+        turns_terminate_allocation,
     },
     /** TSALLOC_ALLOCATED */
     {
@@ -97,9 +104,11 @@ static turns_alloc_fsm_handler
         turns_channel_bind_timer,
         turns_perm_timer,
         turns_channel_data_ind,
+        turns_terminate_allocation,
     },
     /** TSALLOC_TERMINATING */
     {
+        turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
         turns_ignore_msg,
@@ -122,6 +131,10 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     uint32_t error_code = 0;
+#ifdef MB_SMP_SUPORT
+    uint32_t raw_msg_len;
+    u_char *raw_msg = NULL;
+#endif
     turns_rx_stun_pkt_t *stun_pkt = (turns_rx_stun_pkt_t *) h_msg;
 
     /** TODO:
@@ -165,7 +178,33 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
     }
 
     /** if we are here, then allocation request is ok */
+
+#ifdef MB_SMP_SUPORT
+    /** 
+     * Make a copy of the raw stun message that was received within the 
+     * allocation context. This is because this process now needs to interact 
+     * with the decision process and then respond to the client. But the
+     * response from decision process might be handled by some other process, 
+     * so dynamic memory pointers will be invalid within that process. The 
+     * process that will eventually respond to the client can make use of this 
+     * buffered message within the allocation context, decode it and then use 
+     * the decoded message to send the appropriate response.
+     */
+    raw_msg = stun_msg_get_raw_buffer(stun_pkt->h_msg, &raw_msg_len);
+    if (raw_msg == NULL) return STUN_INT_ERROR;
+    if (raw_msg_len > TURN_SERVER_MSG_CACHE_LEN) return STUN_INT_ERROR;
+    /** TODO - need to send some error resp message to the client */
+
+    alloc->stun_msg_len = raw_msg_len;
+    stun_memcpy(alloc->stun_msg, raw_msg, raw_msg_len);
+
+    alloc->h_req = NULL;
+
+    /** free the message since it will not be necessary */
+    stun_msg_destroy(stun_pkt->h_msg);
+#else
     alloc->h_req = stun_pkt->h_msg;
+#endif
 
     /** TODO - need to feed it to transaction module */
 
@@ -181,7 +220,10 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
-    handle h_resp;
+    handle h_resp = NULL;
+#ifdef MB_SMP_SUPORT
+    handle h_origreq = NULL;
+#endif
     uint32_t error_code = 0;
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
@@ -191,6 +233,22 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     alloc->lifetime = alloc->initial_lifetime;
     memcpy(&alloc->hmac_key, &decision->key, TURNS_HMAC_KEY_LEN);
     alloc->app_blob = decision->app_blob;
+
+#ifdef MB_SMP_SUPORT
+    status = stun_msg_decode(
+                alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Allocation approved, stun_msg_decode() "\
+                "returned error %d while sending success response", status);
+        error_code = 500;
+        /** TODO: should the state of allocation be moved to unallocated? */
+        goto MB_ERROR_EXIT;
+    }
+
+    alloc->h_req = h_origreq;
+    alloc->stun_msg_len = 0;
+#endif
 
     /**
      * When the initial alloc request was received, this module had not checked
@@ -233,12 +291,6 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
 
         /** start allocation timer */
         status = turns_utils_start_alloc_timer(alloc);
-
-        if (status == STUN_OK)
-        {
-            /** notify the application about the new socket to listen to */
-            alloc->instance->new_socket_cb(alloc, alloc->relay_sock);
-        }
     }
     else
     {
@@ -260,8 +312,27 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp;
+#ifdef MB_SMP_SUPORT
+    handle h_origreq = NULL;
+#endif
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
+
+#ifdef MB_SMP_SUPORT
+    status = stun_msg_decode(
+                alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Allocation approved, stun_msg_decode() "\
+                "returned error %d while sending success response", status);
+        error_code = 500;
+        /** TODO: should the state of allocation be moved to unallocated? */
+        goto MB_ERROR_EXIT;
+    }
+
+    alloc->h_req = h_origreq;
+    alloc->stun_msg_len = 0;
+#endif
 
     /** send the error response */
     status = turns_utils_create_error_response(alloc, 
@@ -275,7 +346,8 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
                 alloc->client_addr.host_type, alloc->client_addr.ip_addr, 
                 alloc->client_addr.port, alloc->transport_param, alloc->hmac_key);
 
-        ICE_LOG(LOG_SEV_DEBUG, "Sent the allocation success response");
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Sent the allocation error %d response", decision->code);
     }
     else
     {
@@ -394,6 +466,8 @@ int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg)
              * TODO - need to come back here... how will this 
              * allocation move to TSALLOC_UNALLOCATED? 
              */
+            // status = turns_utils_deinit_allocation_context(alloc);
+
             alloc->state = TSALLOC_UNALLOCATED;
             //alloc->state = TSALLOC_TERMINATING;
         }
@@ -451,8 +525,6 @@ int32_t turns_process_alloc_timer (turns_allocation_t *alloc, handle h_msg)
     int32_t status;
 
     ICE_LOG(LOG_SEV_DEBUG, "Allocation timer expired. Lets unallocate it now");
-
-    // status = turns_utils_deinit_allocation_context(alloc);
 
     alloc->state = TSALLOC_UNALLOCATED;
 
@@ -696,6 +768,22 @@ int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg)
 }
 
 
+
+int32_t turns_terminate_allocation (turns_allocation_t *alloc, handle h_msg)
+{
+    int32_t status;
+
+    ICE_LOG (LOG_SEV_INFO, "TURNS ALLOCATION FSM: Terminate event");
+    
+    //status = turns_utils_deinit_allocation_context(alloc);
+
+    alloc->state = TSALLOC_UNALLOCATED;
+
+    return status;
+}
+
+
+
 int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg)
 {
     ICE_LOG (LOG_SEV_INFO, "TURNS ALLOCATION FSM: Ignoring the event");
@@ -715,6 +803,13 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
 
     if (!handler)
         return STUN_INVALID_PARAMS;
+
+    /**
+     * The entry to the function handlers happens in this function. And hence
+     * this is the right place to lock and unlock the mutex since any 
+     * modifications of the allocation context is done within the fsm handlers.
+     */
+    pthread_mutex_lock(&alloc->lock);
 
     status = handler(alloc, h_msg);
 
@@ -753,6 +848,8 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
 
         turns_utils_deinit_allocation_context(alloc);
     }
+
+    pthread_mutex_unlock(&alloc->lock);
 
     return status;
 }

@@ -542,6 +542,20 @@ int32_t stun_msg_verify_if_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
 }
 
 
+u_char* stun_msg_get_raw_buffer(handle h_msg, uint32_t *len)
+{
+    stun_msg_t *msg;
+
+    if (h_msg == NULL) return STUN_INVALID_PARAMS;
+
+    msg = (stun_msg_t *)h_msg;
+
+    *len = msg->stun_msg_len;
+
+    return msg->stun_msg;
+}
+
+
 
 /******************************************************************************/
 

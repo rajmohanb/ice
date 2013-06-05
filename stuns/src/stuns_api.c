@@ -77,7 +77,7 @@ int32_t stuns_create_instance(handle *h_inst)
 
 int32_t stuns_nwk_cb_fxn (handle h_msg, handle h_param)
 {
-    printf("Please send me out\n");
+    ICE_LOG(LOG_SEV_DEBUG, "Please send me out");
     //turn_session_t *session = (turn_session_t *) h_param;
 
     /** turn client always talks to the turn/stun server */
@@ -275,7 +275,7 @@ int32_t stuns_inject_received_msg(handle h_inst, stuns_rx_stun_pkt_t *stun_pkt)
 
     if((method != STUN_METHOD_BINDING) || (msg_type != STUN_REQUEST))
     {
-        printf("Ignoring the stray mesage\n");
+        ICE_LOG(LOG_SEV_INFO, "STUNS: Ignoring the stray mesage");
         return STUN_INVALID_PARAMS;
     }
 

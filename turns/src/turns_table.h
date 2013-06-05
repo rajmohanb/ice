@@ -50,6 +50,18 @@ int32_t turns_table_find_node_for_relayed_transport_address(
         stun_transport_protocol_type_t protocol, turns_allocation_t **alloc);
 
 
+typedef void (*turns_alloc_iteration_cb)(handle h_alloc, turns_allocation_t *alloc);
+
+
+int32_t turns_table_iterate(handle h_table, turns_alloc_iteration_cb iter_cb);
+
+
+int32_t turns_table_init_allocations(handle h_table);
+
+
+int32_t turns_table_deinit_allocations(handle h_table);
+
+
 
 /******************************************************************************/
 

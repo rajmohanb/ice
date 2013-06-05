@@ -27,7 +27,9 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#ifndef MB_STATELESS_TURN_SERVER
 #include "stun_txn_api.h"
+#endif
 #include "turns_api.h"
 #include "turns_int.h"
 #include "turns_alloc_fsm.h"
@@ -36,11 +38,10 @@ extern "C" {
 
 
 
-int32_t turns_create_instance(uint32_t max_allocs, 
-                        uint32_t num_media_procs, handle *h_inst)
+int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst)
 {
     turns_instance_t *instance;
-    int32_t i, status;
+    int32_t status;
 
     if (h_inst == NULL)
         return STUN_INVALID_PARAMS;
@@ -52,12 +53,16 @@ int32_t turns_create_instance(uint32_t max_allocs,
     if (instance == NULL) return STUN_MEM_ERROR;
 
     instance->max_allocs = max_allocs;
-    instance->num_media_procs = num_media_procs;
     instance->nonce_timeout = TURNS_ALLOCATION_NONCE_STALE_TIMER;
 
     status = turns_create_table(max_allocs, &(instance->h_table));
     if (status != STUN_OK) return status;
 
+    /** initialize all the allocations */
+    status = turns_table_init_allocations(instance->h_table);
+    if (status != STUN_OK) return status;
+
+#ifndef MB_STATELESS_TURN_SERVER
     status = stun_txn_create_instance(
                 TURN_MAX_CONCURRENT_SESSIONS, &instance->h_txn_inst);
     if (status != STUN_OK)
@@ -66,12 +71,10 @@ int32_t turns_create_instance(uint32_t max_allocs,
                 "TURNS: Failed to create transaction instance");
         goto MB_ERROR_EXIT;
     }
-
-    /** create the list of media worker processes that deal with media relay */
-    for (i = 0; i < instance->num_media_procs; i++)
-    {
-        //fork();
-    }
+#else
+    ICE_LOG(LOG_SEV_INFO, 
+            "Transaction layer disabled. Running as a stateless server");
+#endif
 
     /** TODO - reserve a block of ports now itself? */
         
@@ -86,6 +89,7 @@ MB_ERROR_EXIT:
 }
 
 
+#ifndef MB_STATELESS_TURN_SERVER
 
 int32_t turns_nwk_cb_fxn (handle h_msg, handle h_param)
 {
@@ -152,7 +156,7 @@ ERROR_EXIT_PT:
 
 int32_t turns_stop_txn_timer(handle timer_id)
 {
-    int32_t status;
+    int32_t status = STUN_OK;
 #if 0
     turn_timer_params_t *timer = (turn_timer_params_t *) timer_id;
     turn_session_t *session;
@@ -182,6 +186,7 @@ int32_t turns_stop_txn_timer(handle timer_id)
 
     return status;
 }
+#endif /** MB_STATELESS_TURN_SERVER */
 
 
 
@@ -189,8 +194,10 @@ int32_t turns_instance_set_osa_callbacks(
                         handle h_inst, turns_osa_callbacks_t *cbs)
 {
     turns_instance_t *instance;
+    int32_t status = STUN_OK;
+#ifndef MB_STATELESS_TURN_SERVER
     stun_txn_instance_callbacks_t app_cbs;
-    int32_t status;
+#endif
 
     if ((h_inst == NULL) || (cbs == NULL))
         return STUN_INVALID_PARAMS;
@@ -206,15 +213,18 @@ int32_t turns_instance_set_osa_callbacks(
     instance->nwk_stun_cb = cbs->nwk_stun_cb;
     instance->nwk_data_cb = cbs->nwk_data_cb;
     instance->new_socket_cb = cbs->new_socket_cb;
+    instance->remove_socket_cb = cbs->remove_socket_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
 
+#ifndef MB_STATELESS_TURN_SERVER
     /** propagate app callbacks to stun txn */
     app_cbs.nwk_cb = turns_nwk_cb_fxn;
     app_cbs.start_timer_cb = turns_start_txn_timer;
     app_cbs.stop_timer_cb = turns_stop_txn_timer;
 
     status = stun_txn_instance_set_callbacks(instance->h_txn_inst, &app_cbs);
+#endif
 
     return status;
 }
@@ -303,26 +313,50 @@ int32_t turns_instance_set_nonce_stale_timer_value(
 
 
 
+void turns_allocation_terminate(handle h_alloc, turns_allocation_t *alloc)
+{
+    int32_t status;
+
+    printf("terminate me NOW table: %p allocation: %p\n", h_alloc, alloc);
+
+    status = turns_allocation_fsm_inject_msg(
+                                alloc, TURNS_ALLOC_TERMINATE, NULL);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                    "Unable to terminate the allocation: %d", status);
+    }
+
+    return;
+}
+
+
+
 int32_t turns_destroy_instance(handle h_inst)
 {
     turns_instance_t *instance;
-    uint32_t i;
+    turns_alloc_iteration_cb cb = turns_allocation_terminate;
 
     if (h_inst == NULL)
         return STUN_INVALID_PARAMS;
 
     instance = (turns_instance_t *) h_inst;
 
-    for (i = 0; i < TURN_MAX_CONCURRENT_SESSIONS; i++)
-    {
-        //if (instance->ah_session[i] == NULL) continue;
+    /** iterate on all allocations and terminate them */
+    turns_table_iterate(instance->h_table, cb);
 
-        //turn_destroy_session(h_inst, instance->ah_session[i]);
-    }
+    /** deinitialize all the allocations */
+    turns_table_deinit_allocations(instance->h_table);
 
+    /** destory the table */
+    turns_destroy_table(instance->h_table);
+
+#ifndef MB_STATELESS_TURN_SERVER
     stun_txn_destroy_instance(instance->h_txn_inst);
+#endif
     
-    stun_free(instance->client_name);
+    if (instance->client_name) stun_free(instance->client_name);
+    if (instance->realm) stun_free(instance->realm);
 
     stun_free(instance);
 
@@ -576,6 +610,7 @@ int32_t turns_inject_received_channeldata_msg(
     {
         ICE_LOG(LOG_SEV_ERROR, "Did not find any allocation for the "\
                 "received channeldata message. Hence dropping the message");
+        /** TODO - should we destroy the message? memleak? */
         return status;
     }
 
@@ -630,6 +665,7 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
 
     switch (timer->type)
     {
+#ifndef MB_STATELESS_TURN_SERVER
 #if 0
         case TURN_STUN_TXN_TIMER:
         {
@@ -645,6 +681,7 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
             break;
         }
 #endif
+#endif /** MB_STATELESS_TURN_SERVER */
 
         case TURNS_ALLOC_TIMER:
             if (alloc->alloc_timer_params.timer_id == timer->timer_id)

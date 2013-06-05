@@ -77,6 +77,7 @@ typedef enum
     TURNS_CHNL_BIND_TIMER_EXP,
     TURNS_PERM_TIMER_EXP,
     TURNS_CHNL_DATA_IND,
+    TURNS_ALLOC_TERMINATE,
     TURNS_ALLOC_EVENT_MAX,
 } turns_alloc_event_t;
 
@@ -119,8 +120,10 @@ typedef struct
 
 typedef struct 
 {
+#ifndef MB_STATELESS_TURN_SERVER
     /** transaction instance handle */
     handle h_txn_inst;
+#endif
 
     /** list of allocations */
     handle  h_table;
@@ -137,6 +140,7 @@ typedef struct
     turns_nwk_send_data_cb nwk_data_cb;
     turns_nwk_send_stun_msg_cb nwk_stun_cb;
     turns_new_socket_cb new_socket_cb;
+    turns_remove_socket_cb remove_socket_cb;
     turns_start_timer_cb start_timer_cb;
     turns_stop_timer_cb stop_timer_cb;
 
@@ -149,9 +153,6 @@ typedef struct
 
     /** maximum configured allocations */
     int max_allocs;
-
-    /** number of media worker processes */
-    uint32_t num_media_procs;
 
     /** nonce stale timer value in seconds */
     uint32_t nonce_timeout;
@@ -179,7 +180,7 @@ typedef struct
 
     /** username */
     uint32_t username_len;
-    u_char *username;
+    u_char username[TURN_MAX_USERNAME_LEN];
 
     /**
      * hmac key - will always be 16 bytes since 
@@ -221,12 +222,17 @@ typedef struct
     /** list of permissions */
     turns_permission_t aps_perms[TURNS_MAX_PERMISSIONS];
 
-    // handle h_perm_txn;
-    // handle h_perm_req;
-    // handle h_perm_resp;
-
     /** application server blob identifier */
     handle app_blob;
+
+    /** lock */
+    pthread_mutex_t lock;
+
+#ifdef MB_SMP_SUPPORT
+    /** copy of stun message, required when interacting with decision process */
+    uint32_t stun_msg_len;
+    u_char  stun_msg[TURN_SERVER_MSG_CACHE_LEN];
+#endif
 
 } turns_allocation_t;
 

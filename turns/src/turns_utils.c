@@ -22,7 +22,9 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#ifndef MB_STATELESS_TURN_SERVER
 #include "stun_txn_api.h"
+#endif
 #include "turns_api.h"
 #include "turns_int.h"
 #include "turns_utils.h"
@@ -137,7 +139,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     uint32_t num, protocol, resp_code, len;
     int32_t status;
     handle h_attr;
-    u_char *realm, *nonce, *username;
+    u_char *realm, *nonce, *username = NULL;
 
     *error_code = 0;
     resp_code = 0;
@@ -157,15 +159,26 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
-                "USERNAME attribute: Error retrieving length, sending 401");
+                "USERNAME attribute: Error retrieving length, sending 400");
         *error_code = 400;
         return status;
     }
 
-    username = (u_char *) stun_calloc(1, len);
-    if(username == NULL) return STUN_MEM_ERROR;
+    if (len > TURN_MAX_USERNAME_LEN)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "USERNAME attribute: "\
+                "received length %d more than max supported, sending 400", len);
+        *error_code = 400;
+        return status;
+    }
 
-    status = stun_attr_username_get_username(h_attr, username, &len);
+    /**
+     * at this time, we do not have any information on the 
+     * username for validation. so ust copy what the client 
+     * has provided and pass on to the server app.
+     */
+    len = TURN_MAX_USERNAME_LEN;
+    status = stun_attr_username_get_username(h_attr, alloc->username, &len);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
@@ -174,14 +187,10 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT1;
     }
 
-    /**
-     * at this time, we do not have any information on the username. so
-     * just copy what the client has provided and pass on to the server app.
-     */
-    alloc->username = username;
+    //alloc->username = username;
     alloc->username_len = len;
-    username = NULL;
-    ICE_LOG(LOG_SEV_DEBUG, "OK: So Username is %s", alloc->username);
+    //username = NULL;
+    //ICE_LOG(LOG_SEV_DEBUG, "OK: So Username is %s", alloc->username);
 
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
@@ -774,30 +783,19 @@ int32_t turns_utils_init_allocation_context(
 
 int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
 {
-    int32_t i, status;
+    int32_t status, i;
     turns_permission_t *perm;
 
-    /** stop all the permission related timers */
+    /** notify the application to stop listening on the relay socket */
+    alloc->instance->remove_socket_cb(alloc, alloc->relay_sock);
+
+    alloc->relay_sock = 0;
+
+    /** uninstall all permissions */
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
-        if (perm->used == false) continue;
-
-        status = turns_utils_stop_channel_binding_timer(alloc, perm);
-        if (status != STUN_OK)
-        {
-            ICE_LOG(LOG_SEV_ERROR, "Error! stopping the channel binding timer."\
-                    " status [%d]", status);
-        }
-
-        status = turns_utils_stop_permission_timer(alloc, perm);
-        if (status != STUN_OK)
-        {
-            ICE_LOG(LOG_SEV_ERROR, "Error! stopping the permission timer. "\
-                    "status [%d]", status);
-        }
-
-        perm->used = false;
+        turns_utils_uninstall_permission(alloc, perm);
     }
  
     /** stop allocation nonce stale timer if running */
@@ -903,6 +901,8 @@ int32_t turns_utils_get_relayed_transport_address(turns_allocation_t *context)
     context->relay_addr.port = i;
     context->relay_sock = sock;
 
+    ICE_LOG(LOG_SEV_ERROR, "Bound to a new relay socket fd %d", sock);
+
     return STUN_OK;
 }
 
@@ -912,8 +912,18 @@ int32_t turns_utils_setup_allocation(turns_allocation_t *context)
 {
     int32_t status;
 
+    /**
+     * how do we decide whether the client is requesting an IPv6
+     * or an IPv4 relayed address? Currently using the local interface
+     * address on which the request was received, to decide the same.
+     */
     /** RFC 5766 - 6.2.  Receiving an Allocate Request */
-    status = turns_utils_get_relayed_transport_address(context);
+    status = context->instance->new_socket_cb(context,
+            context->relay_addr.host_type, 
+            (char *)context->relay_addr.ip_addr, 
+            context->req_tport, (int *)&context->relay_addr.port, 
+            &context->relay_sock);
+
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, 
@@ -2143,7 +2153,7 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
 
     perm->egress_bytes += num;
 
-    printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+    //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
 
     return status;
 
@@ -2204,7 +2214,7 @@ int32_t turns_utils_forward_channel_data(
     else
     {
         perm->egress_bytes += bytes;
-        printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+        //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
     }
 
     /** TODO : check if send really succeeded check return value */
@@ -2251,7 +2261,7 @@ int32_t turns_utils_forward_udp_data_using_channeldata_msg(
     else
         perm->ingress_bytes += data->data_len;
 
-    printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+    //printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     return status;
 }
@@ -2340,7 +2350,7 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
 
     perm->ingress_bytes += data->data_len;
 
-    printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+    //printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     ICE_LOG(LOG_SEV_DEBUG, 
             "Forwarded UDP data using DATA IND to the client at %s:%d", 

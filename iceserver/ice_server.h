@@ -45,6 +45,13 @@ extern "C" {
 
 #define MB_ICE_SERVER_DATA_SOCK_LIMIT   1024
 
+/** number of worker processes that handle the STUN/TURN traffic */
+#define MB_ICE_SERVER_NUM_WORKER_PROCESSES  6
+
+#define MB_ICE_MAX_ALLOCATIONS_COUNT    5000
+
+#define MB_ICE_SERVER_MMAP_FILE_PATH    "/mbiceserver"
+
 
 typedef struct
 {
@@ -55,14 +62,14 @@ typedef struct
 
 typedef enum
 {
-    MB_ISEVENT_NEW_ALLOC_REQ,
+    MB_ISEVENT_NEW_ALLOC_REQ = 0,
     MB_ISEVENT_DEALLOC_NOTF,
 } mb_ice_server_event_type_t;
 
 
 typedef struct
 {
-    mb_ice_server_event_type_t type;
+    mb_ice_server_event_type_t msg_type;
     u_char username[MB_ICE_SERVER_USERNAME_LEN];
     u_char realm[MB_ICE_SERVER_REALM_LEN];
     uint32_t lifetime;
@@ -88,33 +95,73 @@ typedef struct
 
 typedef struct
 {
+    int op_type; /** 1 - add , 0 - remove */ /** TODO - can expand this? */
+    int sock_fd;
+} mb_ice_server_aux_data_t;
+
+
+typedef struct
+{
     int sockfd;
-
     struct sockaddr addr;
-
 } mb_ice_server_intf_t;
 
 
 typedef struct
 {
-    handle h_turns_inst;
+    /** child pid */
+    pid_t pid;
 
+    /** communication between parent and child - pipe/socketpair? */
+    int sockpair[2];  
+
+} mb_iceserver_worker_t;
+
+
+typedef struct
+{
+    mb_iceserver_worker_t workers[MB_ICE_SERVER_NUM_WORKER_PROCESSES];
+} mb_iceserver_worker_list_t;
+
+
+typedef struct
+{
+    int relay_id;
+    int relay_sock;
+    int relay_port;
+} mb_ice_server_relay_socket;
+
+
+typedef struct
+{
+    handle h_turns_inst;
     handle h_stuns_inst;
 
-    pthread_t tid;
-
-    /** internal communication between main thread and decision thread */
-    int     thread_sockpair[2];
-
-    int     timer_sockpair[2];
-
-    fd_set  master_rfds;
+    int timer_sockpair[2];
 
     /** data sockets on which to listen */
     int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    //mb_ice_server_relay_socket relays[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    /** master fd set used for listening - used by signaling workers only */
+    fd_set master_rfds;
     int max_fd;
 
+
     mb_ice_server_intf_t intf[2];
+
+    /** database lookup process */
+    mb_iceserver_worker_t db_lookup;
+
+#if 0
+    /** worker processes */
+    mb_iceserver_worker_t workers[MB_ICE_SERVER_NUM_WORKER_PROCESSES];
+#endif
+
+    /** communication from worker processes to DB processes */
+    mqd_t qid_worker_db;
+
+    /** communication from DB processes to Worker processes */
+    mqd_t qid_db_worker;
 
 } mb_ice_server_t;
 
