@@ -412,7 +412,11 @@ void mb_ice_server_process_approval(mqd_t mqdes)
     mq_getattr(mqdes, &attr);
     buffer = (char *) stun_malloc(attr.mq_msgsize);
 
-    bytes = mq_receive(mqdes, buffer, attr.mq_msgsize, 0);
+    do
+    {
+        bytes = mq_receive(mqdes, buffer, attr.mq_msgsize, 0);
+    } while((bytes == -1) && (errno == EINTR));
+
     if (bytes == -1)
     {
         perror("Worker mq_receive");

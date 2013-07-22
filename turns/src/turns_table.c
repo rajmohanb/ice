@@ -302,7 +302,7 @@ int32_t turns_table_find_node(handle h_table,
                                       src->ip_addr, src->host_type)))
         {
             pthread_rwlock_unlock(&table->table_lock);
-            ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation context found");
+            ICE_LOG (LOG_SEV_DEBUG, "[TURNS] Allocation context found");
             *alloc = context;
             return STUN_OK;
         }
@@ -437,7 +437,7 @@ int32_t turns_table_find_node_for_relayed_transport_address(
         {
             *alloc = context;
             pthread_rwlock_unlock(&table->table_lock);
-            ICE_LOG (LOG_SEV_INFO, "[TURNS] Allocation "\
+            ICE_LOG (LOG_SEV_DEBUG, "[TURNS] Allocation "\
                     "context found for relayed transport address");
             return STUN_OK;
         }
