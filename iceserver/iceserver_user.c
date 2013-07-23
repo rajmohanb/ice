@@ -71,6 +71,7 @@ static char *get_user_plan = "get_user_record";
 static char *alloc_insert_plan = "alloc_insert";
 static char *get_alloc_plan = "get_alloc_plan";
 static char *alloc_dealloc_update = "alloc_dealloc_update";
+static char *delete_ephemeral_cred_plan = "delete_ephemeral_cred_record";
 
 
 /** close connection to database */
@@ -92,6 +93,7 @@ PGconn *iceserver_db_connect(void)
     Oid alloc_dealloc_update_plan_param_types[6] = { 1114, 1114, 23, 23, 23, 23 };
     Oid alloc_insert_plan_param_types[9] = 
                     { 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
+    Oid ephemeral_cred_delete_plan_param_types[1] = { 23 };
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
@@ -224,19 +226,74 @@ PGconn *iceserver_db_connect(void)
     ICE_LOG(LOG_SEV_DEBUG, "Allocation dealloc update PLAN prepared");
     PQclear( result );
 
+    /** 
+     * prepare the postgres command, to be executed later for 
+     * deleting the specified row from the ephemeral credentials table.
+     */
+    result = PQprepare(conn, delete_ephemeral_cred_plan, 
+                "DELETE FROM ephemeral_credentials WHERE id = $1", 
+                1, ephemeral_cred_delete_plan_param_types);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "PostGres alloc plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        iceserver_db_closeconn(conn);
+        return NULL;
+    }
+ 
+    ICE_LOG(LOG_SEV_DEBUG, "Ephemeral credential record delete PLAN prepared");
+    PQclear( result );
+
+
     return conn;
 }
 
 
+int32_t iceserver_db_delete_ephemeral_credential_record(
+                                    PGconn *conn, uint32_t cred_id)
+{
+    int rows;
+    PGresult *result;
+    const char *values[1];
+    ExecStatusType db_status;
+    char cred_identifier[12] = {0};
+
+    sprintf(cred_identifier, "%u", cred_id);
+
+    values[0] = cred_identifier;
+    ICE_LOG(LOG_SEV_ERROR, "Deleting row in ephemeral "\
+                        "credential table with id: %s", values[0]);
+    result = PQexecPrepared(conn, 
+            delete_ephemeral_cred_plan, 1, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Database op failed! "\
+                "unable to delete the record in ephemeral credential table");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        return STUN_INT_ERROR;
+    }
+
+    return STUN_OK;
+}
+
+
 /** search and fetch user record from the database */
-int32_t iceserver_db_fetch_user_record(PGconn *conn, 
-        mb_ice_server_event_t *event, mb_iceserver_user_record_t *user)
+int32_t iceserver_db_fetch_user_record(
+        PGconn *conn, mb_ice_server_event_t *event, 
+        mb_iceserver_user_record_t *user, uint32_t *cred_id)
 {
     int rows, user_id;
     PGresult *result;
     const char *values[1];
     ExecStatusType db_status;
     char user_identifier[12] = {0};
+
+    *cred_id = 0;
 
     /** initially look into ephemeral_credentials table */
     values[0] = event->username;
@@ -281,6 +338,8 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
     /** secret */
     user->password = strdup(PQgetvalue(result, 0, 2));
     ICE_LOG(LOG_SEV_DEBUG, "SECRET => %s", user->password);
+
+    *cred_id = atoi(PQgetvalue(result, 0, 0));
 
     values[0] = user_identifier;
     ICE_LOG(LOG_SEV_NOTICE, 
@@ -595,6 +654,7 @@ int32_t mb_iceserver_handle_new_allocation(
     stun_MD5_CTX ctx;
     mb_ice_server_alloc_decision_t decision;
     mb_iceserver_user_record_t user_record;
+    uint32_t cred_id;
 
     memset(&decision, 0, sizeof(decision));
     memset(&user_record, 0, sizeof(user_record));
@@ -606,7 +666,7 @@ int32_t mb_iceserver_handle_new_allocation(
     ICE_LOG(LOG_SEV_DEBUG, "LIFETIME: %d", event->lifetime);
     ICE_LOG(LOG_SEV_DEBUG, "PROTOCOL: %s", mb_transports[event->protocol]);
 
-    status = iceserver_db_fetch_user_record(conn, event, &user_record);
+    status = iceserver_db_fetch_user_record(conn, event, &user_record, &cred_id);
 
     if (status == STUN_NOT_FOUND)
     {
@@ -687,6 +747,23 @@ int32_t mb_iceserver_handle_new_allocation(
     {
         ICE_LOG(LOG_SEV_DEBUG, 
                 "Posted the allocation decision response to the Worker MQ");
+
+        /** delete the row from the ephemeral credential table */
+        if (decision.approved == true)
+        {
+            status = 
+                iceserver_db_delete_ephemeral_credential_record(conn, cred_id);
+            if (status == STUN_NOT_FOUND)
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Deleting the record "\
+                        "in ephemeral credential returned STUN_NOT_FOUND");
+            }
+            else if (status == STUN_INT_ERROR)
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Deleting the record "\
+                        "in ephemeral credential returned error: %d", status);
+            }
+        }
     }
 
     /** free the memory allocated  for user record */
@@ -793,7 +870,7 @@ void *mb_iceserver_decision_thread(void)
     fd_set rfds;
     PGconn *conn;
 
-    sleep(20);
+    //sleep(20);
 
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: In am in the decision process now");
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: Unix domain socket is : %d", 
