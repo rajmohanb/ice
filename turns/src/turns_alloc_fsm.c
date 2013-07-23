@@ -325,13 +325,15 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
     {
         ICE_LOG(LOG_SEV_ERROR, "Allocation approved, stun_msg_decode() "\
                 "returned error %d while sending success response", status);
-        error_code = 500;
+        decision->code = 500;
         /** TODO: should the state of allocation be moved to unallocated? */
-        goto MB_ERROR_EXIT;
+        //goto MB_ERROR_EXIT;
     }
-
-    alloc->h_req = h_origreq;
-    alloc->stun_msg_len = 0;
+    else
+    {
+        alloc->h_req = h_origreq;
+        alloc->stun_msg_len = 0;
+    }
 #endif
 
     /** send the error response */
@@ -829,7 +831,7 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
 
         turns_utils_calculate_allocation_relayed_data(alloc, 
                 &event_params.ingress_bytes, &event_params.egress_bytes);
-        printf("TURNS = TOTAL INGRESS BYTES %d\n", event_params.ingress_bytes);
+        printf("TURNS = TOTAL INGRESS BYTES %lld\n", event_params.ingress_bytes);
 
         /** notify the server application */
         alloc->instance->alloc_event_cb(TURNS_EV_DEALLOCATED, &event_params);
