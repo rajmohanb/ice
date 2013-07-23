@@ -1125,6 +1125,7 @@ static int32_t iceserver_launch_workers(void)
     else if (child_pid == 0)
     {
         mb_iceserver_decision_thread();
+        return STUN_OK;
     }
     else
     {
@@ -1148,6 +1149,7 @@ static int32_t iceserver_launch_workers(void)
         else if (child_pid == 0)
         {
             ice_server_run();
+            return STUN_OK;
         }
         else
         {

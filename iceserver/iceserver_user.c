@@ -66,6 +66,7 @@ static char *mb_transports[] =
     "ICE_TRANSPORT_TCP"
 };
 
+static char *get_ephemeral_cred_plan = "get_ephemeral_cred_record";
 static char *get_user_plan = "get_user_record";
 static char *alloc_insert_plan = "alloc_insert";
 static char *get_alloc_plan = "get_alloc_plan";
@@ -85,18 +86,19 @@ PGconn *iceserver_db_connect(void)
     PGconn *conn = NULL;
     PGresult *result;
     ExecStatusType db_status;
-    Oid user_plan_param_types[1] = { 1043 };
+    Oid ephemeral_cred_query_plan_param_types[1] = { 1043 };
+    Oid user_plan_param_types[1] = { 23 };
     Oid alloc_plan_param_types[2] = { 23, 20 };
     Oid alloc_dealloc_update_plan_param_types[6] = { 1114, 1114, 23, 23, 23, 23 };
-    Oid alloc_insert_plan_param_types[11] = 
-                    { 1043, 1043, 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
+    Oid alloc_insert_plan_param_types[9] = 
+                    { 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
-    conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_development hostaddr=127.0.0.1 port=5432");
+    conn = PQconnectdb("user=turnserver password=turnserver dbname=turnserver_development hostaddr=127.0.0.1 port=5432");
     ICE_LOG(LOG_SEV_ALERT, "Using Development database");
 #else
-    conn = PQconnectdb("user=turnrelay password=turnrelay dbname=turnrelay_production hostaddr=127.0.0.1 port=5432");
+    conn = PQconnectdb("user=turnserver password=turnserver dbname=turnserver_production hostaddr=127.0.0.1 port=5432");
     ICE_LOG(LOG_SEV_ALERT, "Using Production database");
 #endif
 
@@ -110,17 +112,40 @@ PGconn *iceserver_db_connect(void)
 
     ICE_LOG(LOG_SEV_INFO, "Connection to database - OK");
 
+    /**
+     * prepare the postgres command, to be executed later 
+     * for querying the ephemeral credentials table.
+     */
+    result = PQprepare(conn, get_ephemeral_cred_plan, 
+                "SELECT * FROM ephemeral_credentials WHERE username = $1", 1, 
+                ephemeral_cred_query_plan_param_types);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "PostGres Ephemeral Credential Query PLAN prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        iceserver_db_closeconn(conn);
+        return NULL;
+    }
+ 
+    ICE_LOG(LOG_SEV_DEBUG, "Ephemeral Credential Query PLAN prepared");
+    PQclear( result );
+
+
     /** 
      * prepare the postgres command, to be 
      * executed later for querying the users table.
      */
     result = PQprepare(conn, get_user_plan, 
-                "SELECT * FROM users WHERE username = $1", 1, 
+                "SELECT * FROM users WHERE id = $1", 1, 
                 user_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "PostGres user plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "PostGres user PLAN prepare failed");
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
@@ -136,16 +161,16 @@ PGconn *iceserver_db_connect(void)
      * for inserting records into the allocation table.
      */
     result = PQprepare(conn, alloc_insert_plan, 
-                "INSERT INTO allocations (username, realm, protocol, "\
+                "INSERT INTO allocations (protocol, "\
                 "req_lifetime, allotted_lifetime, bandwidth_used, alloc_at, "\
                 "created_at, updated_at, user_id, alloc_handle) "\
-                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) "\
-                "RETURNING id", 11, alloc_insert_plan_param_types);
+                "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) "\
+                "RETURNING id", 9, alloc_insert_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "PostGres allocation insert plan prepare failed");
+                "PostGres allocation insert PLAN prepare failed");
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
@@ -166,7 +191,7 @@ PGconn *iceserver_db_connect(void)
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "PostGres alloc plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "PostGres alloc PLAN prepare failed");
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
         ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
         PQclear( result );
@@ -207,14 +232,59 @@ PGconn *iceserver_db_connect(void)
 int32_t iceserver_db_fetch_user_record(PGconn *conn, 
         mb_ice_server_event_t *event, mb_iceserver_user_record_t *user)
 {
-    int rows;
+    int rows, user_id;
     PGresult *result;
     const char *values[1];
     ExecStatusType db_status;
+    char user_identifier[12] = {0};
 
+    /** initially look into ephemeral_credentials table */
     values[0] = event->username;
+    ICE_LOG(LOG_SEV_NOTICE, "Searching ephemeral "\
+            "credential table for TURN username: %s", values[0]);
+    result = PQexecPrepared(conn, 
+            get_ephemeral_cred_plan, 1, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Database query failed! Invalid TURN username");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        return STUN_INT_ERROR;
+    }
+
+    rows = PQntuples(result);
+    if (rows == 0)
+    {
+        ICE_LOG(LOG_SEV_NOTICE, "Database query returned: "\
+                        "no matching ephemeral cred username found");
+        return STUN_NOT_FOUND;
+    }
+    else if (rows > 1)
+    {
+        ICE_LOG(LOG_SEV_WARNING, "Application logic error. Found more than "\
+                "one row for the provided TURN username value in ephemeral "\
+                "credentials table. As per our app requirements, the TURN "\
+                "username generated must be unique and no two rows must "\
+                "have the same value. BUG???");
+    }
+
+    /** extract the user record identifier */
+    user_id = atoi(PQgetvalue(result, 0, 5));
+    ICE_LOG(LOG_SEV_DEBUG, "USER ID for ephemeral credential => %d", user_id);
+    sprintf(user_identifier, "%u", (unsigned int)user_id);
+
+    /** username */
+    user->username = strdup(PQgetvalue(result, 0, 1));
+    ICE_LOG(LOG_SEV_DEBUG, "USERNAME => %s", user->username);
+
+    /** secret */
+    user->password = strdup(PQgetvalue(result, 0, 2));
+    ICE_LOG(LOG_SEV_DEBUG, "SECRET => %s", user->password);
+
+    values[0] = user_identifier;
     ICE_LOG(LOG_SEV_NOTICE, 
-            "Fetching user record for TURN username: %s", values[0]);
+            "Fetching user record for user id: %s in USERS table", values[0]);
     result = PQexecPrepared(conn, get_user_plan, 1, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
@@ -267,25 +337,20 @@ int32_t iceserver_db_fetch_user_record(PGconn *conn,
     user->max_concur_allocs = atoi(PQgetvalue(result, 0, 14));
     ICE_LOG(LOG_SEV_DEBUG, "MAX CONCURRENT ALLOCS => %d", user->max_concur_allocs);
 
+#if 0
     /** realm */
     user->realm = strdup(PQgetvalue(result, 0, 15));
     ICE_LOG(LOG_SEV_DEBUG, "REALM => %s", user->realm);
-
-    /** username */
-    user->username = strdup(PQgetvalue(result, 0, 16));
-    ICE_LOG(LOG_SEV_DEBUG, "USERNAME => %s", user->username);
-
-    /** password */
-    user->password = strdup(PQgetvalue(result, 0, 17));
-    ICE_LOG(LOG_SEV_DEBUG, "PASSWORD => %s", user->password);
+#endif
 
     /** default lifetime */
-    user->def_lifetime = atoi(PQgetvalue(result, 0, 18));
+    user->def_lifetime = atoi(PQgetvalue(result, 0, 15));
     ICE_LOG(LOG_SEV_DEBUG, "DEFAULT LIFETIME => %d", user->def_lifetime);
 
     /** max_bandwidth */
-    user->max_bandwidth = atoi(PQgetvalue(result, 0, 19));
-    ICE_LOG(LOG_SEV_DEBUG, "MAXIMUM BANDWIDTH ALLOWED => %d", user->max_bandwidth);
+    user->max_bandwidth = atoi(PQgetvalue(result, 0, 16));
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "MAXIMUM BANDWIDTH ALLOWED => %d", user->max_bandwidth);
 
     /** store the user id */
     user->user_id_str = strdup(PQgetvalue(result, 0, 0));
@@ -391,7 +456,7 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 {
     int rows, alloc_id;
     ExecStatusType db_status;
-    const char *values[11];
+    const char *values[9];
     PGresult *result;
     char tmp_value1[10] = {0};
     char tmp_value2[15] = {0};
@@ -400,8 +465,10 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
     char tmp_value5[12] = {0};
     char tmp_value6[8] = {0};
 
+#if 0
     values[0] = user->username;
     values[1] = user->realm;
+#endif
 
     if (event->protocol == ICE_TRANSPORT_UDP)
         strncpy(tmp_value6, "UDP", 3); 
@@ -410,32 +477,32 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
     else
         strncpy(tmp_value6, "UNKNOWN", 8); 
 
-    values[2] = tmp_value6;
+    values[0] = tmp_value6;
 
     /** requested lifetime */
     sprintf(tmp_value1, "%d", event->lifetime);
-    values[3] = tmp_value1;
+    values[1] = tmp_value1;
 
     /** allotted lifetime */
     sprintf(tmp_value2, "%d", allotted_lifetime);
-    values[4] = tmp_value2;
+    values[2] = tmp_value2;
 
     strcpy(tmp_value3, "0");
-    values[5] = tmp_value3;
+    values[3] = tmp_value3;
 
     iceserver_get_current_time(tmp_value4);
     ICE_LOG(LOG_SEV_DEBUG, "CURRENT TIME : %s", tmp_value4);
 
+    values[4] = tmp_value4;
+    values[5] = tmp_value4;
     values[6] = tmp_value4;
-    values[7] = tmp_value4;
-    values[8] = tmp_value4;
-    values[9] = user->user_id_str;
+    values[7] = user->user_id_str;
 
     sprintf(tmp_value5, "%u", (unsigned int)event->h_alloc);
-    values[10] = tmp_value5;
+    values[8] = tmp_value5;
     ICE_LOG(LOG_SEV_DEBUG, "Allocation handle to DB: %s", tmp_value5);
 
-    result = PQexecPrepared(conn, alloc_insert_plan, 11, values, NULL, NULL, 0);
+    result = PQexecPrepared(conn, alloc_insert_plan, 9, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
     {
@@ -725,6 +792,8 @@ void *mb_iceserver_decision_thread(void)
     int status, ret, max_fd, i;
     fd_set rfds;
     PGconn *conn;
+
+    sleep(20);
 
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: In am in the decision process now");
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: Unix domain socket is : %d", 
