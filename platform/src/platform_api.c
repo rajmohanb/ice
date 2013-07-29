@@ -70,6 +70,8 @@ extern "C" {
 unsigned int compute_crc32(const unsigned char *s, unsigned int n);
 
 
+#ifdef PLATFORM_USE_MISC_API
+
 typedef struct tag_timer_node {
     unsigned int duration;
     unsigned int elapsed_time;
@@ -80,7 +82,8 @@ typedef struct tag_timer_node {
     struct tag_timer_node *prev;
 } struct_timer_node;
 
-#ifdef PLATFORM_USE_MISC_API
+
+
 static struct_timer_node *timer_head = NULL;
 static timer_t timerid;
 static sem_t timer_mutex;
@@ -212,6 +215,8 @@ static bool platform_timer_init(void)
 
     return true;
 }
+
+
 
 static void platform_timer_exit(void)
 {

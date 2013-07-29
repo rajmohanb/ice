@@ -131,7 +131,7 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     uint32_t error_code = 0;
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     uint32_t raw_msg_len;
     u_char *raw_msg = NULL;
 #endif
@@ -179,7 +179,7 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 
     /** if we are here, then allocation request is ok */
 
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     /** 
      * Make a copy of the raw stun message that was received within the 
      * allocation context. This is because this process now needs to interact 
@@ -221,7 +221,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp = NULL;
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     handle h_origreq = NULL;
 #endif
     uint32_t error_code = 0;
@@ -234,7 +234,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     memcpy(&alloc->hmac_key, &decision->key, TURNS_HMAC_KEY_LEN);
     alloc->app_blob = decision->app_blob;
 
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     status = stun_msg_decode(
                 alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
     if (status != STUN_OK)
@@ -312,13 +312,13 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp;
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     handle h_origreq = NULL;
 #endif
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
 
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     status = stun_msg_decode(
                 alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
     if (status != STUN_OK)
