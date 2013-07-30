@@ -599,9 +599,6 @@ int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
     ICE_LOG(LOG_SEV_DEBUG, 
             "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
 
-    printf("Worker %d: About to enter pselect max_fd - %d\n", 
-                                    worker->pid, (g_mb_server.max_fd+1));
-
     ret = pselect((g_mb_server.max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
 
     ICE_LOG(LOG_SEV_DEBUG, "After pselect %d", ret);

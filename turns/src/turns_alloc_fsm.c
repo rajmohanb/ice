@@ -831,7 +831,6 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
 
         turns_utils_calculate_allocation_relayed_data(alloc, 
                 &event_params.ingress_bytes, &event_params.egress_bytes);
-        printf("TURNS = TOTAL INGRESS BYTES %lld\n", event_params.ingress_bytes);
 
         /** notify the server application */
         alloc->instance->alloc_event_cb(TURNS_EV_DEALLOCATED, &event_params);

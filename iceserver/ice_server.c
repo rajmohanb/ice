@@ -212,7 +212,7 @@ static int32_t ice_server_network_send_data(u_char *data,
         perror("sendto");
     }
 
-    printf("Worker %d: Sent TURN DATA message of %d bytes\n", getpid(), sent_bytes);
+    //printf("Worker %d: Sent TURN DATA message of %d bytes\n", getpid(), sent_bytes);
 
     return sent_bytes;
 }
