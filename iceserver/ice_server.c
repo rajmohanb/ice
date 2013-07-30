@@ -858,7 +858,7 @@ static void iceserver_worker_parent_killed(int signum)
 }
 
 
-static int32_t worker_setup_timer_com_intf(void)
+static int32_t iceserver_setup_timer_com_intf(void)
 {
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, g_mb_server.timer_sockpair) == -1)
     {
@@ -881,6 +881,7 @@ static mb_iceserver_worker_t* worker_init(void)
 
     pid = getpid();
 
+#if 0
     status = worker_setup_timer_com_intf();
     if (status != STUN_OK)
     {
@@ -894,6 +895,7 @@ static mb_iceserver_worker_t* worker_init(void)
                 "Worker Process: platform initialization failed");
         return NULL;
     }
+#endif
 
     /** register to be notified about the death of parent process */
     prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
@@ -913,17 +915,11 @@ static mb_iceserver_worker_t* worker_init(void)
     /** should we add the local socketpair() connected socket to the fd list? */
 
 #if 0
-Note: This has already been done in the master process
-    /** add the message queue to the master fd set */
-    FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
-    if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
-        g_mb_server.max_fd = g_mb_server.qid_db_worker;
-#endif
-
     /** add the timer socket to the listener fd set */
     FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
     if (g_mb_server.timer_sockpair[0] > g_mb_server.max_fd)
         g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
+#endif
 
     /** listen on the ipc interface for comm with the parent/other process */
     for (i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
@@ -1071,6 +1067,11 @@ static int32_t iceserver_prepare_listener_fdset(void)
     FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
     if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
         g_mb_server.max_fd = g_mb_server.qid_db_worker;
+
+    /** add timer socketpair */
+    FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
+    if (g_mb_server.timer_sockpair[0] > g_mb_server.max_fd)
+        g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
 
     return STUN_OK;
 }
@@ -1269,6 +1270,14 @@ int main (int argc, char *argv[])
     /** setup the signal handlers */
     iceserver_init_sig_handlers();
 
+    /** init platform library */
+    if (platform_init() != true)
+    {
+        ICE_LOG(LOG_SEV_ALERT, 
+                "Worker Process: platform initialization failed");
+        return NULL;
+    }
+
     /** initialize the turns module */
     status = iceserver_init_turns();
     if (status != STUN_OK)
@@ -1279,7 +1288,7 @@ int main (int argc, char *argv[])
     }
 
     /** initialize the stuns module */
-    iceserver_init_stuns();
+    status = iceserver_init_stuns();
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, "STUNS module initialization failed");
@@ -1308,6 +1317,14 @@ int main (int argc, char *argv[])
         ICE_LOG(LOG_SEV_ALERT, "Initialization of "\
                 "IPC between db process and worker processes failed");
         return -1;
+    }
+
+    /** setup timer interface between master and worker processes */
+    status = iceserver_setup_timer_com_intf();
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Unable to setup timer communication interface");
+        return NULL;
     }
 
     /** prepare the socket listener set used by signaling worker processes */
@@ -1368,6 +1385,8 @@ int main (int argc, char *argv[])
     mq_close(g_mb_server.qid_db_worker);
     mq_unlink(MQ_WORKER_DB);
     mq_unlink(MQ_DB_WORKER);
+
+    platform_exit();
 
     closelog();
 

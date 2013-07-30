@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -142,14 +142,14 @@ int32_t turns_destroy_table(handle h_table)
 
     if (h_table == NULL) return STUN_INVALID_PARAMS;
 
+    pthread_rwlock_destroy(&table->table_lock);
+
     if (munmap(table, table->mmap_len) != 0)
     {
         perror("turns munmap");
         ICE_LOG(LOG_SEV_ALERT, "Shared memory release failed");
         return STUN_INT_ERROR;
     }
-
-    pthread_rwlock_destroy(&table->table_lock);
 
     return STUN_OK;
 }

@@ -46,6 +46,8 @@ extern "C" {
 
 #define DEV_RANDOM_FILE                     "/dev/urandom"
 
+#define PLATFORM_TIMER_MMAP_FILE_PATH       "/timertable"
+
 typedef struct
 {
     char      src_ip_addr[IP_ADDR_MAX_LEN];

@@ -26,6 +26,8 @@ extern "C" {
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <mqueue.h>
+#include <signal.h>
+#include <sys/prctl.h>
 
 #include <stun_base.h>
 #include <turns_api.h>
@@ -871,6 +873,9 @@ void *mb_iceserver_decision_thread(void)
     PGconn *conn;
 
     //sleep(20);
+    
+    /** register to be notified about the death of parent process */
+    prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
 
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: In am in the decision process now");
     ICE_LOG(LOG_SEV_DEBUG, "DB Process: Unix domain socket is : %d", 

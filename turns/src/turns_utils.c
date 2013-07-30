@@ -1000,13 +1000,13 @@ int32_t turns_utils_start_permission_timer(
 
     if(!timer->timer_id)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Starting of channel binding timer "\
+        ICE_LOG(LOG_SEV_ERROR, "Starting of permission refresh timer "\
                 "for %d secs duration failed", TURNS_PERM_REFRESH_DURATION);
         return STUN_NO_RESOURCE;
     }
 
     ICE_LOG(LOG_SEV_DEBUG, "Started TURNS allocation context %p "\
-            "channel bind timer for duration %d seconds timer id %p ", 
+            "permission refresh timer for duration %d seconds timer id %p ", 
             alloc, TURNS_PERM_REFRESH_DURATION, timer->timer_id);
 
     perm->h_perm_timer = timer->timer_id;
