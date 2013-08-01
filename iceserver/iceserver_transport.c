@@ -188,7 +188,11 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
     handle h_rcvdmsg = NULL;
     socklen_t addrlen = sizeof(client);
 
-    bytes = recvfrom(intf->sockfd, buf, 1500, 0, &client, &addrlen);
+    do
+    {
+        bytes = recvfrom(intf->sockfd, buf, 1500, 0, &client, &addrlen);
+    } while((bytes == -1) && (errno == EINTR));
+
     if (bytes == -1) return;
 
     /** TODO - connection closed for TCP, remove the socket from list? */
@@ -346,7 +350,11 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
 
     sock_fd = g_mb_server.relay_sockets[i];
 
-    bytes = recvfrom(sock_fd, buf, 1500, 0, &client, &addrlen);
+    do
+    {
+        bytes = recvfrom(sock_fd, buf, 1500, 0, &client, &addrlen);
+    } while((bytes == -1) && (errno == EINTR));
+
     if (bytes == -1) return;
 
     /** check for EAGAIN or EWOULDBLOCK since the sockets are non blocking? */
@@ -596,8 +604,8 @@ int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
     /** make a copy of the read socket fds set */
     rfds = g_mb_server.master_rfds;
 
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
+    //ICE_LOG(LOG_SEV_DEBUG, 
+    //        "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
 
     ret = pselect((g_mb_server.max_fd + 1), &rfds, NULL, NULL, NULL, NULL);
 

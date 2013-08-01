@@ -504,8 +504,11 @@ int32_t iceserver_get_current_time(char *str)
     result = time(NULL);
     now = localtime(&result);
  
-    sprintf(str, "%.4d-%.2d-%.2d %d:%d:%d.000000", (now->tm_year+1900), 
-            now->tm_mon, now->tm_mday, now->tm_hour, now->tm_min, now->tm_sec);
+    /** tm_year - number of years since 1900 */
+    /** tm_mon - number of months since January, in the range 0 to 11 */
+    sprintf(str, "%.4d-%.2d-%.2d %.2d:%.2d:%.2d.000000", 
+            (now->tm_year+1900), (now->tm_mon + 1), now->tm_mday, 
+            now->tm_hour, now->tm_min, now->tm_sec);
 
     return STUN_OK;
 }

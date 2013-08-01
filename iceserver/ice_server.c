@@ -285,8 +285,6 @@ static int32_t ice_server_network_send_msg(handle h_msg,
         perror("sendto");
     }
 
-    printf("Worker %d: Sent TURN message of %d bytes\n", getpid(), sent_bytes);
-
     return sent_bytes;
 }
 
