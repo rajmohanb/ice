@@ -154,8 +154,8 @@ int32_t iceserver_init_transport(void)
     /** reset */
     g_mb_server.max_fd = 0;
     FD_ZERO(&g_mb_server.master_rfds);
-    memset(g_mb_server.relay_sockets, 0, 
-                (sizeof(int) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
+    memset(g_mb_server.relays, 0, 
+            (sizeof(mb_iceserver_relay_socket) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
     status = mb_ice_server_get_local_interface();
     // if (status != STUN_OK) return status;
@@ -337,8 +337,8 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
     turns_rx_channel_data_t data;
 
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server.relay_sockets[i])
-            if (FD_ISSET(g_mb_server.relay_sockets[i], read_fds))
+        if (g_mb_server.relays[i].relay_sock)
+            if (FD_ISSET(g_mb_server.relays[i].relay_sock, read_fds))
                 break;
 
     if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
@@ -348,7 +348,7 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
         return;
     }
 
-    sock_fd = g_mb_server.relay_sockets[i];
+    sock_fd = g_mb_server.relays[i].relay_sock;
 
     do
     {
@@ -487,7 +487,6 @@ static int32_t mb_ice_server_process_control_info(int fd)
     struct iovec iov[1];
     struct cmsghdr *cmsgp = NULL;
     char buf[CMSG_SPACE(sizeof(int))];
-    char dbuf[80];
     mb_ice_server_aux_data_t aux_data;
     pid_t mypid = getpid();
 
@@ -502,7 +501,7 @@ static int32_t mb_ice_server_process_control_info(int fd)
     msgh.msg_iov = iov;
     msgh.msg_iovlen = 1;
 
-    /** initialize I/O vector to read data into our dbuf[] array */
+    /** initialize I/O vector to read data into our structure */
     iov[0].iov_base = (char *) &aux_data;
     iov[0].iov_len = sizeof(aux_data);
 
@@ -513,6 +512,15 @@ static int32_t mb_ice_server_process_control_info(int fd)
     {
         bytes = recvmsg(fd, &msgh, 0);
     } while((bytes == -1) && (errno == EINTR));
+
+    if (bytes == -1)
+    {
+        perror("recvmsg :");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    //printf("Auxillary data : op_type:%d port:%d\n", 
+    //                        aux_data.op_type, aux_data.port);
 
     if (aux_data.op_type == 1)
     {
@@ -527,13 +535,15 @@ static int32_t mb_ice_server_process_control_info(int fd)
                 ICE_LOG(LOG_SEV_ALERT,
                         "Received ancillary file descriptor: %d", rcvd_fd);
 
-                printf("worker %d: Add aux socket %d\n", mypid, rcvd_fd);
+                //printf("worker %d: Add aux socket %d\n", mypid, rcvd_fd);
 
                 /** add it to the list */
                 for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-                    if (g_mb_server.relay_sockets[i] == 0)
+                    if (g_mb_server.relays[i].relay_sock == 0)
                     {
-                        g_mb_server.relay_sockets[i] = rcvd_fd;
+                        g_mb_server.relays[i].relay_sock = rcvd_fd;
+                        g_mb_server.relays[i].relay_port = aux_data.port;
+
                         break;
                     }
 
@@ -554,34 +564,40 @@ static int32_t mb_ice_server_process_control_info(int fd)
     else if (aux_data.op_type == 0)
     {
         ICE_LOG(LOG_SEV_ALERT,
-                "Need to remove ancillary file descriptor: %d", 
-                aux_data.sock_fd);
+                "Need to remove ancillary file descriptor for port: %d", 
+                aux_data.port);
 
-        printf("worker %d: Remove aux socket %d\n", mypid, aux_data.sock_fd);
+        //printf("worker %d: Remove aux socket %d\n", mypid, aux_data.sock_fd);
 
         /** close and remove the socket from the list */
         for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-            if (g_mb_server.relay_sockets[i] == aux_data.sock_fd)
+            if (g_mb_server.relays[i].relay_port == aux_data.port)
             {
-                g_mb_server.relay_sockets[i] = 0;
+                int tmp_sock = g_mb_server.relays[i].relay_sock;
+
+                g_mb_server.relays[i].relay_sock = 0;
+                g_mb_server.relays[i].relay_port = 0;
+
+                /** close the relay socket */
+                close(tmp_sock);
+
+                FD_CLR(tmp_sock, &g_mb_server.master_rfds);
+
+                /** re-calculate the max fd, painful job */
+                if (g_mb_server.max_fd == tmp_sock)
+                    g_mb_server.max_fd = ice_server_get_max_fd();
+
                 break;
             }
 
         if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Trying to remove socket fd: %d from the relay sock queue. "\
-                "But could not locate it within the relay sock list", 
-                aux_data.sock_fd);
+                "Trying to remove socket fd for port: %d from the relay sock "\
+                "queue. But could not locate it within the relay sock list", 
+                aux_data.port);
             return STUN_NOT_FOUND;
         }
-
-        FD_CLR(aux_data.sock_fd, &g_mb_server.master_rfds);
-
-        /** re-calculate the max fd, painful job */
-        if (g_mb_server.max_fd == aux_data.sock_fd)
-            g_mb_server.max_fd = ice_server_get_max_fd();
-
     }
     else
     {

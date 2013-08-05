@@ -617,15 +617,15 @@ int32_t iceserver_db_update_dealloc_column(PGconn *conn,
     values[1] = tmp_value1;
 
     /** ingress data size */
-    sprintf(tmp_value2, "%d", event->ingress_bytes);
+    sprintf(tmp_value2, "%llu", event->ingress_bytes);
     values[2] = tmp_value2;
 
     /** egress data size */
-    sprintf(tmp_value3, "%d", event->egress_bytes);
+    sprintf(tmp_value3, "%llu", event->egress_bytes);
     values[3] = tmp_value3;
 
     /** total relay data size */
-    sprintf(tmp_value4, "%d", (event->ingress_bytes + event->egress_bytes));
+    sprintf(tmp_value4, "%llu", (event->ingress_bytes + event->egress_bytes));
     values[4] = tmp_value4;
 
     sprintf(tmp_value5, "%u", alloc_record->allocation_id);
@@ -804,8 +804,8 @@ int32_t mb_iceserver_handle_deallocation(
         return status;
     }
 
-    printf("TOTAL INGRESS DATA: %d bytes\n", event->ingress_bytes);
-    printf("TOTAL EGRESS DATA: %d bytes\n", event->egress_bytes);
+    printf("TOTAL INGRESS DATA: %llu bytes\n", event->ingress_bytes);
+    printf("TOTAL EGRESS DATA: %llu bytes\n", event->egress_bytes);
 
     /** TODO - should we update the stats in user record */
 

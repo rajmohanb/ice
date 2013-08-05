@@ -290,12 +290,14 @@ static int32_t ice_server_network_send_msg(handle h_msg,
 
 
 
-int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
+//int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
+int32_t ice_server_share_with_other_workers(
+                    mb_iceserver_relay_socket *relay, int op_type)
 {
     struct msghdr msgh;
     struct iovec iov[1];
     struct cmsghdr *cmsgp = NULL;
-    char buf[CMSG_SPACE(sizeof(sock_fd))];
+    char buf[CMSG_SPACE(sizeof(int))];
     int bytes, i;
     pid_t pid;
     mb_iceserver_worker_t *worker;
@@ -305,7 +307,7 @@ int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
     memset(&msgh, 0, sizeof(msgh));
     memset(buf, 0, sizeof(buf));
 
-    aux_data.sock_fd = sock_fd;
+    aux_data.port = relay->relay_port;
     aux_data.op_type = op_type;
 
     /** because we are making use of stream/connected sockets */
@@ -318,17 +320,21 @@ int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
     iov[0].iov_base = (char *) &aux_data;
     iov[0].iov_len = sizeof(aux_data);
 
-    msgh.msg_control = buf;
-    msgh.msg_controllen = sizeof(buf);
+    /** add ancillary control info only when sharing a socket descriptor */
+    if (op_type == 1)
+    {
+        msgh.msg_control = buf;
+        msgh.msg_controllen = sizeof(buf);
 
-    cmsgp = CMSG_FIRSTHDR(&msgh);
-    cmsgp->cmsg_level = SOL_SOCKET;
-    cmsgp->cmsg_type = SCM_RIGHTS;
-    cmsgp->cmsg_len = CMSG_LEN(sizeof(sock_fd));
+        cmsgp = CMSG_FIRSTHDR(&msgh);
+        cmsgp->cmsg_level = SOL_SOCKET;
+        cmsgp->cmsg_type = SCM_RIGHTS;
+        cmsgp->cmsg_len = CMSG_LEN(sizeof(int));
 
-    /** copy the socket descriptor value */
-    *((int *)CMSG_DATA(cmsgp)) = sock_fd;
-    msgh.msg_controllen = cmsgp->cmsg_len;
+        /** copy the socket descriptor value */
+        *((int *)CMSG_DATA(cmsgp)) = relay->relay_sock;
+        msgh.msg_controllen = cmsgp->cmsg_len;
+    }
 
     pid = getpid();
 
@@ -342,6 +348,7 @@ int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
         {
             bytes = sendmsg(worker->sockpair[1], &msgh, 0);
         } while((bytes == -1) && (errno == EINTR));
+
     }
 
     return STUN_OK;
@@ -432,9 +439,10 @@ static int32_t ice_server_create_socket(handle h_alloc,
 
     /** add it to the relay socket list */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server.relay_sockets[i] == 0)
+        if (g_mb_server.relays[i].relay_sock == 0)
         {
-            g_mb_server.relay_sockets[i] = sock;
+            g_mb_server.relays[i].relay_sock = sock;
+            g_mb_server.relays[i].relay_port = *port;
             break;
         }
 
@@ -454,7 +462,7 @@ static int32_t ice_server_create_socket(handle h_alloc,
             "Added a new relay socket: %d at index %d", sock, i);
 
     /** send ancillary data to other worker processes */
-    status = ice_server_share_with_other_workers(sock, 1);
+    status = ice_server_share_with_other_workers(&g_mb_server.relays[i], 1);
     /** TODO - need to check return value */
 
     *sock_fd = sock;
@@ -466,6 +474,7 @@ static int32_t ice_server_create_socket(handle h_alloc,
 
 
 
+#if 0
 static int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
 {
     int32_t i, status;
@@ -502,7 +511,7 @@ static int32_t ice_server_add_socket(handle h_alloc, int sock_fd)
 
     return status;
 }
-
+#endif
 
 
 int32_t ice_server_get_max_fd(void)
@@ -543,8 +552,8 @@ int32_t ice_server_get_max_fd(void)
 
     /** and at last, relay sockets */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server.relay_sockets[i] > max_fd)
-            max_fd = g_mb_server.relay_sockets[i];
+        if (g_mb_server.relays[i].relay_sock > max_fd)
+            max_fd = g_mb_server.relays[i].relay_sock;
 
     return max_fd;
 }
@@ -559,9 +568,25 @@ static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd)
 
     /** remove it from the list */
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server.relay_sockets[i] == sock_fd)
+        if (g_mb_server.relays[i].relay_sock == sock_fd)
         {
-            g_mb_server.relay_sockets[i] = 0;
+            /** send ancillary data to other worker processes */
+            status = 
+                ice_server_share_with_other_workers(&g_mb_server.relays[i], 0);
+            if (status == STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_DEBUG,
+                        "Notified other worker processes about socket close\n");
+            }
+            else
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Error in Notifying "\
+                        "other worker processes about socket close\n");
+            }
+
+            g_mb_server.relays[i].relay_sock = 0;
+            g_mb_server.relays[i].relay_port = 0;
+
             break;
         }
 
@@ -583,7 +608,7 @@ static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd)
     close(sock_fd);
     
     /** send ancillary data to other worker processes */
-    status = ice_server_share_with_other_workers(sock_fd, 0);
+    //status = ice_server_share_with_other_workers(sock_fd, 0);
     /** TODO - need to check return value */
 
     return STUN_OK;
