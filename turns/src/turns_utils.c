@@ -797,7 +797,7 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
         perm = &alloc->aps_perms[i];
         turns_utils_uninstall_permission(alloc, perm);
     }
- 
+
     /** stop allocation nonce stale timer if running */
     status = turns_utils_stop_nonce_stale_timer(alloc);
     if (status != STUN_OK)
@@ -814,8 +814,8 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
                 "status [%d]", status);
     }
 
-    /** TODO: in the end, memset is safe? */
-    stun_memset(alloc, 0, sizeof(turns_allocation_t));
+    /** in the end, memset is safe? - no, dont do it! */
+    //stun_memset(alloc, 0, sizeof(turns_allocation_t));
 
     return status;
 }
@@ -1946,10 +1946,19 @@ turns_permission_t *turns_utils_search_for_permission(
     int32_t i;
     turns_permission_t *perm = NULL;
 
+#if 0
+    ICE_LOG(LOG_SEV_ERROR, "Searching for: %d:%s\n", addr.host_type, addr.ip_addr);
+#endif
+
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
         if (perm->used == false) continue;
+
+#if 0
+        ICE_LOG(LOG_SEV_ERROR, "Permissions [%d]: %d:%s\n", 
+                i, perm->peer_addr.host_type, perm->peer_addr.ip_addr);
+#endif
 
         /**
          * should we compare the port when checking if a permission has been 
@@ -1962,11 +1971,18 @@ turns_permission_t *turns_utils_search_for_permission(
             (turns_utils_host_compare(perm->peer_addr.ip_addr, 
                                       addr.ip_addr, addr.host_type) == true))
         {
+            ICE_LOG(LOG_SEV_DEBUG, "Permission found!");
+#if 0
+            ICE_LOG(LOG_SEV_ERROR, "Permission found!");
+#endif
             return perm;
         }
     }
 
     ICE_LOG(LOG_SEV_DEBUG, "Permission NOT found");
+#if 0
+    ICE_LOG(LOG_SEV_ERROR, "Permission NOT found");
+#endif
     return NULL;
 }
 

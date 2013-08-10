@@ -91,7 +91,8 @@ typedef struct tag_timer_node {
 
 #ifdef MB_SMP_SUPPORT
 typedef struct {
-    pthread_rwlock_t table_lock;
+    //pthread_rwlock_t table_lock;
+    pthread_mutex_t table_lock;
     uint32_t mmap_len;
     uint32_t max_timers;
     uint32_t cur_timers;
@@ -132,7 +133,10 @@ sys_timer_handler(union sigval sig_val)
     unsigned int i;
     struct_timer_node *node;
 
-    pthread_rwlock_rdlock(&g_timer_table->table_lock);
+    //pthread_rwlock_rdlock(&g_timer_table->table_lock);
+    pthread_mutex_lock(&g_timer_table->table_lock);
+    //printf("TIMER HANDLER: PID %d Timer is read locked. No of timers %d\n", 
+    //                                     getpid(), g_timer_table->cur_timers);
 
     /** run through the list */
     node = g_timer_table->timer_list;
@@ -140,7 +144,9 @@ sys_timer_handler(union sigval sig_val)
     if (g_timer_table->cur_timers == 0)
     {
         last_timestamp = platform_get_current_time();
-        pthread_rwlock_unlock(&g_timer_table->table_lock);
+        //pthread_rwlock_unlock(&g_timer_table->table_lock);
+        pthread_mutex_unlock(&g_timer_table->table_lock);
+        //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
         return;
     }
 
@@ -158,9 +164,11 @@ sys_timer_handler(union sigval sig_val)
                 "[TIMER]: Timer id %d fired, about to notify app\n", 
                 node->timer_id);
 
-            pthread_rwlock_unlock(&g_timer_table->table_lock);
+            //pthread_rwlock_unlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
             node->timer_fxn((void *)node->timer_id, node->arg);
-            pthread_rwlock_wrlock(&g_timer_table->table_lock);
+            //pthread_rwlock_wrlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is write locked\n", getpid());
 
             ICE_LOG (LOG_SEV_DEBUG, "[TIMER]: Freeing %d\n", node->timer_id);
 
@@ -171,8 +179,10 @@ sys_timer_handler(union sigval sig_val)
 
             g_timer_table->cur_timers -= 1;
 
-            pthread_rwlock_unlock(&g_timer_table->table_lock);
-            pthread_rwlock_rdlock(&g_timer_table->table_lock);
+            //pthread_rwlock_unlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
+            //pthread_rwlock_rdlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is read locked\n", getpid());
 
             ICE_LOG (LOG_SEV_DEBUG, "[TIMER]: Freed timer node\n");
         }
@@ -182,7 +192,10 @@ sys_timer_handler(union sigval sig_val)
 
     last_timestamp = platform_get_current_time();
 
-    pthread_rwlock_unlock(&g_timer_table->table_lock);
+    //pthread_rwlock_unlock(&g_timer_table->table_lock);
+    pthread_mutex_unlock(&g_timer_table->table_lock);
+    //printf("TIMER HANDLER: PID %d Timer is unlocked. No of timers %d\n", 
+    //                                    getpid(), g_timer_table->cur_timers);
 
 #else
     struct_timer_node *node;
@@ -246,6 +259,7 @@ static int32_t platform_timer_init_table(uint32_t max_timers)
     uint32_t size, fd, i;
     platform_timer_table_t *table = NULL;
     char zero = 0;
+    pthread_mutexattr_t mattr;
 
     /** remove shared memory object if it existed */
     shm_unlink(PLATFORM_TIMER_MMAP_FILE_PATH);
@@ -305,14 +319,31 @@ static int32_t platform_timer_init_table(uint32_t max_timers)
     table->max_timers = max_timers;
     table->cur_timers = 0;
 
+#if 0
     /** TODO: Do we need to use non-default attr? */
     if (pthread_rwlock_init(&table->table_lock, NULL) != 0)
     {
         /** TODO - unmmap, etc */
         return STUN_INT_ERROR;
     }
+#else
+    pthread_mutexattr_init(&mattr);
+    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
 
-    printf("Initialized Table lock: %p\n", &table->table_lock);
+    if (pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK) != 0)
+    {
+        perror("pthread_mutexattr_settype: ");
+        ICE_LOG(LOG_SEV_ERROR,
+                "Error while setting the pthread mutexattr settype");
+    }
+
+    /** TODO: Do we need to use non-default attr? */
+    if (pthread_mutex_init(&table->table_lock, &mattr) != 0)
+    {
+        /** TODO - unmmap, etc */
+        return STUN_INT_ERROR;
+    }
+#endif
 
     ICE_LOG(LOG_SEV_DEBUG, "table = %p", table);
     ICE_LOG(LOG_SEV_DEBUG, "table alloc list = %p", table->timer_list);
@@ -411,7 +442,8 @@ static void platform_timer_exit(void)
         ICE_LOG (LOG_SEV_ERROR, "timer_delete() failed\n");
 
 #ifdef MB_SMP_SUPPORT
-    pthread_rwlock_destroy(&g_timer_table->table_lock);
+    //pthread_rwlock_destroy(&g_timer_table->table_lock);
+    pthread_mutex_destroy(&g_timer_table->table_lock);
 
     if (munmap(g_timer_table, g_timer_table->mmap_len) != 0)
     {
@@ -496,7 +528,9 @@ void *platform_start_timer(int duration,
     if (g_timer_table->cur_timers == g_timer_table->max_timers)
         return NULL;
 
-    pthread_rwlock_wrlock(&g_timer_table->table_lock);
+    //pthread_rwlock_wrlock(&g_timer_table->table_lock);
+    pthread_mutex_lock(&g_timer_table->table_lock);
+    //printf("START TIMER: PID %d timer write locked\n", getpid());
 
     /** find a free node */
     for (i = 0; i < g_timer_table->max_timers; i++)
@@ -510,7 +544,9 @@ void *platform_start_timer(int duration,
 
     if (i == g_timer_table->max_timers)
     {
-        pthread_rwlock_unlock(&g_timer_table->table_lock);
+        //pthread_rwlock_unlock(&g_timer_table->table_lock);
+        pthread_mutex_unlock(&g_timer_table->table_lock);
+        //printf("START TIMER: PID %d timer unlocked\n", getpid());
         return NULL;
     }
 
@@ -530,7 +566,10 @@ void *platform_start_timer(int duration,
 
     g_timer_table->cur_timers += 1;
 
-    pthread_rwlock_unlock(&g_timer_table->table_lock);
+    //pthread_rwlock_unlock(&g_timer_table->table_lock);
+    pthread_mutex_unlock(&g_timer_table->table_lock);
+    //printf("START TIMER: PID %d timer unlocked. No of timers %d\n", 
+    //                                    getpid(), g_timer_table->cur_timers);
 
     printf("Added a new timer node %p. timer_id %d and arg %p\n", 
                             new_node, new_node->timer_id, new_node->arg);
@@ -582,15 +621,22 @@ bool platform_stop_timer(void *timer_id)
     struct_timer_node *node;
     bool found = false;
 
+    //printf("PLATFORM: Stopping timer %p. Timers on list:%d\n", 
+    //                                    timer_id, g_timer_table->cur_timers);
+
 #ifdef MB_SMP_SUPPORT
     uint32_t i;
 
     node = g_timer_table->timer_list;
 
-    pthread_rwlock_wrlock(&g_timer_table->table_lock);
+    //printf("STOP TIMER: PID %d Timer about to write lock\n", getpid());
+    //pthread_rwlock_wrlock(&g_timer_table->table_lock);
+    pthread_mutex_lock(&g_timer_table->table_lock);
+    //printf("STOP TIMER: PID %d Timer is write locked\n", getpid());
 
     for (i = 0; i < g_timer_table->max_timers; i++)
     {
+        //printf("PLATFORM: [%d] %u\n", i, node->timer_id);
         if (timer_id == (void *)node->timer_id)
         {
             node->arg = NULL;
@@ -602,6 +648,9 @@ bool platform_stop_timer(void *timer_id)
 
             g_timer_table->cur_timers -= 1;
 
+            //printf("PLATFORM: Stopped timer %p. Timers on list:%d\n", 
+            //                            timer_id, g_timer_table->cur_timers);
+
             break;
         } 
 
@@ -609,7 +658,13 @@ bool platform_stop_timer(void *timer_id)
         node++;
     }
 
-    pthread_rwlock_unlock(&g_timer_table->table_lock);
+    //pthread_rwlock_unlock(&g_timer_table->table_lock);
+    pthread_mutex_unlock(&g_timer_table->table_lock);
+    //printf("STOP TIMER: PID %d Timer is unlocked\n", getpid());
+    //if (found == false)
+    //    printf("PLATFORM: Timer %p not found. Timers on list:%d\n",
+    //                                    timer_id, g_timer_table->cur_timers);
+
 #else
     sem_wait(&timer_mutex);
 

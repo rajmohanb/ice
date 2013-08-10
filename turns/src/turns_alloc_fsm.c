@@ -813,6 +813,8 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
      */
     pthread_mutex_lock(&alloc->lock);
 
+    //printf("PID %d: Alloc: %p locked\n", getpid(), alloc);
+
     status = handler(alloc, h_msg);
 
     if (cur_state != alloc->state)
@@ -848,10 +850,14 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
         }
 
         turns_utils_deinit_allocation_context(alloc);
+
+        //printf("TURNS Allocation destroyed PID %d: Lock: %d\n", 
+        //                                            getpid(), alloc->lock);
     }
 
     pthread_mutex_unlock(&alloc->lock);
 
+    //printf("PID %d: Alloc: %p unlocked\n", getpid(), alloc);
     return status;
 }
 

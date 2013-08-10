@@ -891,6 +891,17 @@ static int32_t iceserver_setup_timer_com_intf(void)
         return STUN_INT_ERROR;
     }
 
+    /** 
+     * set the sockets to non-blocking. This is because on linux, strange 
+     * behavior is observed where select says that "data is available", but
+     * subsequent recvfrom() blocks. This is mentioned in man page as well. 
+     * Also if we have multiple processes waiting on a shared socket descriptor
+     * using select(), only one process will process the timer event. Others
+     * should not get blocked.
+     */
+    fcntl(g_mb_server.timer_sockpair[0], F_SETFL, O_NONBLOCK);
+    fcntl(g_mb_server.timer_sockpair[1], F_SETFL, O_NONBLOCK);
+
     return STUN_OK;
 }
 

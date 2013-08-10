@@ -62,6 +62,7 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     uint32_t size, fd, i;
     turns_alloc_table_t *table = NULL;
     char zero = 0;
+    pthread_rwlockattr_t attr;
 
     if (h_table == NULL) return STUN_INVALID_PARAMS;
 
@@ -119,8 +120,10 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
     table->max_allocs = max_allocs;
     table->cur_allocs = 0;
 
-    /** TODO: Do we need to use non-default attr? */
-    if (pthread_rwlock_init(&table->table_lock, NULL) != 0)
+    pthread_rwlockattr_init(&attr);
+    pthread_rwlockattr_setpshared(&attr, PTHREAD_PROCESS_SHARED);
+
+    if (pthread_rwlock_init(&table->table_lock, &attr) != 0)
     {
         /** TODO - unmmap, etc */
         return STUN_INT_ERROR;
@@ -128,6 +131,8 @@ int32_t turns_create_table(uint32_t max_allocs, handle *h_table)
 
     ICE_LOG(LOG_SEV_DEBUG, "table = %p", table);
     ICE_LOG(LOG_SEV_DEBUG, "table alloc list = %p", table->alloc_list);
+
+    pthread_rwlockattr_destroy(&attr);
 
     *h_table = table;
 
@@ -466,15 +471,24 @@ int32_t turns_table_init_allocations(handle h_table)
 
     node = (turns_alloc_node_t *) table->alloc_list;
 
-    pthread_mutexattr_init(&mattr);
-    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
-
     for (i = 0; i < table->max_allocs; i++)
     {
         context = &node->context;
 
+        pthread_mutexattr_init(&mattr);
+        pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+
+        if (pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK) != 0)
+        {
+            perror("pthread_mutexattr_settype: ");
+            ICE_LOG(LOG_SEV_ERROR,
+                "Error while setting the pthread mutexattr settype");
+        }
+
         // memset(context, 0, sizeof(turns_alloc_node_t));
         pthread_mutex_init(&context->lock, &mattr);
+
+        pthread_mutexattr_destroy(&mattr);
 
         node++;
     }
