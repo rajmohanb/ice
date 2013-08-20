@@ -74,6 +74,7 @@ static char *alloc_insert_plan = "alloc_insert";
 static char *get_alloc_plan = "get_alloc_plan";
 static char *alloc_dealloc_update = "alloc_dealloc_update";
 static char *delete_ephemeral_cred_plan = "delete_ephemeral_cred_record";
+static char *user_dealloc_update = "user_dealloc_update";
 
 
 /** close connection to database */
@@ -96,6 +97,7 @@ PGconn *iceserver_db_connect(void)
     Oid alloc_insert_plan_param_types[9] = 
                     { 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
     Oid ephemeral_cred_delete_plan_param_types[1] = { 23 };
+    Oid user_dealloc_update_plan_param_types[2] = { 23, 23 };
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
@@ -250,6 +252,28 @@ PGconn *iceserver_db_connect(void)
     PQclear( result );
 
 
+    /** 
+     * prepare the postgres command, to be executed later for 
+     * updating the specified user record columns for every deallocation.
+     */
+    result = PQprepare(conn, user_dealloc_update, 
+                "UPDATE users SET bandwidth_used = $1 WHERE id = $2", 
+                2, user_dealloc_update_plan_param_types);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "PostGres user dealloc update plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        iceserver_db_closeconn(conn);
+        return NULL;
+    }
+ 
+    ICE_LOG(LOG_SEV_DEBUG, "User table deallocation update PLAN prepared");
+    PQclear( result );
+
     return conn;
 }
 
@@ -257,7 +281,6 @@ PGconn *iceserver_db_connect(void)
 int32_t iceserver_db_delete_ephemeral_credential_record(
                                     PGconn *conn, uint32_t cred_id)
 {
-    int rows;
     PGresult *result;
     const char *values[1];
     ExecStatusType db_status;
@@ -477,12 +500,15 @@ int32_t iceserver_db_fetch_allocation_record(PGconn *conn,
      * are deleted? Better to get the column number using one of the libpq API.
      */
 
+#if 0
+    /** bandwidth values are not yet updated in table... so use from event */
     /** bandwidth used so far */
-    alloc_record->bandwidth_used = atoi(PQgetvalue(result, 0, 5));
+    alloc_record->bandwidth_used = atoi(PQgetvalue(result, 0, 12));
     ICE_LOG(LOG_SEV_DEBUG, "BANDWIDTH USED => %d", alloc_record->bandwidth_used);
+#endif
 
     /** store the user id */
-    alloc_record->user_id = atoi(PQgetvalue(result, 0, 10));
+    alloc_record->user_id = atoi(PQgetvalue(result, 0, 8));
     ICE_LOG(LOG_SEV_DEBUG, "USER ID => %d", alloc_record->user_id);
 
     /** store the allocation id */
@@ -595,6 +621,92 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 
     return STUN_OK;
 }
+
+
+
+int32_t iceserver_db_update_user_record_with_deallocation(PGconn *conn,
+        mb_ice_server_event_t *event, mb_iceserver_alloc_record_t *alloc_record)
+{
+    PGresult *result;
+    const char *values[2];
+    ExecStatusType db_status;
+    char user_identifier[12] = {0};
+    char bw_value[12] = {0};
+    uint32_t rows, bw;
+
+    sprintf(user_identifier, "%u", alloc_record->user_id);
+
+    /*
+     * we need to add the bandwidth used by the terminated allocation record to
+     * the existing value of the user bandwidth. Hence fetch the user record
+     */
+    values[0] = user_identifier;
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Fetching user record for user id: %s in USERS table", values[0]);
+    result = PQexecPrepared(conn, get_user_plan, 1, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Database query failed!");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        return STUN_INT_ERROR;
+    }
+
+    /**
+     * Now make sure that we have atleast and only one matching record. If
+     * number of records equals 0, then the provided username is not found.
+     * so the server needs to reject the allocation request.
+     */
+    rows = PQntuples(result);
+    if (rows == 0)
+    {
+        ICE_LOG(LOG_SEV_NOTICE, 
+                "Database query returned: no matching account found");
+        return STUN_NOT_FOUND;
+    }
+    else if (rows > 1)
+    {
+        ICE_LOG(LOG_SEV_WARNING, "Application logic error. Found more than "\
+                "one account for the provided username value. As per our app "\
+                "requirements, no two accounts need to share the same "\
+                "username. BUG???");
+    }
+
+    /** extract the current bandwidth value */
+    bw = atoi(PQgetvalue(result, 0, 22));
+    ICE_LOG(LOG_SEV_DEBUG, "BANDWIDTH used before updating => %u", bw);
+
+    /** clear result */
+    PQclear( result );
+
+    /** next step */
+    bw += alloc_record->bandwidth_used;
+
+    sprintf(bw_value, "%u", bw);
+    values[0] = bw_value;
+    values[1] = user_identifier;
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Updating user record for user id: %s in USERS table "\
+            "with the deallocation details", values[1]);
+    result = PQexecPrepared(conn, user_dealloc_update, 2, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "PostGres updation of "\
+                        "bandwidth_used column in users table failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        return STUN_INT_ERROR;
+    }
+
+    /** clear result */
+    PQclear( result );
+
+    return STUN_OK;
+}
+
 
 
 int32_t iceserver_db_update_dealloc_column(PGconn *conn, 
@@ -807,7 +919,17 @@ int32_t mb_iceserver_handle_deallocation(
     printf("TOTAL INGRESS DATA: %llu bytes\n", event->ingress_bytes);
     printf("TOTAL EGRESS DATA: %llu bytes\n", event->egress_bytes);
 
-    /** TODO - should we update the stats in user record */
+    alloc_record.bandwidth_used = event->ingress_bytes + event->egress_bytes;
+
+    /** update the stats in user record */
+    status = iceserver_db_update_user_record_with_deallocation(
+                                                conn, event, &alloc_record);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Updating of the user record with deallocation details failed");
+        return status;
+    }
 
     return STUN_OK;
 }
