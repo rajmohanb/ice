@@ -583,6 +583,7 @@ int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg)
 
 int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
 {
+    int32_t status;
     turns_permission_t *perm;
     turns_timer_params_t *timer = (turns_timer_params_t *) h_msg;
 
@@ -609,13 +610,11 @@ int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
     }
 
     /** remove the installed permission */
-    perm->channel_num = 0;
-    perm->h_channel_timer = NULL;
-    perm->channel_timer.timer_id = NULL;
+    status = turns_utils_uninstall_permission(alloc, perm);
 
     ICE_LOG(LOG_SEV_DEBUG, "Un-installed permission");
 
-    return STUN_OK;
+    return status;
 }
 
 

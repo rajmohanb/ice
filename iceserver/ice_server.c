@@ -153,8 +153,8 @@ static void ice_server_timer_expiry_cb (void *timer_id, void *arg)
     ssize_t bytes = 0;
     mb_ice_server_timer_event_t timer_event;
 
-    ICE_LOG(LOG_SEV_DEBUG, "[MB ICE SERVER] in sample application timer "\
-            "callback %d %p", (int)timer_id, arg);
+    ICE_LOG(LOG_SEV_ERROR, "[MB ICE SERVER] in ice server timer "\
+            "callback. Timer Fired [%d] Argument [%p]", (int)timer_id, arg);
 
     timer_event.timer_id = timer_id;
     timer_event.arg = arg;

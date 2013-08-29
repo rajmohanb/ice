@@ -814,6 +814,9 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
                 "status [%d]", status);
     }
 
+    alloc->stun_msg_len = 0;
+    alloc->app_blob = alloc->transport_param = 0;
+
     /** in the end, memset is safe? - no, dont do it! */
     //stun_memset(alloc, 0, sizeof(turns_allocation_t));
 
@@ -1485,6 +1488,7 @@ int32_t turns_utils_uninstall_permission(
     stun_memset(&perm->peer_addr, 0, sizeof(stun_inet_addr_t));
     perm->channel_num = 0;
     perm->used = false;
+    perm->ingress_bytes = perm->egress_bytes = 0;
 
     return STUN_OK;
 }
@@ -2169,8 +2173,6 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
 
     perm->egress_bytes += num;
 
-    //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
-
     return status;
 
 MB_ERROR_EXIT:
@@ -2412,7 +2414,20 @@ int32_t turns_utils_calculate_allocation_relayed_data(
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
-        if (perm->used == false) continue;
+        /**
+         * TODO - make sure that you calculate the relayed data for all 
+         * permissions, including the ones that have expired.
+         *
+         * What about scenarios where some permission is created, then expires 
+         * and again the same permission memory is provided for another create 
+         * permission request. In such case, we will lose the relayed data of 
+         * priorly created allocation. This could be taken care of by 
+         * maintaining the relayed data per allocation and updating the same 
+         * whenever a permission expires. This will eliminate the side 
+         * effects of the reuse of the same memory for the allocations, as 
+         * mentioned above.
+         */
+        //if (perm->used == false) continue;
 
         ingress += perm->ingress_bytes;
         egress += perm->egress_bytes;

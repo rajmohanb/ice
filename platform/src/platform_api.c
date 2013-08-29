@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -137,6 +137,8 @@ sys_timer_handler(union sigval sig_val)
     pthread_mutex_lock(&g_timer_table->table_lock);
     //printf("TIMER HANDLER: PID %d Timer is read locked. No of timers %d\n", 
     //                                     getpid(), g_timer_table->cur_timers);
+    
+    ICE_LOG(LOG_SEV_ERROR, "****** Timer callback ****** Locked");
 
     /** run through the list */
     node = g_timer_table->timer_list;
@@ -146,6 +148,7 @@ sys_timer_handler(union sigval sig_val)
         last_timestamp = platform_get_current_time();
         //pthread_rwlock_unlock(&g_timer_table->table_lock);
         pthread_mutex_unlock(&g_timer_table->table_lock);
+        ICE_LOG(LOG_SEV_ERROR, "No timers");
         //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
         return;
     }
@@ -156,11 +159,20 @@ sys_timer_handler(union sigval sig_val)
          * store platform_get_current_time() in a variable. so that
          * we need not call it every time
          */
-        node->elapsed_time += platform_get_current_time() - last_timestamp;
+        //if ((node->arg == NULL) && (!node->timer_id)) continue;
 
-        if ((node->arg) && (node->elapsed_time > node->duration))
+        if (node->arg)
+            node->elapsed_time += platform_get_current_time() - last_timestamp;
+
+#if 0
+        ICE_LOG(LOG_SEV_ERROR, "[%d]: Timer ID=[%d] node->elapsed_time: %u "\
+                "node->duration: %u Arg: %p\n", i,  node->timer_id, 
+                node->elapsed_time, node->duration, node->arg);
+#endif
+
+        if ((node->arg) && (node->elapsed_time >= node->duration))
         {
-            ICE_LOG (LOG_SEV_DEBUG, 
+            ICE_LOG (LOG_SEV_ERROR, 
                 "[TIMER]: Timer id %d fired, about to notify app\n", 
                 node->timer_id);
 
@@ -176,8 +188,11 @@ sys_timer_handler(union sigval sig_val)
             node->elapsed_time = 0;
             node->arg = 0;
             node->timer_fxn = NULL;
+            node->timer_id = 0;
 
+            //pthread_mutex_lock(&g_timer_table->table_lock);
             g_timer_table->cur_timers -= 1;
+            //pthread_mutex_unlock(&g_timer_table->table_lock);
 
             //pthread_rwlock_unlock(&g_timer_table->table_lock);
             //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
@@ -196,6 +211,8 @@ sys_timer_handler(union sigval sig_val)
     pthread_mutex_unlock(&g_timer_table->table_lock);
     //printf("TIMER HANDLER: PID %d Timer is unlocked. No of timers %d\n", 
     //                                    getpid(), g_timer_table->cur_timers);
+    ICE_LOG(LOG_SEV_ERROR, 
+            "sys timer handler Exit: Num timers: %d", g_timer_table->cur_timers);
 
 #else
     struct_timer_node *node;
@@ -330,12 +347,14 @@ static int32_t platform_timer_init_table(uint32_t max_timers)
     pthread_mutexattr_init(&mattr);
     pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
 
+#if 0
     if (pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK) != 0)
     {
         perror("pthread_mutexattr_settype: ");
         ICE_LOG(LOG_SEV_ERROR,
                 "Error while setting the pthread mutexattr settype");
     }
+#endif
 
     /** TODO: Do we need to use non-default attr? */
     if (pthread_mutex_init(&table->table_lock, &mattr) != 0)
@@ -571,8 +590,8 @@ void *platform_start_timer(int duration,
     //printf("START TIMER: PID %d timer unlocked. No of timers %d\n", 
     //                                    getpid(), g_timer_table->cur_timers);
 
-    printf("Added a new timer node %p. timer_id %d and arg %p\n", 
-                            new_node, new_node->timer_id, new_node->arg);
+    //printf("Added a new timer node %p. timer_id %d and arg %p\n", 
+    //                        new_node, new_node->timer_id, new_node->arg);
 
 #else
     new_node = (struct_timer_node *) 
@@ -605,11 +624,10 @@ void *platform_start_timer(int duration,
 
 #endif
 
-    ICE_LOG (LOG_SEV_DEBUG, 
-        "[TIMER]: Added timer node %p for %d ms\n", new_node, duration);
-    ICE_LOG (LOG_SEV_DEBUG,
-        "[TIMER]: returned Timer handle is %d and arg is %p\n", 
-        new_node->timer_id, new_node->arg);
+    ICE_LOG(LOG_SEV_ERROR, 
+        "[TIMER]: Added timer node %p for %d ms. "\
+        "Returned timer handle %d and arg %p. No of timers %d\n", new_node, 
+        duration, new_node->timer_id, new_node->arg, g_timer_table->cur_timers);
 
     return (void *)new_node->timer_id;
 }
@@ -633,10 +651,16 @@ bool platform_stop_timer(void *timer_id)
     //pthread_rwlock_wrlock(&g_timer_table->table_lock);
     pthread_mutex_lock(&g_timer_table->table_lock);
     //printf("STOP TIMER: PID %d Timer is write locked\n", getpid());
+    ICE_LOG(LOG_SEV_ERROR, "Stop timer: %p Mutex locked", timer_id);
 
     for (i = 0; i < g_timer_table->max_timers; i++)
     {
-        //printf("PLATFORM: [%d] %u\n", i, node->timer_id);
+#if 0
+        ICE_LOG(LOG_SEV_ERROR, "[%d]: Timer ID=[%d] node->elapsed_time: %u "\
+                "node->duration: %u Arg: %p\n", i,  node->timer_id, 
+                node->elapsed_time, node->duration, node->arg);
+#endif
+
         if (timer_id == (void *)node->timer_id)
         {
             node->arg = NULL;
@@ -648,8 +672,9 @@ bool platform_stop_timer(void *timer_id)
 
             g_timer_table->cur_timers -= 1;
 
-            //printf("PLATFORM: Stopped timer %p. Timers on list:%d\n", 
-            //                            timer_id, g_timer_table->cur_timers);
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "PLATFORM: Stopped timer %p. Timers on list:%d\n", 
+                    timer_id, g_timer_table->cur_timers);
 
             break;
         } 
@@ -664,6 +689,7 @@ bool platform_stop_timer(void *timer_id)
     //if (found == false)
     //    printf("PLATFORM: Timer %p not found. Timers on list:%d\n",
     //                                    timer_id, g_timer_table->cur_timers);
+    ICE_LOG(LOG_SEV_ERROR, "Stop timer: Mutex UNLOCKED");
 
 #else
     sem_wait(&timer_mutex);

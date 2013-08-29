@@ -105,9 +105,11 @@ typedef struct
     bool_t use_channel;
 #endif
 
+#if 0
     handle h_chnl_txn;
     handle h_chnl_req;
     handle h_chnl_resp;
+#endif
 
     /** ingress relay data to the client from the peer */
     uint64_t ingress_bytes;
@@ -203,7 +205,9 @@ typedef struct
 
     handle app_param;
 
+#if 0
     handle h_txn;
+#endif
     handle h_req;
     handle h_resp;
 
