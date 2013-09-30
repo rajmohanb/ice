@@ -146,6 +146,7 @@ sys_timer_handler(union sigval sig_val)
     if (g_timer_table->cur_timers == 0)
     {
         last_timestamp = platform_get_current_time();
+        //ICE_LOG(LOG_SEV_ERROR, "last timestamp: %u\n", last_timestamp);
         //pthread_rwlock_unlock(&g_timer_table->table_lock);
         pthread_mutex_unlock(&g_timer_table->table_lock);
         ICE_LOG(LOG_SEV_ERROR, "No timers");

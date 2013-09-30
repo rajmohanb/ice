@@ -916,8 +916,10 @@ int32_t mb_iceserver_handle_deallocation(
         return status;
     }
 
-    printf("TOTAL INGRESS DATA: %llu bytes\n", event->ingress_bytes);
-    printf("TOTAL EGRESS DATA: %llu bytes\n", event->egress_bytes);
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "TOTAL INGRESS DATA: %llu bytes\n", event->ingress_bytes);
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "TOTAL EGRESS DATA: %llu bytes\n", event->egress_bytes);
 
     alloc_record.bandwidth_used = event->ingress_bytes + event->egress_bytes;
 

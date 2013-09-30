@@ -612,7 +612,10 @@ int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
     /** remove the installed permission */
     status = turns_utils_uninstall_permission(alloc, perm);
 
-    ICE_LOG(LOG_SEV_DEBUG, "Un-installed permission");
+    if (status == STUN_OK)
+        ICE_LOG(LOG_SEV_DEBUG, "Un-installed permission");
+    else
+        ICE_LOG(LOG_SEV_DEBUG, "Uninstalling of permission failed: %d", status);
 
     return status;
 }
