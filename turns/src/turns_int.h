@@ -232,6 +232,12 @@ typedef struct
     /** lock */
     pthread_mutex_t lock;
 
+    /** Total ingress relay data to the client from the peers */
+    uint64_t ingress_bytes;
+
+    /** Total egress relay data from the client to the peers */
+    uint64_t egress_bytes;
+
 #ifdef MB_SMP_SUPPORT
     /** copy of stun message, required when interacting with decision process */
     uint32_t stun_msg_len;
