@@ -138,7 +138,7 @@ sys_timer_handler(union sigval sig_val)
     //printf("TIMER HANDLER: PID %d Timer is read locked. No of timers %d\n", 
     //                                     getpid(), g_timer_table->cur_timers);
     
-    ICE_LOG(LOG_SEV_ERROR, "****** Timer callback ****** Locked");
+    //ICE_LOG(LOG_SEV_ERROR, "****** Timer callback ****** Locked");
 
     /** run through the list */
     node = g_timer_table->timer_list;
@@ -149,7 +149,7 @@ sys_timer_handler(union sigval sig_val)
         //ICE_LOG(LOG_SEV_ERROR, "last timestamp: %u\n", last_timestamp);
         //pthread_rwlock_unlock(&g_timer_table->table_lock);
         pthread_mutex_unlock(&g_timer_table->table_lock);
-        ICE_LOG(LOG_SEV_ERROR, "No timers");
+        //ICE_LOG(LOG_SEV_ERROR, "No timers");
         //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
         return;
     }

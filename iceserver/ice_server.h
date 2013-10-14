@@ -143,10 +143,14 @@ typedef struct
     //int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
     mb_iceserver_relay_socket relays[MB_ICE_SERVER_DATA_SOCK_LIMIT];
 
+#ifdef MB_USE_EPOLL
+    /** epoll instance */
+    int efd;
+#else
     /** master fd set used for listening - used by signaling workers only */
     fd_set master_rfds;
     int max_fd;
-
+#endif
 
     mb_ice_server_intf_t intf[2];
 
@@ -166,6 +170,15 @@ typedef struct
 
 } mb_ice_server_t;
 
+
+/** Function prototypes of the functions shared across the source files */
+int32_t mb_ice_server_make_socket_non_blocking(int sock_fd);
+
+int32_t iceserver_init_transport(void);
+
+int32_t iceserver_deinit_transport(void);
+
+int32_t iceserver_process_messages(mb_iceserver_worker_t *worker);
 
 /******************************************************************************/
 

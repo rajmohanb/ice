@@ -31,6 +31,10 @@ extern "C" {
 #include <pthread.h>
 #include <errno.h>
 
+#ifdef MB_USE_EPOLL
+#include <sys/epoll.h>
+#endif
+
 #include <stun_base.h>
 #include <msg_layer_api.h>
 #include <stun_enc_dec_api.h>
@@ -40,6 +44,30 @@ extern "C" {
 
 
 extern mb_ice_server_t g_mb_server;
+
+
+int32_t mb_ice_server_make_socket_non_blocking(int sock_fd)
+{
+    int flags, s;
+
+    flags = fcntl(sock_fd, F_GETFL, 0);
+    if (flags == -1)
+    {
+        perror("fcntl F_GETFL");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    flags |= O_NONBLOCK;
+
+    s = fcntl(sock_fd, F_SETFL, flags);
+    if (s == -1)
+    {
+        perror("fcntl F_SETFL");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    return STUN_OK;
+}
 
 
 
@@ -72,7 +100,12 @@ int32_t mb_ice_server_get_local_interface(void)
         s = socket(ifa->ifa_addr->sa_family, SOCK_DGRAM, 0);
         if (s == -1) continue;
 
-        fcntl(s, F_SETFL, O_NONBLOCK);
+        if (mb_ice_server_make_socket_non_blocking(s) != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "Making the socket [%d] NON-BLOCKing failed", s);
+            continue;
+        }
 
         if (bind(s, ifa->ifa_addr, sizeof(struct sockaddr)) == -1)
         {
@@ -90,7 +123,7 @@ int32_t mb_ice_server_get_local_interface(void)
         }
     }
 
-    if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
+    if (ifAddrStruct != NULL) freeifaddrs(ifAddrStruct);
 
     ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server.intf[0].sockfd);
     ICE_LOG(LOG_SEV_DEBUG, "Socket fd: [%d]", g_mb_server.intf[1].sockfd);
@@ -149,11 +182,13 @@ int32_t mb_ice_server_init_timer_comm(void)
 
 int32_t iceserver_init_transport(void)
 {
-    int32_t status, i;
+    int32_t status;
 
+#ifndef MB_USE_EPOLL
     /** reset */
     g_mb_server.max_fd = 0;
     FD_ZERO(&g_mb_server.master_rfds);
+#endif
     memset(g_mb_server.relays, 0, 
             (sizeof(mb_iceserver_relay_socket) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
@@ -181,7 +216,7 @@ int32_t iceserver_deinit_transport(void)
 
 void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
 {
-    int bytes, temp;
+    int bytes;
     int32_t status;
     char buf[1500];
     struct sockaddr client;
@@ -216,7 +251,7 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
 
         ICE_LOG(LOG_SEV_DEBUG, "CHANNEL DATA message");
 
-        data.data = buf;
+        data.data = (u_char *)buf;
         data.data_len = bytes;
         data.transport_param = (handle)intf->sockfd;
         data.protocol = ICE_TRANSPORT_UDP;
@@ -290,7 +325,8 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
         if((method == STUN_METHOD_BINDING) && (msg_type == STUN_REQUEST))
         {
             /** hand over to the stun server module */
-            status = stuns_inject_received_msg(g_mb_server.h_stuns_inst, &pkt);
+            status = stuns_inject_received_msg(
+                    g_mb_server.h_stuns_inst, (stuns_rx_stun_pkt_t *)&pkt);
         }
         else
         {
@@ -327,7 +363,11 @@ void mb_ice_server_process_signaling_msg(mb_ice_server_intf_t *intf)
 
 
 
+#ifdef MB_USE_EPOLL
+void mb_ice_server_process_media_msg(int event_fd)
+#else
 void mb_ice_server_process_media_msg(fd_set *read_fds)
+#endif
 {
     int32_t status;
     int bytes, i, sock_fd;
@@ -338,7 +378,11 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
 
     for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
         if (g_mb_server.relays[i].relay_sock)
+#ifdef MB_USE_EPOLL
+            if (event_fd == g_mb_server.relays[i].relay_sock)
+#else
             if (FD_ISSET(g_mb_server.relays[i].relay_sock, read_fds))
+#endif
                 break;
 
     if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
@@ -362,9 +406,9 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
     /** TODO - connection closed for TCP, remove the socket from list? */
     if (bytes == 0) return;
 
-    data.data = buf;
+    data.data = (u_char *)buf;
     data.data_len = bytes;
-    data.transport_param = sock_fd;
+    data.transport_param = (handle)sock_fd;
     data.protocol = ICE_TRANSPORT_UDP;
 
     if(client.sa_family == AF_INET)
@@ -488,7 +532,11 @@ static int32_t mb_ice_server_process_control_info(int fd)
     struct cmsghdr *cmsgp = NULL;
     char buf[CMSG_SPACE(sizeof(int))];
     mb_ice_server_aux_data_t aux_data;
-    pid_t mypid = getpid();
+    //pid_t mypid = getpid();
+#ifdef MB_USE_EPOLL
+    int s;
+    struct epoll_event event;
+#endif
 
     /** TODO - are these really necessary? performance? */
     memset(&msgh, 0, sizeof(msgh));
@@ -556,8 +604,20 @@ static int32_t mb_ice_server_process_control_info(int fd)
                     return STUN_NO_RESOURCE;
                 }
 
+#ifdef MB_USE_EPOLL
+                event.data.fd = rcvd_fd;
+                event.events = EPOLLIN; // | EPOLLET;
+
+                s = epoll_ctl(g_mb_server.efd, EPOLL_CTL_ADD, rcvd_fd, &event);
+                if (s == -1)
+                {
+                    perror("epoll_ctl add");
+                    return STUN_TRANSPORT_FAIL;
+                }
+#else
                 FD_SET(rcvd_fd, &g_mb_server.master_rfds);
                 if (g_mb_server.max_fd < rcvd_fd) g_mb_server.max_fd = rcvd_fd;
+#endif
             }
         }
     }
@@ -578,14 +638,26 @@ static int32_t mb_ice_server_process_control_info(int fd)
                 g_mb_server.relays[i].relay_sock = 0;
                 g_mb_server.relays[i].relay_port = 0;
 
-                /** close the relay socket */
-                close(tmp_sock);
+#ifdef MB_USE_EPOLL
+                event.data.fd = tmp_sock;
+                event.events = EPOLLIN; // | EPOLLET;
 
+                s = epoll_ctl(g_mb_server.efd, EPOLL_CTL_DEL, tmp_sock, &event);
+                if (s == -1)
+                {
+                    perror("epoll_ctl del");
+                    return STUN_TRANSPORT_FAIL;
+                }
+#else
                 FD_CLR(tmp_sock, &g_mb_server.master_rfds);
 
                 /** re-calculate the max fd, painful job */
                 if (g_mb_server.max_fd == tmp_sock)
                     g_mb_server.max_fd = ice_server_get_max_fd();
+#endif
+
+                /** close the relay socket */
+                close(tmp_sock);
 
                 break;
             }
@@ -612,6 +684,51 @@ static int32_t mb_ice_server_process_control_info(int fd)
 
 
 
+#ifdef MB_USE_EPOLL
+int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
+{
+    #define MB_EPOLL_MAX_EVENTS 64
+    int i, nfds;
+    struct epoll_event events[MB_EPOLL_MAX_EVENTS];
+
+    //ICE_LOG(LOG_SEV_DEBUG, 
+    //        "About to enter pselect max_fd - %d", (g_mb_server.max_fd+1));
+
+    nfds = epoll_pwait(g_mb_server.efd, events, MB_EPOLL_MAX_EVENTS, -1, NULL);
+    ICE_LOG(LOG_SEV_DEBUG, "epoll_pwait returned %d fds", nfds);
+
+    if (nfds == -1 && errno == EINTR) return STUN_OK;
+    if (nfds == -1)
+    {
+        perror("epoll_pwait");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    for (i = 0; i < nfds; i++)
+    {
+        int event_fd = events[i].data.fd;
+
+        if (event_fd == g_mb_server.intf[0].sockfd)
+            mb_ice_server_process_signaling_msg(&g_mb_server.intf[0]);
+        else if(event_fd == g_mb_server.intf[1].sockfd)
+            mb_ice_server_process_signaling_msg(&g_mb_server.intf[1]);
+        else if (event_fd == g_mb_server.qid_db_worker)
+            mb_ice_server_process_approval(g_mb_server.qid_db_worker);
+        else if (event_fd == g_mb_server.timer_sockpair[0])
+            mb_ice_server_process_timer_event(event_fd);
+        else if (event_fd == worker->sockpair[0])
+            mb_ice_server_process_control_info(event_fd);
+        else
+#ifdef MB_USE_EPOLL
+            mb_ice_server_process_media_msg(event_fd);
+#else
+            mb_ice_server_process_media_msg(&rfds);
+#endif
+    }
+
+    return STUN_OK;
+}
+#else
 int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
 {
     int i, ret;
@@ -653,6 +770,7 @@ int32_t iceserver_process_messages(mb_iceserver_worker_t *worker)
 
     return STUN_OK;
 }
+#endif
 
 
 /******************************************************************************/

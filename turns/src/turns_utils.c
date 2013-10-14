@@ -2232,7 +2232,7 @@ int32_t turns_utils_forward_channel_data(
     else
     {
         perm->egress_bytes += bytes;
-        //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+        ICE_LOG(LOG_SEV_DEBUG, "EGRESS BYTES: %d bytes\n", perm->egress_bytes);
     }
 
     /** TODO : check if send really succeeded check return value */
@@ -2279,7 +2279,7 @@ int32_t turns_utils_forward_udp_data_using_channeldata_msg(
     else
         perm->ingress_bytes += data->data_len;
 
-    //printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     return status;
 }
@@ -2368,7 +2368,7 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
 
     perm->ingress_bytes += data->data_len;
 
-    //printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+    ICE_LOG(LOG_SEV_DEBUG, "INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     ICE_LOG(LOG_SEV_DEBUG, 
             "Forwarded UDP data using DATA IND to the client at %s:%d", 
