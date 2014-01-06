@@ -1485,6 +1485,15 @@ int32_t turns_utils_uninstall_permission(
                 "timer for allocation %p", alloc);
     }
 
+    /**
+     * Before a permission is uninstalled, update the allocation with this
+     * permission's ingress and egress data size. Otherwise we lose it.
+     */
+    alloc->ingress_bytes += perm->ingress_bytes;
+    alloc->egress_bytes += perm->egress_bytes;
+    ICE_LOG(LOG_SEV_NOTICE, "Permission expired. Allocation ingress %u and "\
+            "egress %u bytes", alloc->ingress_bytes, alloc->egress_bytes);
+
     stun_memset(&perm->peer_addr, 0, sizeof(stun_inet_addr_t));
     perm->channel_num = 0;
     perm->used = false;
@@ -2173,6 +2182,8 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
 
     perm->egress_bytes += num;
 
+    //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+
     return status;
 
 MB_ERROR_EXIT:
@@ -2232,7 +2243,7 @@ int32_t turns_utils_forward_channel_data(
     else
     {
         perm->egress_bytes += bytes;
-        ICE_LOG(LOG_SEV_DEBUG, "EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+        //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
     }
 
     /** TODO : check if send really succeeded check return value */
@@ -2279,7 +2290,7 @@ int32_t turns_utils_forward_udp_data_using_channeldata_msg(
     else
         perm->ingress_bytes += data->data_len;
 
-    ICE_LOG(LOG_SEV_DEBUG, "INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+    //printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     return status;
 }
@@ -2368,7 +2379,7 @@ int32_t turns_utils_forward_udp_data_using_data_ind(
 
     perm->ingress_bytes += data->data_len;
 
-    ICE_LOG(LOG_SEV_DEBUG, "INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
+    //printf("INGRESS BYTES: %d bytes\n", perm->ingress_bytes);
 
     ICE_LOG(LOG_SEV_DEBUG, 
             "Forwarded UDP data using DATA IND to the client at %s:%d", 
@@ -2408,33 +2419,25 @@ int32_t turns_utils_calculate_allocation_relayed_data(
                         uint64_t *egress_data)
 {
     turns_permission_t *perm = NULL;
-    uint64_t ingress = 0, egress = 0;
     uint16_t i;
+
 
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
-        /**
-         * TODO - make sure that you calculate the relayed data for all 
-         * permissions, including the ones that have expired.
-         *
-         * What about scenarios where some permission is created, then expires 
-         * and again the same permission memory is provided for another create 
-         * permission request. In such case, we will lose the relayed data of 
-         * priorly created allocation. This could be taken care of by 
-         * maintaining the relayed data per allocation and updating the same 
-         * whenever a permission expires. This will eliminate the side 
-         * effects of the reuse of the same memory for the allocations, as 
-         * mentioned above.
-         */
-        //if (perm->used == false) continue;
+        if (perm->used == false) continue;
 
-        ingress += perm->ingress_bytes;
-        egress += perm->egress_bytes;
+        alloc->ingress_bytes += perm->ingress_bytes;
+        alloc->egress_bytes += perm->egress_bytes;
     }
 
-    *ingress_data = ingress;
-    *egress_data = egress;
+    *ingress_data = alloc->ingress_bytes;
+    *egress_data = alloc->egress_bytes;
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "TOTAL INGRESS DATA: %llu bytes\n", alloc->ingress_bytes);
+    ICE_LOG(LOG_SEV_ERROR, 
+            "TOTAL EGRESS DATA: %llu bytes\n", alloc->egress_bytes);
 
     return STUN_OK;
 }
