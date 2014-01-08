@@ -1397,6 +1397,12 @@ int main (int argc, char *argv[])
             "MindBricks: SeamConnect ICE server booting up...[Release mode]");
 #endif
 
+#ifdef MB_USE_EPOLL
+    ICE_LOG(LOG_SEV_ALERT, "MindBricks: using EPOLL ");
+#else
+    ICE_LOG(LOG_SEV_ALERT, "MindBricks: using PSELECT ");
+#endif
+
     /** setup the signal handlers */
     iceserver_init_sig_handlers();
 
