@@ -37,6 +37,10 @@ extern "C" {
 
 #include <syslog.h> /** logging */
 
+#ifdef MB_USE_EPOLL
+#include <sys/epoll.h>
+#endif
+
 #include <errno.h>
 
 #include <stun_base.h>
@@ -290,7 +294,6 @@ static int32_t ice_server_network_send_msg(handle h_msg,
 
 
 
-//int32_t ice_server_share_with_other_workers(int sock_fd, int op_type)
 int32_t ice_server_share_with_other_workers(
                     mb_iceserver_relay_socket *relay, int op_type)
 {
@@ -364,6 +367,10 @@ static int32_t ice_server_create_socket(handle h_alloc,
     struct sockaddr addr;
     unsigned short sa_family;
     int32_t status;
+#ifdef MB_USE_EPOLL
+    int s;
+    struct epoll_event event;
+#endif
 
     /**
      * how do we decide whether the client is requesting an IPv6
@@ -406,7 +413,12 @@ static int32_t ice_server_create_socket(handle h_alloc,
      * behavior is observed where select says that "data is available", but
      * subsequent recvfrom() blocks. This is mentioned in man page as well.
      */
-    fcntl(sock, F_SETFL, O_NONBLOCK);
+    if (mb_ice_server_make_socket_non_blocking(sock) != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Making the socket [%d] NON-BLOCKing failed", sock);
+        return STUN_TRANSPORT_FAIL;
+    }
 
     addr.sa_family = sa_family;
 
@@ -454,8 +466,23 @@ static int32_t ice_server_create_socket(handle h_alloc,
         return STUN_NO_RESOURCE;
     }
 
+#ifdef MB_USE_EPOLL
+    event.data.fd = sock;
+    event.events = EPOLLIN; // | EPOLLET;
+
+    s = epoll_ctl(g_mb_server.efd, EPOLL_CTL_ADD, sock, &event);
+    if (s == -1)
+    {
+        perror("epoll_ctl add");
+        close(sock);
+        g_mb_server.relays[i].relay_sock = 0;
+        g_mb_server.relays[i].relay_port = 0;
+        return STUN_TRANSPORT_FAIL;
+    }
+#else
     FD_SET(sock, &g_mb_server.master_rfds);
     if (g_mb_server.max_fd < sock) g_mb_server.max_fd = sock;
+#endif
 
     /** need to wake up the waiting pselect */
     ICE_LOG(LOG_SEV_INFO, 
@@ -472,46 +499,6 @@ static int32_t ice_server_create_socket(handle h_alloc,
     return status;
 }
 
-
-
-#if 0
-static int32_t ice_server_add_socket(handle h_alloc, int sock_fd) 
-{
-    int32_t i, status;
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "Now need to listen on this socket as well: %d", sock_fd);
-
-    printf("worker %d: TURNS wants app to listen on socket %d\n", getpid(), sock_fd);
-
-    /** add it to the list */
-    for (i = 0; i < MB_ICE_SERVER_DATA_SOCK_LIMIT; i++)
-        if (g_mb_server.relay_sockets[i] == 0)
-        {
-            g_mb_server.relay_sockets[i] = sock_fd;
-            break;
-        }
-
-    if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Ran out of available "\
-                "relay sockets. Hence not adding to the list");
-        return STUN_NO_RESOURCE;
-    }
-
-    FD_SET(sock_fd, &g_mb_server.master_rfds);
-    if (g_mb_server.max_fd < sock_fd) g_mb_server.max_fd = sock_fd;
-
-    /** need to wake up the waiting pselect */
-    ICE_LOG(LOG_SEV_INFO, 
-            "Added a new relay socket: %d at index %d", sock_fd, i);
-
-    /** send ancillary data to other worker processes */
-    status = ice_server_share_with_other_workers(sock_fd, 1);
-    /** TODO - need to check return value */
-
-    return status;
-}
-#endif
 
 
 int32_t ice_server_get_max_fd(void)
@@ -563,6 +550,11 @@ int32_t ice_server_get_max_fd(void)
 static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd) 
 {
     int32_t i, status;
+#ifdef MB_USE_EPOLL
+    int s;
+    struct epoll_event event;
+#endif
+
     ICE_LOG(LOG_SEV_ERROR, 
             "Now need to remove this socket from select: %d", sock_fd);
 
@@ -598,11 +590,23 @@ static int32_t ice_server_remove_socket(handle h_alloc, int sock_fd)
         return STUN_NOT_FOUND;
     }
 
+#ifdef MB_USE_EPOLL
+    event.data.fd = sock_fd;
+    event.events = EPOLLIN; // | EPOLLET;
+
+    s = epoll_ctl(g_mb_server.efd, EPOLL_CTL_DEL, sock_fd, &event);
+    if (s == -1)
+    {
+        perror("epoll_ctl del");
+        return STUN_TRANSPORT_FAIL;
+    }
+#else
     FD_CLR(sock_fd, &g_mb_server.master_rfds);
 
     /** re-calculate the max fd, painful job */
     if (g_mb_server.max_fd == sock_fd)
         g_mb_server.max_fd = ice_server_get_max_fd();
+#endif
 
     /** close the relay socket */
     close(sock_fd);
@@ -645,6 +649,7 @@ static int32_t ice_server_stop_timer (handle timer_id)
 }
 
 
+#if 0
 static int mb_worker_get_parent_sock(void)
 {
     int i, mypid = getpid();
@@ -657,6 +662,7 @@ static int mb_worker_get_parent_sock(void)
             "Unable to find the parent socket for pid: %d", mypid);
     return 0;
 }
+#endif
 
 
 static int32_t ice_server_new_allocation_request(
@@ -899,8 +905,21 @@ static int32_t iceserver_setup_timer_com_intf(void)
      * using select(), only one process will process the timer event. Others
      * should not get blocked.
      */
-    fcntl(g_mb_server.timer_sockpair[0], F_SETFL, O_NONBLOCK);
-    fcntl(g_mb_server.timer_sockpair[1], F_SETFL, O_NONBLOCK);
+    if (mb_ice_server_make_socket_non_blocking(
+                        g_mb_server.timer_sockpair[0]) != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Making the timer socket pair NON-BLOCKing failed");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    if (mb_ice_server_make_socket_non_blocking(
+                        g_mb_server.timer_sockpair[1]) != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Making the timer socket pair NON-BLOCKing failed");
+        return STUN_TRANSPORT_FAIL;
+    }
 
     return STUN_OK;
 }
@@ -912,6 +931,10 @@ static mb_iceserver_worker_t* worker_init(void)
     pid_t pid;
     struct sigaction sa;
     mb_iceserver_worker_t *worker = NULL;
+#ifdef MB_USE_EPOLL
+    int s;
+    struct epoll_event event;
+#endif
 
     pid = getpid();
 
@@ -961,9 +984,22 @@ static mb_iceserver_worker_t* worker_init(void)
         worker = &gaps_workers->workers[i];
         if (worker->pid != pid) continue;
 
+#ifdef MB_USE_EPOLL
+        event.data.fd = worker->sockpair[0];
+        event.events = EPOLLIN; // | EPOLLET;
+
+        s = epoll_ctl(g_mb_server.efd, 
+                EPOLL_CTL_ADD, worker->sockpair[0], &event);
+        if (s == -1)
+        {
+            perror("epoll_ctl add");
+            return NULL;
+        }
+#else
         FD_SET(worker->sockpair[0], &g_mb_server.master_rfds);
         if (worker->sockpair[0] > g_mb_server.max_fd)
             g_mb_server.max_fd = worker->sockpair[0];
+#endif
 
         break;
     }
@@ -1067,15 +1103,41 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
 
 static int32_t iceserver_prepare_listener_fdset(void)
 {
-    int32_t i;
+    int32_t i, s;
+#ifdef MB_USE_EPOLL
+    struct epoll_event event;
+
+    g_mb_server.efd = epoll_create1(0);
+    if (g_mb_server.efd == -1)
+    {
+        perror("epoll_create1");
+        return STUN_TRANSPORT_FAIL;
+    }
+#endif
 
     /** add stun packet listener sockets */
     for(i = 0; i < 2; i++)
     {
+#ifdef MB_USE_EPOLL
+        if (g_mb_server.intf[i].sockfd)
+        {
+            event.data.fd = g_mb_server.intf[i].sockfd;
+            event.events = EPOLLIN; // | EPOLLET;
+
+            s = epoll_ctl(g_mb_server.efd, 
+                    EPOLL_CTL_ADD, g_mb_server.intf[i].sockfd, &event);
+            if (s == -1)
+            {
+                perror("epoll_ctl add");
+                return STUN_TRANSPORT_FAIL;
+            }
+        }
+#else
         if (g_mb_server.intf[i].sockfd)
             FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
         if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
             g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
+#endif
     }
 
 #if 0
@@ -1097,6 +1159,33 @@ static int32_t iceserver_prepare_listener_fdset(void)
     }
 #endif
 
+#ifdef MB_USE_EPOLL
+
+    /** add the DB to worker processes message queue to epoll */
+    event.data.fd = g_mb_server.qid_db_worker;
+    event.events = EPOLLIN; // | EPOLLET;
+
+    s = epoll_ctl(g_mb_server.efd, 
+            EPOLL_CTL_ADD, g_mb_server.qid_db_worker, &event);
+    if (s == -1)
+    {
+        perror("epoll_ctl add");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    /** add timer socketpair to epoll */
+    event.data.fd = g_mb_server.timer_sockpair[0];
+    event.events = EPOLLIN; // | EPOLLET;
+
+    s = epoll_ctl(g_mb_server.efd, 
+            EPOLL_CTL_ADD, g_mb_server.timer_sockpair[0], &event);
+    if (s == -1)
+    {
+        perror("epoll_ctl add");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+#else
     /** add the DB to worker processes message queue */
     FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
     if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
@@ -1106,6 +1195,7 @@ static int32_t iceserver_prepare_listener_fdset(void)
     FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
     if (g_mb_server.timer_sockpair[0] > g_mb_server.max_fd)
         g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
+#endif
 
     return STUN_OK;
 }
@@ -1299,7 +1389,13 @@ int main (int argc, char *argv[])
 
     /** set up logging */
     iceserver_init_log();
-    ICE_LOG(LOG_SEV_ALERT, "MindBricks: SeamConnect ICE server booting up...");
+#ifdef MB_SERVER_DEV
+    ICE_LOG(LOG_SEV_ALERT, 
+            "MindBricks: SeamConnect ICE server booting up... [Development]");
+#else
+    ICE_LOG(LOG_SEV_ALERT, 
+            "MindBricks: SeamConnect ICE server booting up...[Release mode]");
+#endif
 
     /** setup the signal handlers */
     iceserver_init_sig_handlers();
@@ -1308,8 +1404,8 @@ int main (int argc, char *argv[])
     if (platform_init() != true)
     {
         ICE_LOG(LOG_SEV_ALERT, 
-                "Worker Process: platform initialization failed");
-        return NULL;
+                "Main Process: platform initialization failed");
+        return -1;
     }
 
     /** initialize the turns module */
@@ -1358,7 +1454,7 @@ int main (int argc, char *argv[])
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, "Unable to setup timer communication interface");
-        return NULL;
+        return -1;
     }
 
     /** prepare the socket listener set used by signaling worker processes */

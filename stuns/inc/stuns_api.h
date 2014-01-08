@@ -68,7 +68,7 @@ typedef struct
  */
 typedef int32_t (*stuns_nwk_send_cb) (handle h_msg, 
                     stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
-                    uint32_t port, handle transport_param, handle app_param);
+                    uint32_t port, handle transport_param, u_char *key);
 
 /** 
  * This callback will be called when the STUNS stack wants to 

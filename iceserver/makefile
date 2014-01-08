@@ -36,7 +36,9 @@ ICE_LIBRARY := $(ICE_LIB_DEST_PATH)/lib_turns.a \
 
 POSTGRES_LIB := -lpq
 
-CFLAGS += -g -Wall -Wstrict-prototypes -c -DLINUX -DMB_ENABLE_ICE -DMB_ENABLE_TURN $(INCLUDE) -DMB_SERVER_DEV -DMB_SMP_SUPPORT
+CFLAGS += -g -Wall -Wstrict-prototypes -c -DLINUX -DMB_ENABLE_ICE \
+		  -DMB_ENABLE_TURN $(INCLUDE) -DMB_SERVER_DEV -DMB_SMP_SUPPORT \
+		  -DMB_USE_EPOLL
 
 OBJ:=$(SRC:c=o)
 

@@ -2182,6 +2182,8 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
 
     perm->egress_bytes += num;
 
+    //printf("EGRESS BYTES: %d bytes\n", perm->egress_bytes);
+
     return status;
 
 MB_ERROR_EXIT:
@@ -2419,6 +2421,7 @@ int32_t turns_utils_calculate_allocation_relayed_data(
     turns_permission_t *perm = NULL;
     uint16_t i;
 
+
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
@@ -2430,9 +2433,10 @@ int32_t turns_utils_calculate_allocation_relayed_data(
 
     *ingress_data = alloc->ingress_bytes;
     *egress_data = alloc->egress_bytes;
-    ICE_LOG(LOG_SEV_ERROR,
+
+    ICE_LOG(LOG_SEV_ERROR, 
             "TOTAL INGRESS DATA: %llu bytes\n", alloc->ingress_bytes);
-    ICE_LOG(LOG_SEV_ERROR,
+    ICE_LOG(LOG_SEV_ERROR, 
             "TOTAL EGRESS DATA: %llu bytes\n", alloc->egress_bytes);
 
     return STUN_OK;

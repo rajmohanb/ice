@@ -1048,7 +1048,7 @@ void *mb_iceserver_decision_thread(void)
         {
             if (FD_ISSET(g_mb_server.db_lookup.sockpair[1], &rfds))
                 mb_ice_server_db_process_msg_from_master(
-                            conn, &g_mb_server.db_lookup.sockpair[1]);
+                            conn, g_mb_server.db_lookup.sockpair[1]);
             else
                 mb_ice_server_db_process_msg_from_worker(
                             conn, g_mb_server.qid_worker_db);
