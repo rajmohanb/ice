@@ -212,8 +212,8 @@ sys_timer_handler(union sigval sig_val)
     pthread_mutex_unlock(&g_timer_table->table_lock);
     //printf("TIMER HANDLER: PID %d Timer is unlocked. No of timers %d\n", 
     //                                    getpid(), g_timer_table->cur_timers);
-    ICE_LOG(LOG_SEV_ERROR, 
-            "sys timer handler Exit: Num timers: %d", g_timer_table->cur_timers);
+    //ICE_LOG(LOG_SEV_DEBUG, 
+    //        "sys timer handler Exit: Num timers: %d", g_timer_table->cur_timers);
 
 #else
     struct_timer_node *node;

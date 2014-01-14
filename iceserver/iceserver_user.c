@@ -321,7 +321,7 @@ int32_t iceserver_db_fetch_user_record(
     *cred_id = 0;
 
     /** initially look into ephemeral_credentials table */
-    values[0] = event->username;
+    values[0] = (char *)event->username;
     ICE_LOG(LOG_SEV_NOTICE, "Searching ephemeral "\
             "credential table for TURN username: %s", values[0]);
     result = PQexecPrepared(conn, 
@@ -941,11 +941,12 @@ int32_t mb_ice_server_db_process_msg_from_master(PGconn *conn, int fd)
 {
     int32_t bytes, status = STUN_OK;
     mb_ice_server_alloc_decision_t resp;
-    turns_allocation_decision_t turns_resp;
 
     bytes = recv(fd, &resp, sizeof(resp), 0);
     if (bytes == -1) return STUN_INT_ERROR;
     if (bytes == 0) return STUN_OK;
+
+    /* TODO */
 
     return status;
 }
@@ -995,7 +996,7 @@ int32_t mb_ice_server_db_process_msg_from_worker(PGconn *conn, mqd_t mqdes)
 
 void *mb_iceserver_decision_thread(void)
 {
-    int status, ret, max_fd, i;
+    int ret, max_fd, i;
     fd_set rfds;
     PGconn *conn;
 

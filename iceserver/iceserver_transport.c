@@ -100,6 +100,8 @@ int32_t mb_ice_server_get_local_interface(void)
         s = socket(ifa->ifa_addr->sa_family, SOCK_DGRAM, 0);
         if (s == -1) continue;
 
+        ICE_LOG(LOG_SEV_ERROR, "**[LOCAL INTERAFCE] %d [LOCAL INTERAFCE]***\n", s);
+
         if (mb_ice_server_make_socket_non_blocking(s) != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
@@ -182,23 +184,16 @@ int32_t mb_ice_server_init_timer_comm(void)
 
 int32_t iceserver_init_transport(void)
 {
-    int32_t status;
-
 #ifndef MB_USE_EPOLL
     /** reset */
     g_mb_server.max_fd = 0;
     FD_ZERO(&g_mb_server.master_rfds);
 #endif
+
     memset(g_mb_server.relays, 0, 
             (sizeof(mb_iceserver_relay_socket) * MB_ICE_SERVER_DATA_SOCK_LIMIT));
 
-    status = mb_ice_server_get_local_interface();
-    // if (status != STUN_OK) return status;
-
-    /** setup internal timer communication */
-    // status = mb_ice_server_init_timer_comm();
-    
-    return status;
+    return mb_ice_server_get_local_interface();
 }
 
 
@@ -369,7 +364,6 @@ void mb_ice_server_process_media_msg(int event_fd)
 void mb_ice_server_process_media_msg(fd_set *read_fds)
 #endif
 {
-    int32_t status;
     int bytes, i, sock_fd;
     char buf[1500] = {0};
     struct sockaddr client;
@@ -387,8 +381,13 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
 
     if (i == MB_ICE_SERVER_DATA_SOCK_LIMIT)
     {
+#ifdef MB_USE_EPOLL
+        ICE_LOG(LOG_SEV_CRITICAL, "UDP data received on unknown socket %d? "\
+                "This should not happen. Look into this", event_fd);
+#else
         ICE_LOG(LOG_SEV_CRITICAL, "UDP data received on unknown socket? "\
                 "This should not happen. Look into this");
+#endif
         return;
     }
 
@@ -426,7 +425,7 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
                 (char *)data.src.ip_addr, ICE_IP_ADDR_MAX_LEN);
     }
 
-    status = turns_inject_received_udp_msg(g_mb_server.h_turns_inst, &data);
+    turns_inject_received_udp_msg(g_mb_server.h_turns_inst, &data);
 
     return;
 }
@@ -434,7 +433,7 @@ void mb_ice_server_process_media_msg(fd_set *read_fds)
 
 void mb_ice_server_process_timer_event(int fd)
 {
-    int32_t bytes, status;
+    int32_t bytes;
     mb_ice_server_timer_event_t timer_event;
 
     bytes = recv(g_mb_server.timer_sockpair[0], 
@@ -445,7 +444,7 @@ void mb_ice_server_process_timer_event(int fd)
     ICE_LOG(LOG_SEV_DEBUG, "Timer expired: ID %p ARG %p", 
             timer_event.timer_id, timer_event.arg);
 
-    status = turns_inject_timer_event(timer_event.timer_id, timer_event.arg);
+    turns_inject_timer_event(timer_event.timer_id, timer_event.arg);
 
     return;
 }
@@ -453,7 +452,7 @@ void mb_ice_server_process_timer_event(int fd)
 
 void mb_ice_server_process_approval(mqd_t mqdes)
 {
-    int32_t bytes, status;
+    int32_t bytes;
     mb_ice_server_alloc_decision_t *resp;
     struct mq_attr attr;
     char *buffer = NULL;
@@ -494,7 +493,7 @@ void mb_ice_server_process_approval(mqd_t mqdes)
     memcpy(turns_resp.key, resp->hmac_key, 16);
     turns_resp.app_blob = resp->app_blob;
 
-    status = turns_inject_allocation_decision(
+    turns_inject_allocation_decision(
                         g_mb_server.h_turns_inst, (void *)&turns_resp);
 
     free(buffer);

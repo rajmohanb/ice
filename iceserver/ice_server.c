@@ -285,8 +285,9 @@ static int32_t ice_server_network_send_msg(handle h_msg,
     sent_bytes = sendto(sock_fd, buf, buf_len, 0, &dest, sizeof(dest));
     if (sent_bytes == -1)
     {
-        printf("ERROR: Worker %d Sending of TURN message on socker fd %d failed\n", getpid(), sock_fd);
         perror("sendto");
+        ICE_LOG(LOG_SEV_ERROR, "ERROR: Worker %d Sending of TURN message "\
+                "on socker fd %d failed\n", getpid(), sock_fd);
     }
 
     return sent_bytes;
@@ -352,6 +353,8 @@ int32_t ice_server_share_with_other_workers(
             bytes = sendmsg(worker->sockpair[1], &msgh, 0);
         } while((bytes == -1) && (errno == EINTR));
 
+        ICE_LOG(LOG_SEV_ERROR, "Sent socket control info to worker %d: sock %d"\
+               " and port %d\n", (int)worker->pid, relay->relay_sock, relay->relay_port);
     }
 
     return STUN_OK;
@@ -407,6 +410,8 @@ static int32_t ice_server_create_socket(handle h_alloc,
 
     sock = socket(sa_family, sock_type, 0);
     if (sock == -1) return STUN_NO_RESOURCE;
+
+    ICE_LOG(LOG_SEV_ERROR, "***[RELAY SOCKET] %d [RELAY SOCKET]***\n", sock);
 
     /** 
      * set the socket to non-blocking. This is because on linux, strange 
@@ -897,6 +902,9 @@ static int32_t iceserver_setup_timer_com_intf(void)
         return STUN_INT_ERROR;
     }
 
+    ICE_LOG(LOG_SEV_ERROR, "Timer communication Socket Pair: %d & %d\n", 
+                g_mb_server.timer_sockpair[0], g_mb_server.timer_sockpair[1]);
+
     /** 
      * set the sockets to non-blocking. This is because on linux, strange 
      * behavior is observed where select says that "data is available", but
@@ -925,9 +933,103 @@ static int32_t iceserver_setup_timer_com_intf(void)
 }
 
 
+
+/*
+ * IMP - When using epoll, linux kernel maintains a common fd which it shares 
+ * across parent and child processes. The side effect of this is that each 
+ * child process gets spurious messages even when it is not interested in
+ * certain descriptors because of the shared epoll fd in kernel. In order to
+ * avoid this, each child process upon being created creates its own epoll fd.
+ * This avoids the spurious events. This is unlike when using select() when
+ * a common fd_set was created by the parent and shared with all the child
+ * processes.
+ */
+static int32_t iceserver_prepare_listener_fdset(void)
+{
+    int32_t i, s;
+#ifdef MB_USE_EPOLL
+    struct epoll_event event;
+
+    g_mb_server.efd = epoll_create1(0);
+    if (g_mb_server.efd == -1)
+    {
+        perror("epoll_create1");
+        return STUN_TRANSPORT_FAIL;
+    }
+#endif
+
+    /** add stun packet listener sockets */
+    for(i = 0; i < 2; i++)
+    {
+#ifdef MB_USE_EPOLL
+        if (g_mb_server.intf[i].sockfd)
+        {
+            event.data.fd = g_mb_server.intf[i].sockfd;
+            event.events = EPOLLIN; // | EPOLLET;
+
+            s = epoll_ctl(g_mb_server.efd, 
+                    EPOLL_CTL_ADD, g_mb_server.intf[i].sockfd, &event);
+            if (s == -1)
+            {
+                perror("epoll_ctl add");
+                return STUN_TRANSPORT_FAIL;
+            }
+        }
+#else
+        if (g_mb_server.intf[i].sockfd)
+            FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
+        if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
+            g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
+#endif
+    }
+
+
+#ifdef MB_USE_EPOLL
+
+    /** add the DB to worker processes message queue to epoll */
+    event.data.fd = g_mb_server.qid_db_worker;
+    event.events = EPOLLIN; // | EPOLLET;
+
+    s = epoll_ctl(g_mb_server.efd, 
+            EPOLL_CTL_ADD, g_mb_server.qid_db_worker, &event);
+    if (s == -1)
+    {
+        perror("epoll_ctl add");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+    /** add timer socketpair to epoll */
+    event.data.fd = g_mb_server.timer_sockpair[0];
+    event.events = EPOLLIN; // | EPOLLET;
+
+    s = epoll_ctl(g_mb_server.efd, 
+            EPOLL_CTL_ADD, g_mb_server.timer_sockpair[0], &event);
+    if (s == -1)
+    {
+        perror("epoll_ctl add");
+        return STUN_TRANSPORT_FAIL;
+    }
+
+#else
+    /** add the DB to worker processes message queue */
+    FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
+    if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
+        g_mb_server.max_fd = g_mb_server.qid_db_worker;
+
+    /** add timer socketpair */
+    FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
+    if (g_mb_server.timer_sockpair[0] > g_mb_server.max_fd)
+        g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
+#endif
+
+    return STUN_OK;
+}
+
+
+
 static mb_iceserver_worker_t* worker_init(void)
 {
-    int32_t i, status;
+    int32_t i;
     pid_t pid;
     struct sigaction sa;
     mb_iceserver_worker_t *worker = NULL;
@@ -937,22 +1039,6 @@ static mb_iceserver_worker_t* worker_init(void)
 #endif
 
     pid = getpid();
-
-#if 0
-    status = worker_setup_timer_com_intf();
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ALERT, "Unable to setup timer communication interface");
-        return NULL;
-    }
-
-    if (platform_init() != true)
-    {
-        ICE_LOG(LOG_SEV_ALERT, 
-                "Worker Process: platform initialization failed");
-        return NULL;
-    }
-#endif
 
     /** register to be notified about the death of parent process */
     prctl(PR_SET_PDEATHSIG, SIGHUP, 0, 0, 0);
@@ -971,11 +1057,14 @@ static mb_iceserver_worker_t* worker_init(void)
     /** TODO */
     /** should we add the local socketpair() connected socket to the fd list? */
 
-#if 0
-    /** add the timer socket to the listener fd set */
-    FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
-    if (g_mb_server.timer_sockpair[0] > g_mb_server.max_fd)
-        g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
+
+#ifdef MB_USE_EPOLL
+    /** prepare the socket listener set used by signaling worker processes */
+    if (iceserver_prepare_listener_fdset() != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ALERT, "Preparation of socket listener fdset failed");
+        return NULL;
+    }
 #endif
 
     /** listen on the ipc interface for comm with the parent/other process */
@@ -1018,7 +1107,6 @@ static mb_iceserver_worker_t* worker_init(void)
 static void ice_server_run(void)
 {
     mb_iceserver_worker_t *worker;
-    ICE_LOG(LOG_SEV_DEBUG, "Run Lola run");
 
     // sleep(15);
 
@@ -1058,9 +1146,11 @@ static int32_t iceserver_setup_db_worker_ipcs(void)
         return STUN_INT_ERROR;
     }
 
-    ICE_LOG(LOG_SEV_DEBUG,
-            "Message queues created for communication between DB processes and "
-            "the worker processes");
+    ICE_LOG(LOG_SEV_ERROR,
+            "Message queues %d & %d created for communication between DB "\
+            "processes and the worker processes", g_mb_server.qid_db_worker,
+            g_mb_server.qid_worker_db);
+
     return STUN_OK;
 }
 
@@ -1079,6 +1169,10 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
         return STUN_INT_ERROR;
     }
 
+    ICE_LOG(LOG_SEV_ERROR, "DB master communication Socket Pair: %d & %d\n", 
+                                            g_mb_server.db_lookup.sockpair[0], 
+                                            g_mb_server.db_lookup.sockpair[1]);
+
     ICE_LOG(LOG_SEV_DEBUG, 
             "Create DB lookup process socket: %d to fd_set", 
             g_mb_server.db_lookup.sockpair[0]);
@@ -1094,111 +1188,17 @@ static int32_t iceserver_setup_master_worker_ipcs(void)
                     "returned error for Worker process %d", count);
             return STUN_INT_ERROR;
         }
+
+        ICE_LOG(LOG_SEV_ERROR, "Master worker %d communication Socket "\
+                "Pair: %d & %d\n", count, 
+                gaps_workers->workers[count].sockpair[0],
+                gaps_workers->workers[count].sockpair[1]);
     }
 
     return STUN_OK;
 }
 
 
-
-static int32_t iceserver_prepare_listener_fdset(void)
-{
-    int32_t i, s;
-#ifdef MB_USE_EPOLL
-    struct epoll_event event;
-
-    g_mb_server.efd = epoll_create1(0);
-    if (g_mb_server.efd == -1)
-    {
-        perror("epoll_create1");
-        return STUN_TRANSPORT_FAIL;
-    }
-#endif
-
-    /** add stun packet listener sockets */
-    for(i = 0; i < 2; i++)
-    {
-#ifdef MB_USE_EPOLL
-        if (g_mb_server.intf[i].sockfd)
-        {
-            event.data.fd = g_mb_server.intf[i].sockfd;
-            event.events = EPOLLIN; // | EPOLLET;
-
-            s = epoll_ctl(g_mb_server.efd, 
-                    EPOLL_CTL_ADD, g_mb_server.intf[i].sockfd, &event);
-            if (s == -1)
-            {
-                perror("epoll_ctl add");
-                return STUN_TRANSPORT_FAIL;
-            }
-        }
-#else
-        if (g_mb_server.intf[i].sockfd)
-            FD_SET(g_mb_server.intf[i].sockfd, &g_mb_server.master_rfds);
-        if (g_mb_server.max_fd < g_mb_server.intf[i].sockfd)
-            g_mb_server.max_fd = g_mb_server.intf[i].sockfd;
-#endif
-    }
-
-#if 0
-    /** NOTE: Following are required to be done by the master process */
-
-    /** add ipc fds for db process */
-    FD_SET(g_mb_server.db_lookup.sockpair[1], &g_mb_server.master_rfds);
-    if (g_mb_server.max_fd < g_mb_server.db_lookup.sockpair[1])
-        g_mb_server.max_fd = g_mb_server.db_lookup.sockpair[1];
-
-
-    /** add ipc fds for worker processes */
-    for(i = 0; i < MB_ICE_SERVER_NUM_WORKER_PROCESSES; i++)
-    {
-        if (g_mb_server.workers[i].sockpair[1])
-            FD_SET(g_mb_server.workers[i].sockpair[1], &g_mb_server.master_rfds);
-        if (g_mb_server.max_fd < g_mb_server.workers[i].sockpair[1])
-            g_mb_server.max_fd = g_mb_server.workers[i].sockpair[1];
-    }
-#endif
-
-#ifdef MB_USE_EPOLL
-
-    /** add the DB to worker processes message queue to epoll */
-    event.data.fd = g_mb_server.qid_db_worker;
-    event.events = EPOLLIN; // | EPOLLET;
-
-    s = epoll_ctl(g_mb_server.efd, 
-            EPOLL_CTL_ADD, g_mb_server.qid_db_worker, &event);
-    if (s == -1)
-    {
-        perror("epoll_ctl add");
-        return STUN_TRANSPORT_FAIL;
-    }
-
-    /** add timer socketpair to epoll */
-    event.data.fd = g_mb_server.timer_sockpair[0];
-    event.events = EPOLLIN; // | EPOLLET;
-
-    s = epoll_ctl(g_mb_server.efd, 
-            EPOLL_CTL_ADD, g_mb_server.timer_sockpair[0], &event);
-    if (s == -1)
-    {
-        perror("epoll_ctl add");
-        return STUN_TRANSPORT_FAIL;
-    }
-
-#else
-    /** add the DB to worker processes message queue */
-    FD_SET(g_mb_server.qid_db_worker, &g_mb_server.master_rfds);
-    if (g_mb_server.qid_db_worker > g_mb_server.max_fd)
-        g_mb_server.max_fd = g_mb_server.qid_db_worker;
-
-    /** add timer socketpair */
-    FD_SET(g_mb_server.timer_sockpair[0], &g_mb_server.master_rfds);
-    if (g_mb_server.timer_sockpair[0] > g_mb_server.max_fd)
-        g_mb_server.max_fd = g_mb_server.timer_sockpair[0];
-#endif
-
-    return STUN_OK;
-}
 
 
 void iceserver_init_log(void)
@@ -1379,16 +1379,9 @@ int main (int argc, char *argv[])
     printf("Running as a daemon in the background\n");
 #endif
 
-    gaps_workers = iceserver_init_shared_globals();
-    if (gaps_workers == NULL)
-    {
-        ICE_LOG(LOG_SEV_ALERT,
-                "ICE SERVER: Initialization of the global data failed");
-        exit(-1);
-    }
-
     /** set up logging */
     iceserver_init_log();
+
 #ifdef MB_SERVER_DEV
     ICE_LOG(LOG_SEV_ALERT, 
             "MindBricks: SeamConnect ICE server booting up... [Development]");
@@ -1402,6 +1395,14 @@ int main (int argc, char *argv[])
 #else
     ICE_LOG(LOG_SEV_ALERT, "MindBricks: using PSELECT ");
 #endif
+
+    gaps_workers = iceserver_init_shared_globals();
+    if (gaps_workers == NULL)
+    {
+        ICE_LOG(LOG_SEV_ALERT,
+                "ICE SERVER: Initialization of the global data failed");
+        exit(-1);
+    }
 
     /** setup the signal handlers */
     iceserver_init_sig_handlers();
@@ -1463,14 +1464,16 @@ int main (int argc, char *argv[])
         return -1;
     }
 
+#ifndef MB_USE_EPOLL
     /** prepare the socket listener set used by signaling worker processes */
     if (iceserver_prepare_listener_fdset() != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ALERT, "Preparation of socket listener fdset failed");
         return -1;
     }
+#endif
 
-    printf("Master process. PID: %d\n", getpid());
+    ICE_LOG(LOG_SEV_ALERT, "Master process. PID: %d\n", getpid());
 
     /** spin off the db and worker processes */
     if (iceserver_launch_workers() != STUN_OK)

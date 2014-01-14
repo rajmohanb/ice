@@ -1491,8 +1491,8 @@ int32_t turns_utils_uninstall_permission(
      */
     alloc->ingress_bytes += perm->ingress_bytes;
     alloc->egress_bytes += perm->egress_bytes;
-    ICE_LOG(LOG_SEV_NOTICE, "Permission expired. Allocation ingress %u and "\
-            "egress %u bytes", alloc->ingress_bytes, alloc->egress_bytes);
+    ICE_LOG(LOG_SEV_NOTICE, "Permission expired. Allocation ingress %llu and "\
+            "egress %llu bytes", alloc->ingress_bytes, alloc->egress_bytes);
 
     stun_memset(&perm->peer_addr, 0, sizeof(stun_inet_addr_t));
     perm->channel_num = 0;
