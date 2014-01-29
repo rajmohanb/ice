@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2013, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -82,8 +82,9 @@ int32_t mb_ice_server_get_local_interface(void)
     for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next)
     {
         if (strncmp(ifa->ifa_name, "lo", 2) == 0) continue;
+        if (!ifa->ifa_addr) continue;
 
-        if (ifa ->ifa_addr->sa_family==AF_INET)
+        if (ifa->ifa_addr->sa_family==AF_INET)
         {
             ((struct sockaddr_in *)ifa->ifa_addr)->sin_port = 
                                         htons(MB_ICE_SERVER_LISTEN_PORT);
@@ -439,7 +440,10 @@ void mb_ice_server_process_timer_event(int fd)
     bytes = recv(g_mb_server.timer_sockpair[0], 
                 &timer_event, sizeof(timer_event), 0);
     if (bytes == -1)
-        ICE_LOG(LOG_SEV_ERROR, "Receiving of timer event failed");
+    {
+        ICE_LOG(LOG_SEV_INFO, "Receiving of timer event failed");
+        return;
+    }
 
     ICE_LOG(LOG_SEV_DEBUG, "Timer expired: ID %p ARG %p", 
             timer_event.timer_id, timer_event.arg);

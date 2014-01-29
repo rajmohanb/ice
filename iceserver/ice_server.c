@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2013, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -107,6 +107,8 @@ static void iceserver_sig_handler(int signum)
     pid = getpid();
     ppid = getppid();
     iceserver_quit = 1;
+    mq_close(g_mb_server.qid_db_worker);
+    mq_close(g_mb_server.qid_worker_db);
     printf("Quiting - Signal : %d PID: %d PPID: %d\n", signum, pid, ppid);
     ICE_LOG(LOG_SEV_ALERT,
             "Quiting - Signal : %d PID: %d PPID: %d\n", signum, pid, ppid);

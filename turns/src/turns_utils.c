@@ -452,7 +452,8 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
     status = stun_attr_error_code_set_error_code(h_attrs[count-1], error_code);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "setting error code attribute value failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "setting error code attribute value %d failed", error_code);
         goto MB_ERROR_EXIT2;
     }
 

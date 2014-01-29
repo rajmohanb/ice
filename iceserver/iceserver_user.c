@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2013, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -789,13 +789,13 @@ int32_t mb_iceserver_handle_new_allocation(
     {
         /** TODO - reject the request */
         decision.approved = false;
-        decision.code = 0;
+        decision.code = 486;
     }
     else if (status == STUN_INT_ERROR)
     {
         /** TODO - handle */
         decision.approved = false;
-        decision.code = 0;
+        decision.code = 508;
     }
     else if (status == STUN_OK)
     {
