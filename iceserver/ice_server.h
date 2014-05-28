@@ -23,7 +23,7 @@ extern "C" {
 /******************************************************************************/
 
 /** some configuration stuff */
-#define MB_ICE_SERVER   "MindBricks ICE Server 0.1"
+#define MB_ICE_SERVER   "SeamConnect NAT Server 1.0"
 
 #define MB_ICE_SERVER_LISTEN_PORT   3478
 
@@ -78,6 +78,9 @@ typedef struct
     handle app_blob;
     uint64_t ingress_bytes;
     uint64_t egress_bytes;
+
+    /* udp specific */
+    bool df_attr; /* DONT_FRAGMENT attribute */
 } mb_ice_server_event_t;
 
 

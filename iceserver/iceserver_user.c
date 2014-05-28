@@ -75,6 +75,7 @@ static char *get_alloc_plan = "get_alloc_plan";
 static char *alloc_dealloc_update = "alloc_dealloc_update";
 static char *delete_ephemeral_cred_plan = "delete_ephemeral_cred_record";
 static char *user_dealloc_update = "user_dealloc_update";
+static char *user_alloc_update = "user_alloc_update";
 
 
 /** close connection to database */
@@ -97,7 +98,8 @@ PGconn *iceserver_db_connect(void)
     Oid alloc_insert_plan_param_types[9] = 
                     { 1043, 23, 23, 23, 1114, 1114, 1114, 23, 20 };
     Oid ephemeral_cred_delete_plan_param_types[1] = { 23 };
-    Oid user_dealloc_update_plan_param_types[2] = { 23, 23 };
+    Oid user_dealloc_update_plan_param_types[3] = { 23, 23, 23 };
+    Oid user_alloc_update_plan_param_types[3] = { 23, 23, 23 };
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
@@ -257,8 +259,8 @@ PGconn *iceserver_db_connect(void)
      * updating the specified user record columns for every deallocation.
      */
     result = PQprepare(conn, user_dealloc_update, 
-                "UPDATE users SET bandwidth_used = $1 WHERE id = $2", 
-                2, user_dealloc_update_plan_param_types);
+                "UPDATE users SET bandwidth_used = $1, active_allocs = $2 "\
+                "WHERE id = $3", 3, user_dealloc_update_plan_param_types);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -272,6 +274,28 @@ PGconn *iceserver_db_connect(void)
     }
  
     ICE_LOG(LOG_SEV_DEBUG, "User table deallocation update PLAN prepared");
+    PQclear( result );
+
+    /** 
+     * prepare the postgres command, to be executed later for updating 
+     * the user record columns for every successful new allocation.
+     */
+    result = PQprepare(conn, user_alloc_update, 
+                "UPDATE users SET allocs = $1, active_allocs = $2 "\
+                "WHERE id = $3", 3, user_alloc_update_plan_param_types);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "PostGres user alloc update plan prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        iceserver_db_closeconn(conn);
+        return NULL;
+    }
+ 
+    ICE_LOG(LOG_SEV_DEBUG, "User table allocation update PLAN prepared");
     PQclear( result );
 
     return conn;
@@ -624,15 +648,107 @@ int32_t iceserver_db_add_allocation_record(PGconn *conn,
 
 
 
-int32_t iceserver_db_update_user_record_with_deallocation(PGconn *conn,
+static int32_t iceserver_db_update_user_record_with_new_allocation(
+                PGconn *conn, mb_iceserver_user_record_t *alloc_record)
+{
+    PGresult *result;
+    const char *values[3] = {0};
+    ExecStatusType db_status;
+    uint32_t rows, allocs, active_allocs;
+    char allocs_value[12] = {0};
+    char active_allocs_value[12] = {0};
+
+    /*
+     * we need to update the new allocation details in 
+     * the user record. Hence fetch the user record.
+     */
+    values[0] = alloc_record->user_id_str;
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Fetching user record for user id: %s in USERS table", values[0]);
+    result = PQexecPrepared(conn, get_user_plan, 1, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Database query failed!");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        return STUN_INT_ERROR;
+    }
+
+    /**
+     * Now make sure that we have atleast and only one matching record. If
+     * number of records equals 0, then the provided username is not found.
+     * so the server needs to reject the allocation request.
+     */
+    rows = PQntuples(result);
+    if (rows == 0)
+    {
+        ICE_LOG(LOG_SEV_NOTICE, 
+                "Database query returned: no matching account found");
+        return STUN_NOT_FOUND;
+    }
+    else if (rows > 1)
+    {
+        ICE_LOG(LOG_SEV_WARNING, "Application logic error. Found more than "\
+                "one account for the provided username value. As per our app "\
+                "requirements, no two accounts need to share the same "\
+                "username. BUG???");
+    }
+
+    /** get the count of allocations created */
+    allocs = atoi(PQgetvalue(result, 0, 20));
+    ICE_LOG(LOG_SEV_DEBUG, "ALLOCATIONS count before updating => %u", allocs);
+
+    /** get the count of current active allocations */
+    active_allocs = atoi(PQgetvalue(result, 0, 21));
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "ACTIVE ALLOCATIONS before updating => %u", active_allocs);
+
+    /** clear result */
+    PQclear( result );
+
+    /** next step */
+    allocs += 1;
+    active_allocs += 1;
+
+    sprintf(allocs_value, "%u", allocs);
+    sprintf(active_allocs_value, "%u", active_allocs);
+    values[0] = allocs_value;
+    values[1] = active_allocs_value;
+    values[2] = alloc_record->user_id_str;
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Updating user record for user id: %s in USERS table "\
+            "with the new allocation details", values[2]);
+    result = PQexecPrepared(conn, user_alloc_update, 3, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "postgres updation of "\
+                        "bandwidth_used column in users table failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        return STUN_INT_ERROR;
+    }
+
+    /** clear result */
+    PQclear( result );
+
+    return STUN_OK;
+}
+
+
+
+static int32_t iceserver_db_update_user_record_with_deallocation(PGconn *conn,
         mb_ice_server_event_t *event, mb_iceserver_alloc_record_t *alloc_record)
 {
     PGresult *result;
-    const char *values[2];
+    const char *values[3] = {0};
     ExecStatusType db_status;
     char user_identifier[12] = {0};
     char bw_value[12] = {0};
-    uint32_t rows, bw;
+    char active_allocs_value[12] = {0};
+    uint32_t rows, bw, active_allocs;
 
     sprintf(user_identifier, "%u", alloc_record->user_id);
 
@@ -673,23 +789,31 @@ int32_t iceserver_db_update_user_record_with_deallocation(PGconn *conn,
                 "username. BUG???");
     }
 
-    /** extract the current bandwidth value */
+    /** get the bandwidth column value */
     bw = atoi(PQgetvalue(result, 0, 22));
     ICE_LOG(LOG_SEV_DEBUG, "BANDWIDTH used before updating => %u", bw);
+
+    /** get the active allocations column value */
+    active_allocs = atoi(PQgetvalue(result, 0, 21));
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "ACTIVE ALLOCATIONS count before updating => %u", active_allocs);
 
     /** clear result */
     PQclear( result );
 
     /** next step */
     bw += alloc_record->bandwidth_used;
+    active_allocs -= 1;
 
     sprintf(bw_value, "%u", bw);
+    sprintf(active_allocs_value, "%u", active_allocs);
     values[0] = bw_value;
-    values[1] = user_identifier;
+    values[1] = active_allocs_value;
+    values[2] = user_identifier;
     ICE_LOG(LOG_SEV_NOTICE, 
             "Updating user record for user id: %s in USERS table "\
             "with the deallocation details", values[1]);
-    result = PQexecPrepared(conn, user_dealloc_update, 2, values, NULL, NULL, 0);
+    result = PQexecPrepared(conn, user_dealloc_update, 3, values, NULL, NULL, 0);
 
     if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
     {
@@ -803,11 +927,31 @@ int32_t mb_iceserver_handle_new_allocation(
         decision.code = 0;
 
         /** 
-         * TODO: checks - check at the requested lifetime? suggest provisioned one
+         * check at the requested lifetime against the provisioned one. The 
+         * rule is that the server should be able to remove unused allocations
+         * as quickly as possible, so set a lesser lifetime. For now, going
+         * with the lesser of the two.
          */
-        decision.lifetime = 1800;
+        if (event->lifetime > 0)
+        {
+            if (event->lifetime > user_record.def_lifetime)
+                decision.lifetime = user_record.def_lifetime;
+            else
+                decision.lifetime = event->lifetime;
+        }
+        else
+        {
+            decision.lifetime = user_record.def_lifetime;
+        }
 
-        /** TODO: checks - And look at protocol? */
+        /* TODO - check against the provisioned policy from database records */
+        /** check if requested transport protocol is allowed for this user? */
+        if (event->protocol != ICE_TRANSPORT_UDP)
+        {
+            decision.approved = false;
+            decision.code = 442;
+            goto MB_ERROR_SENDMSG;
+        }
          
         /** TODO: check if the user has already reached max number of allocations? */
 
@@ -847,6 +991,8 @@ int32_t mb_iceserver_handle_new_allocation(
         decision.app_blob = (handle) alloc_handle;
     }
 
+MB_ERROR_SENDMSG:
+
     /** set the allocation handle given by the turns module */
     decision.blob = event->h_alloc;
 
@@ -879,6 +1025,16 @@ int32_t mb_iceserver_handle_new_allocation(
             {
                 ICE_LOG(LOG_SEV_ERROR, "Deleting the record "\
                         "in ephemeral credential returned error: %d", status);
+            }
+
+            /* now update the statistics for this user */
+            status = 
+                iceserver_db_update_user_record_with_new_allocation(
+                                                            conn, &user_record);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Updating of the user record row "\
+                        "with the new allocation returned error: %d", status);
             }
         }
     }

@@ -441,11 +441,11 @@ void mb_ice_server_process_timer_event(int fd)
                 &timer_event, sizeof(timer_event), 0);
     if (bytes == -1)
     {
-        ICE_LOG(LOG_SEV_INFO, "Receiving of timer event failed");
+        ICE_LOG(LOG_SEV_ERROR, "Receiving of timer event failed");
         return;
     }
 
-    ICE_LOG(LOG_SEV_DEBUG, "Timer expired: ID %p ARG %p", 
+    ICE_LOG(LOG_SEV_ERROR, "Timer expired: ID %p ARG %p", 
             timer_event.timer_id, timer_event.arg);
 
     turns_inject_timer_event(timer_event.timer_id, timer_event.arg);
@@ -535,6 +535,7 @@ static int32_t mb_ice_server_process_control_info(int fd)
     struct cmsghdr *cmsgp = NULL;
     char buf[CMSG_SPACE(sizeof(int))];
     mb_ice_server_aux_data_t aux_data;
+
     //pid_t mypid = getpid();
 #ifdef MB_USE_EPOLL
     int s;

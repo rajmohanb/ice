@@ -257,7 +257,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     else
     {
         resp_code = 442;
-        goto MB_ERROR_EXIT2; /** TODO - reject with 442 */
+        goto MB_ERROR_EXIT2; /** reject with 442 */
     }
 
     num = 1;
@@ -340,6 +340,12 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT3;
     }
 #endif /** TURNS_ENABLE_FINGERPRINT_VALIDATION */
+
+    /* TODO : handle udp specific stuff
+     * - DONT_FRAGMENT
+     * - RESERVATION_TOKEN
+     * - EVEN_PORT
+     */
 
     return status;
 
@@ -453,7 +459,7 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "setting error code attribute value %d failed", error_code);
+                "setting error code attribute value = [%d] failed", error_code);
         goto MB_ERROR_EXIT2;
     }
 
@@ -755,6 +761,9 @@ int32_t turns_utils_init_allocation_context(
 {
     int32_t status;
     context->instance = instance;
+
+    context->username_len = 0;
+    context->req_tport = ICE_TRANSPORT_INVALID;
 
     context->protocol = stun_pkt->protocol;
     context->transport_param = stun_pkt->transport_param;
