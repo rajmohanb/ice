@@ -140,7 +140,7 @@ ERROR_EXIT_PT:
 
 int32_t stuns_stop_txn_timer(handle timer_id)
 {
-    int32_t status;
+    int32_t status = STUN_OK;
 #if 0
     turn_timer_params_t *timer = (turn_timer_params_t *) timer_id;
     turn_session_t *session;

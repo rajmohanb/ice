@@ -48,6 +48,10 @@ typedef struct
 
     char *user_id_str;
     uint32_t user_id;
+
+    uint32_t allocs;
+    uint32_t active_allocs;
+    uint32_t bw_used;
 } mb_iceserver_user_record_t;
 
 
@@ -459,6 +463,19 @@ int32_t iceserver_db_fetch_user_record(
     user->max_bandwidth = atoi(PQgetvalue(result, 0, 16));
     ICE_LOG(LOG_SEV_DEBUG, 
             "MAXIMUM BANDWIDTH ALLOWED => %d", user->max_bandwidth);
+
+    /** allocations count */
+    user->allocs = atoi(PQgetvalue(result, 0, 20));
+    ICE_LOG(LOG_SEV_DEBUG, "ALLOCATIONS COUNT => %d", user->allocs);
+
+    /** active allocations count */
+    user->active_allocs = atoi(PQgetvalue(result, 0, 21));
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "ACTIVE ALLOCATIONS COUNT => %d", user->active_allocs);
+
+    /** bandwidth used */
+    user->bw_used = atoi(PQgetvalue(result, 0, 22));
+    ICE_LOG(LOG_SEV_DEBUG, "BANDWIDTH CONSUMED => %d", user->bw_used);
 
     /** store the user id */
     user->user_id_str = strdup(PQgetvalue(result, 0, 0));
@@ -953,15 +970,37 @@ int32_t mb_iceserver_handle_new_allocation(
             goto MB_ERROR_SENDMSG;
         }
          
-        /** TODO: check if the user has already reached max number of allocations? */
+        /** 
+         * check if the user has already reached max number of 
+         * allocations or his quota of active allocations
+         */
+        if ((user_record.allocs >= user_record.max_allocs) || 
+                (user_record.active_allocs >= user_record.max_concur_allocs))
+        {
+            ICE_LOG(LOG_SEV_WARNING, 
+                    "Allocation request rejected. User has either reached "\
+                    "his quota of maximum allocations [%d] or his "\
+                    "provisioned quota of maximum active allocations [%d]", 
+                    user_record.max_allocs, user_record.max_concur_allocs);
+            ICE_LOG(LOG_SEV_WARNING, "User: Current allocations count [%d] "\
+                    "and current active allocations count [%d]", 
+                    user_record.allocs, user_record.active_allocs);
+            decision.approved = false;
+            decision.code = 486;
+            goto MB_ERROR_SENDMSG;
+        }
 
-        /** TODO: check if the user has already reached the max number of concurrent allocations? */
-
-        /** TODO: Check the bandwidth usage? */
-
-        /** TODO: Then decide to either approve or reject the allocation request */
-
-        /** TODO - for now, just go ahead and approve the allocation */
+        /** check the bandwidth usage */
+        if (user_record.bw_used >= user_record.max_bandwidth)
+        {
+            ICE_LOG(LOG_SEV_WARNING, "Allocation request rejected. Reached "\
+                    "bandwidth quota. Provisioned bandwidth [%d] and used "\
+                    "bandwidth [%d]", user_record.max_bandwidth, 
+                    user_record.bw_used);
+            decision.approved = false;
+            decision.code = 486;
+            goto MB_ERROR_SENDMSG;
+        }
 
         /** calculate the hmac key for long-term authentication */
         stun_MD5_Init(&ctx);
