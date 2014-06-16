@@ -912,7 +912,7 @@ int32_t mb_iceserver_handle_new_allocation(
     stun_MD5_CTX ctx;
     mb_ice_server_alloc_decision_t decision;
     mb_iceserver_user_record_t user_record;
-    uint32_t cred_id;
+    uint32_t cred_id, bw;
 
     memset(&decision, 0, sizeof(decision));
     memset(&user_record, 0, sizeof(user_record));
@@ -990,13 +990,13 @@ int32_t mb_iceserver_handle_new_allocation(
             goto MB_ERROR_SENDMSG;
         }
 
+        bw = user_record.bw_used/(1024 * 1024);
         /** check the bandwidth usage */
-        if (user_record.bw_used >= user_record.max_bandwidth)
+        if (bw >= user_record.max_bandwidth)
         {
             ICE_LOG(LOG_SEV_WARNING, "Allocation request rejected. Reached "\
-                    "bandwidth quota. Provisioned bandwidth [%d] and used "\
-                    "bandwidth [%d]", user_record.max_bandwidth, 
-                    user_record.bw_used);
+                    "bandwidth quota. Provisioned bandwidth [%d] MB and used "\
+                    "bandwidth [%d] MB", user_record.max_bandwidth, bw);
             decision.approved = false;
             decision.code = 486;
             goto MB_ERROR_SENDMSG;
