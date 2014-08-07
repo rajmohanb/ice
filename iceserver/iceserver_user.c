@@ -80,6 +80,7 @@ static char *alloc_dealloc_update = "alloc_dealloc_update";
 static char *delete_ephemeral_cred_plan = "delete_ephemeral_cred_record";
 static char *user_dealloc_update = "user_dealloc_update";
 static char *user_alloc_update = "user_alloc_update";
+static char *user_search_by_username_plan = "user_search_by_username_plan";
 
 
 /** close connection to database */
@@ -104,6 +105,7 @@ PGconn *iceserver_db_connect(void)
     Oid ephemeral_cred_delete_plan_param_types[1] = { 23 };
     Oid user_dealloc_update_plan_param_types[3] = { 23, 23, 23 };
     Oid user_alloc_update_plan_param_types[3] = { 23, 23, 23 };
+    Oid user_search_by_username_param_types[1] = { 1043 };
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
@@ -302,6 +304,29 @@ PGconn *iceserver_db_connect(void)
     ICE_LOG(LOG_SEV_DEBUG, "User table allocation update PLAN prepared");
     PQclear( result );
 
+    /** 
+     * prepare the postgres command, to be executed later for 
+     * querying the users table. This is required for supporting 
+     * long-term authentication.
+     */
+    result = PQprepare(conn, user_search_by_username_plan, 
+                "SELECT * FROM users WHERE turn_username = $1", 1, 
+                user_search_by_username_param_types);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_COMMAND_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "PostGres user search by turn username PLAN prepare failed");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        PQclear( result );
+        iceserver_db_closeconn(conn);
+        return NULL;
+    }
+ 
+    ICE_LOG(LOG_SEV_DEBUG, "User search by TURN username PLAN prepared");
+    PQclear( result );
+
     return conn;
 }
 
@@ -332,6 +357,52 @@ int32_t iceserver_db_delete_ephemeral_credential_record(
     }
 
     return STUN_OK;
+}
+
+
+
+int32_t iceserver_db_search_for_turn_username_in_users(
+                        PGconn *conn, mb_ice_server_event_t *event, 
+                        mb_iceserver_user_record_t *user)
+{
+    int rows, user_id;
+    PGresult *result;
+    const char *values[1];
+    ExecStatusType db_status;
+    char user_identifier[12] = {0};
+
+    *cred_id = 0;
+
+    values[0] = (char *)event->username;
+    ICE_LOG(LOG_SEV_NOTICE, 
+            "Searching Users table for TURN username: %s", values[0]);
+    result = PQexecPrepared(conn, 
+            user_search_by_username_plan, 1, values, NULL, NULL, 0);
+
+    if ((db_status = PQresultStatus(result)) != PGRES_TUPLES_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Database query failed! Invalid TURN username");
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresStatus(db_status));
+        ICE_LOG(LOG_SEV_ERROR, "%s", PQresultErrorMessage( result ));
+        return STUN_INT_ERROR;
+    }
+
+    rows = PQntuples(result);
+    if (rows == 0)
+    {
+        ICE_LOG(LOG_SEV_NOTICE, "Database query returned: "\
+                        "no matching turn username found in Users table");
+        return STUN_NOT_FOUND;
+    }
+    else if (rows > 1)
+    {
+        ICE_LOG(LOG_SEV_WARNING, "Application logic error. Found more than "\
+                "one row for the provided TURN username value in Users "\
+                "table. As per our app requirements, the TURN "\
+                "username generated must be unique and no two rows must "\
+                "have the same value. BUG???");
+    }
+
 }
 
 
@@ -366,9 +437,18 @@ int32_t iceserver_db_fetch_user_record(
     rows = PQntuples(result);
     if (rows == 0)
     {
+        int32_t status;
+
         ICE_LOG(LOG_SEV_NOTICE, "Database query returned: "\
                         "no matching ephemeral cred username found");
-        return STUN_NOT_FOUND;
+
+        /* 
+         * search in the User table for cases where long-term 
+         * credential authentication is concerned.
+         */
+        status = iceserver_db_search_for_turn_username_in_users(
+                                                        conn, event, user);
+        return status;
     }
     else if (rows > 1)
     {
@@ -928,13 +1008,13 @@ int32_t mb_iceserver_handle_new_allocation(
 
     if (status == STUN_NOT_FOUND)
     {
-        /** TODO - reject the request */
+        /** reject the request */
         decision.approved = false;
         decision.code = 486;
     }
     else if (status == STUN_INT_ERROR)
     {
-        /** TODO - handle */
+        /** handle */
         decision.approved = false;
         decision.code = 508;
     }
