@@ -80,7 +80,9 @@ static char *alloc_dealloc_update = "alloc_dealloc_update";
 static char *delete_ephemeral_cred_plan = "delete_ephemeral_cred_record";
 static char *user_dealloc_update = "user_dealloc_update";
 static char *user_alloc_update = "user_alloc_update";
+#ifdef MB_DUAL_AUTH
 static char *user_search_by_username_plan = "user_search_by_username_plan";
+#endif
 
 
 /** close connection to database */
@@ -105,7 +107,9 @@ PGconn *iceserver_db_connect(void)
     Oid ephemeral_cred_delete_plan_param_types[1] = { 23 };
     Oid user_dealloc_update_plan_param_types[3] = { 23, 23, 23 };
     Oid user_alloc_update_plan_param_types[3] = { 23, 23, 23 };
+#ifdef MB_DUAL_AUTH
     Oid user_search_by_username_param_types[1] = { 1043 };
+#endif
 
     /** make a connection to the database */
 #ifdef MB_SERVER_DEV
@@ -304,6 +308,7 @@ PGconn *iceserver_db_connect(void)
     ICE_LOG(LOG_SEV_DEBUG, "User table allocation update PLAN prepared");
     PQclear( result );
 
+#ifdef MB_DUAL_AUTH
     /** 
      * prepare the postgres command, to be executed later for 
      * querying the users table. This is required for supporting 
@@ -326,6 +331,7 @@ PGconn *iceserver_db_connect(void)
  
     ICE_LOG(LOG_SEV_DEBUG, "User search by TURN username PLAN prepared");
     PQclear( result );
+#endif
 
     return conn;
 }
@@ -360,7 +366,7 @@ int32_t iceserver_db_delete_ephemeral_credential_record(
 }
 
 
-
+#ifdef MB_DUAL_AUTH
 int32_t iceserver_db_search_for_turn_username_in_users(
                         PGconn *conn, mb_ice_server_event_t *event, 
                         mb_iceserver_user_record_t *user)
@@ -404,6 +410,7 @@ int32_t iceserver_db_search_for_turn_username_in_users(
     }
 
 }
+#endif
 
 
 /** search and fetch user record from the database */
@@ -437,11 +444,13 @@ int32_t iceserver_db_fetch_user_record(
     rows = PQntuples(result);
     if (rows == 0)
     {
+#ifdef MB_DUAL_AUTH
         int32_t status;
+#endif
 
         ICE_LOG(LOG_SEV_NOTICE, "Database query returned: "\
                         "no matching ephemeral cred username found");
-
+#ifdef MB_DUAL_AUTH
         /* 
          * search in the User table for cases where long-term 
          * credential authentication is concerned.
@@ -449,6 +458,9 @@ int32_t iceserver_db_fetch_user_record(
         status = iceserver_db_search_for_turn_username_in_users(
                                                         conn, event, user);
         return status;
+#else
+        return STUN_NOT_FOUND;
+#endif
     }
     else if (rows > 1)
     {
