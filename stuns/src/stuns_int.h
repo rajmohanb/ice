@@ -13,8 +13,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef STUN_ENC_DEC_API__H
-#define STUN_ENC_DEC_API__H
+#ifndef STUNS_INT__H
+#define STUNS_INT__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,35 +23,50 @@ extern "C" {
 /******************************************************************************/
 
 
-#include "stun_base.h"
+typedef enum
+{
+    /** timer started by turn transactions */
+    STUNS_STUN_TXN_TIMER = 0,
+    
+    /** timers internal to turn */
+    //TURN_ALLOC_REFRESH_TIMER,
+    //TURN_PERM_REFRESH_TIMER,
+    //TURN_CHNL_REFRESH_TIMER,
+    //TURN_KEEP_ALIVE_TIMER,
+
+    /** that's all we have as of now */
+} stuns_timer_type_t;
 
 
-#define STUN_MSG_AUTH_PASSWORD_LEN  128
+typedef struct {
+    handle h_instance;
+    handle h_turn_session;
+    stuns_timer_type_t type;
+    handle timer_id;
+    handle arg;
+} stuns_timer_params_t;
 
 
 typedef struct 
 {
-    uint32_t key_len;
-    u_char key[STUN_MSG_AUTH_PASSWORD_LEN];
-} stun_auth_params_t;
+    /** transaction instance handle */
+    handle h_txn_inst;
 
-/**
- * Decode api. Decodes the given TLV message buffer into message structure and
- * returns a handle to the message. Further operations like set and get can 
- * be done on this returned h_msg.
- */
-int32_t stun_msg_decode(u_char *buf, uint32_t len, 
-                                    bool_t validate_fp, handle *tlv);
+    /** list of allocations */
+    //handle  h_table;
 
-/**
- * Encode api. Converts the given message to TLV format and returns the TLV
- * message buffer that can be sent on the network to the peer.
- */
-int32_t stun_msg_encode(handle tlv, 
-            stun_auth_params_t *auth, u_char *buf, uint32_t *size);
+    /** software client name and version */
+    uint32_t client_name_len;
+    u_char *client_name;
+
+    /** timer and socker callbacks */
+    stuns_nwk_send_cb nwk_send_cb;
+    stuns_start_timer_cb start_timer_cb;
+    stuns_stop_timer_cb stop_timer_cb;
+
+} stuns_instance_t;
 
 
-int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len);
 
 
 /******************************************************************************/

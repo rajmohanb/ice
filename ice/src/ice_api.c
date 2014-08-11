@@ -429,30 +429,29 @@ static int32_t ice_encode_and_send_message(handle h_msg,
 
         if (msg_class == STUN_REQUEST)
         {
-            auth.len = stun_strlen(media->peer_pwd);
-            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-            stun_strncpy((char *)auth.password, media->peer_pwd, auth.len);
+            auth.key_len = stun_strlen(media->peer_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->peer_pwd, auth.key_len);
         }
         else if ((msg_class == STUN_SUCCESS_RESP) || 
                  (msg_class == STUN_ERROR_RESP))
         {
-            auth.len = stun_strlen(media->local_pwd);
-            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-            stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+            auth.key_len = stun_strlen(media->local_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->local_pwd, auth.key_len);
         }
         
         /** Indications are not authenticated */
     }
     else
     {
-        /** turn messages - long term credential */
-        auth.len = stun_strlen((char *)ice_session->turn_cfg.credential);
-        if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-            auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-        stun_memcpy((char *)auth.password, 
-                        ice_session->turn_cfg.credential, auth.len);
+        /** turn message - calculate the long-term authentication hmac key */
+        auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+        status = ice_utils_compute_turn_hmac_key(media, auth.key, &auth.key_len);
+
+        if (status != STUN_OK) return status;
     }
 
     buf = (u_char *) stun_calloc(1, TRANSPORT_MTU_SIZE);
@@ -528,10 +527,10 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
             media = cp->media;
             ice_session = media->ice_session;
 
-            auth.len = stun_strlen(media->peer_pwd);
-            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-            stun_strncpy((char *)auth.password, media->peer_pwd, auth.len);
+            auth.key_len = stun_strlen(media->peer_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->peer_pwd, auth.key_len);
         }
         else if ((msg_class == STUN_SUCCESS_RESP) || 
                  (msg_class == STUN_ERROR_RESP))
@@ -540,10 +539,10 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
             ice_session = media->ice_session;
             cp = NULL;
 
-            auth.len = stun_strlen(media->local_pwd);
-            if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-                auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
-            stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+            auth.key_len = stun_strlen(media->local_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->local_pwd, auth.key_len);
         }
             
         /** Indications are not authenticated */

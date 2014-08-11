@@ -164,11 +164,11 @@ static int32_t ice_format_and_send_message(handle h_msg,
     buf_len = TRANSPORT_MTU_SIZE;
 
     /** authentication parameters for message integrity */
-    auth.len = strlen(media->local_pwd);
-    if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-        auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+    auth.key_len = strlen(media->local_pwd);
+    if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+        auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
 
-    stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+    stun_strncpy((char *)auth.key, media->local_pwd, auth.key_len);
 
 #ifdef MB_LOG_RX_TX_MSGS
     stun_msg_print(h_msg, buf, buf_len);

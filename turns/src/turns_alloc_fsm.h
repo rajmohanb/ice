@@ -13,8 +13,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef STUN_ENC_DEC_API__H
-#define STUN_ENC_DEC_API__H
+#ifndef TURN_SESSION_FSM__H
+#define TURN_SESSION_FSM__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,35 +23,53 @@ extern "C" {
 /******************************************************************************/
 
 
-#include "stun_base.h"
+int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg);
 
 
-#define STUN_MSG_AUTH_PASSWORD_LEN  128
+int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg);
 
 
-typedef struct 
-{
-    uint32_t key_len;
-    u_char key[STUN_MSG_AUTH_PASSWORD_LEN];
-} stun_auth_params_t;
-
-/**
- * Decode api. Decodes the given TLV message buffer into message structure and
- * returns a handle to the message. Further operations like set and get can 
- * be done on this returned h_msg.
- */
-int32_t stun_msg_decode(u_char *buf, uint32_t len, 
-                                    bool_t validate_fp, handle *tlv);
-
-/**
- * Encode api. Converts the given message to TLV format and returns the TLV
- * message buffer that can be sent on the network to the peer.
- */
-int32_t stun_msg_encode(handle tlv, 
-            stun_auth_params_t *auth, u_char *buf, uint32_t *size);
+int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg);
 
 
-int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len);
+int32_t turns_refresh_req (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_send_ind (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_channel_data_ind (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_process_alloc_timer (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_generate_new_nonce(turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_create_perm_req(turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_channel_bind_req(turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_media_data (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_terminate_allocation (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_ignore_msg (turns_allocation_t *alloc, handle h_msg);
+
+
+int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc, 
+                                    turns_alloc_event_t event, handle h_msg);
 
 
 /******************************************************************************/

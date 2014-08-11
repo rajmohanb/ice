@@ -13,8 +13,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef STUN_ENC_DEC_API__H
-#define STUN_ENC_DEC_API__H
+#ifndef STUNS_UTILS__H
+#define STUNS_UTILS__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,35 +23,16 @@ extern "C" {
 /******************************************************************************/
 
 
-#include "stun_base.h"
+int32_t stuns_utils_send_error_resp(stuns_instance_t *instance, 
+                        stuns_rx_stun_pkt_t *stun_pkt, uint32_t error_code, 
+                        char *reason, handle *pah_attr, uint32_t num_attr);
 
+int32_t stuns_utils_send_success_resp(
+            stuns_instance_t *instance, stuns_rx_stun_pkt_t *stun_pkt);
 
-#define STUN_MSG_AUTH_PASSWORD_LEN  128
+int32_t stuns_utils_process_stun_binding_request(
+                stuns_instance_t *instance, stuns_rx_stun_pkt_t *stun_pkt);
 
-
-typedef struct 
-{
-    uint32_t key_len;
-    u_char key[STUN_MSG_AUTH_PASSWORD_LEN];
-} stun_auth_params_t;
-
-/**
- * Decode api. Decodes the given TLV message buffer into message structure and
- * returns a handle to the message. Further operations like set and get can 
- * be done on this returned h_msg.
- */
-int32_t stun_msg_decode(u_char *buf, uint32_t len, 
-                                    bool_t validate_fp, handle *tlv);
-
-/**
- * Encode api. Converts the given message to TLV format and returns the TLV
- * message buffer that can be sent on the network to the peer.
- */
-int32_t stun_msg_encode(handle tlv, 
-            stun_auth_params_t *auth, u_char *buf, uint32_t *size);
-
-
-int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len);
 
 
 /******************************************************************************/

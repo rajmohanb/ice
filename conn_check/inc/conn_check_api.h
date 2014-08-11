@@ -22,11 +22,11 @@ extern "C" {
 
 /******************************************************************************/
 
-#define CONN_CHECK_MAX_CONCURRENT_SESSIONS    10
-#define STUN_MAX_USERNAME_LEN           128
-#define STUN_MAX_PASSWORD_LEN           128
-#define STUN_MAX_REALM_LEN              64
-#define STUN_IP_ADDR_MAX_LEN            46
+#define CONN_CHECK_MAX_CONCURRENT_SESSIONS  20
+#define STUN_MAX_USERNAME_LEN               128
+#define STUN_MAX_PASSWORD_LEN               128
+#define STUN_MAX_REALM_LEN                  64
+#define STUN_IP_ADDR_MAX_LEN                46
 
 /******************************************************************************/
 

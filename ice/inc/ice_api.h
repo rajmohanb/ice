@@ -35,11 +35,6 @@ typedef enum
 } ice_state_t;
 
 
-typedef enum {
-    ICE_TRANSPORT_UDP = 0,
-    ICE_TRANSPORT_TCP,
-} ice_transport_type_t;
-
 
 typedef enum
 {
@@ -167,7 +162,7 @@ typedef struct
 {
     /** host candidate transport details */
     stun_inet_addr_t addr;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
 
     /** 
      * local preference for this candidate as defined in ICE RFC 4.1.2.1. 
@@ -211,7 +206,7 @@ typedef struct
 {
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t component_id;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
     uint64_t priority;
     stun_inet_addr_type_t ip_addr_type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];

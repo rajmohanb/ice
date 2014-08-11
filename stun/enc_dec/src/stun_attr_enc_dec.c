@@ -573,8 +573,8 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
 {
     stun_msg_integrity_attr_t *integrity;
     stun_method_type_t method;
-    uint16_t val16, key_len = 0;
-    u_char md5_key[255], hmac[20];
+    uint16_t val16; //, key_len = 0;
+    u_char hmac[20]; //, md5_key[255];
     u_char mi_print[STUN_MI_PRINT_BUF_LEN] = {0};
 
     integrity = (stun_msg_integrity_attr_t *) attr;
@@ -596,6 +596,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_memset(buf, 0, STUN_ATTR_MSG_INTEGRITY_LEN);
     buf += STUN_ATTR_MSG_INTEGRITY_LEN;
 
+#if 0
 #ifdef MB_ENABLE_TURN
     if (method != STUN_METHOD_BINDING)
     {
@@ -610,6 +611,7 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
         strncpy((char *)md5_key, (char *)auth->password, auth->len);
         key_len = auth->len;
     }
+#endif
 
     /** before computing the hmac digest, set the length of the msg */
     val16 = (uint16_t) (buf - msg_start - 20);
@@ -617,19 +619,21 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_memcpy(msg_start+2, &val16, sizeof(uint16_t));
 
     /** compute the hmac digest */
-    platform_hmac_sha((char *)md5_key, key_len, 
+    platform_hmac_sha((char *)auth->key, auth->key_len, 
             (char *)msg_start, (buf-msg_start - 24), (char *)hmac, 20);
 
     stun_memcpy((buf-STUN_ATTR_MSG_INTEGRITY_LEN), 
                                 hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
 
+#if 0
     stun_enc_dec_utils_print_binary_buffer(
                             mi_print, STUN_MI_PRINT_BUF_LEN, 
                             hmac, STUN_ATTR_MSG_INTEGRITY_LEN);
     mi_print[STUN_MI_PRINT_BUF_LEN] = 0;
-    ICE_LOG(LOG_SEV_INFO,
-            "   MESSAGE-INTEGRITY: pwd[%s] md5key[%s] key_len=[%d], value=%s", 
-                auth->password, md5_key, key_len, mi_print);
+    ICE_LOG(LOG_SEV_DEBUG,
+            "   MESSAGE-INTEGRITY: key[%s] key_len=[%d], value=%s", 
+                auth->key, auth->key_len, mi_print);
+#endif
 
     *len = integrity->hdr.length + 4;
     return STUN_OK;
@@ -1528,8 +1532,6 @@ int32_t stun_attr_encode_fingerprint(stun_attr_hdr_t *attr,
                             fp_print, STUN_FP_PRINT_BUF_LEN, 
                             (u_char *)&crc32, STUN_ATTR_FINGERPRINT_LEN);
     fp_print[STUN_FP_PRINT_BUF_LEN] = 0;
-    ICE_LOG(LOG_SEV_INFO,
-            "   FINGERPRINT: length=4, value=%s", fp_print);
 
     *len = fingerprint->hdr.length + 4;
 
@@ -1645,7 +1647,7 @@ int32_t stun_attr_decode_channel_number(u_char *buf_head, u_char **buf,
         return STUN_DECODE_FAILED;
     }
 
-    stun_memcpy(&val16, buf, sizeof(uint16_t)); 
+    stun_memcpy(&val16, pkt, sizeof(uint16_t)); 
     channel->channel_number = ntohs(val16);
     pkt += 2;
 
@@ -2357,6 +2359,36 @@ int32_t stun_attr_encode_requested_transport(stun_attr_hdr_t *attr,
 int32_t stun_attr_decode_requested_transport(u_char *buf_head, 
                 u_char **buf, u_char *buf_end, stun_attr_hdr_t **attr)
 {
+    stun_req_transport_attr_t *tport;
+    uint16_t val16;
+    u_char *pkt = *buf;
+
+    tport = (stun_req_transport_attr_t *) 
+                stun_calloc (1, sizeof(stun_req_transport_attr_t));
+    if (tport == NULL) return STUN_MEM_ERROR;
+
+    tport->hdr.type = STUN_ATTR_REQUESTED_TRANSPORT;
+
+    stun_memcpy(&val16, pkt, sizeof(uint16_t));
+    tport->hdr.length = ntohs(val16);
+    pkt += 2;
+
+    /** handle malformed/incomplete/corrupted messages */
+    if ((tport->hdr.length != STUN_ATTR_REQ_TRANSPORT_LEN) ||
+        ((buf_end - pkt) < STUN_ATTR_REQ_TRANSPORT_LEN))
+    {
+        stun_free(tport);
+        return STUN_DECODE_FAILED;
+    }
+
+    tport->protocol = *pkt;
+
+    /** move past padded bytes (1+3) */
+    pkt += 4;
+
+    *attr = (stun_attr_hdr_t *) tport;
+    *buf = pkt;
+
     return STUN_OK;
 }
 

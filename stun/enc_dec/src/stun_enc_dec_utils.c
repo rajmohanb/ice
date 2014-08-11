@@ -151,7 +151,7 @@ int32_t stun_enc_dec_utils_get_long_term_cred_hmac_key(handle h_msg,
     stun_MD5_Update(&ctx, realm, realm_len);
     stun_MD5_Update(&ctx, ":", 1);
 
-    stun_MD5_Update(&ctx, auth_params->password, auth_params->len);
+    stun_MD5_Update(&ctx, auth_params->key, auth_params->key_len);
 
     stun_MD5_Final(key, &ctx);
 

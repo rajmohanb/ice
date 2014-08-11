@@ -218,6 +218,9 @@ int32_t stun_attr_xor_mapped_addr_set_address(handle h_attr,
     if ((address == NULL) || (h_attr == NULL) || (len == 0))
         return STUN_INVALID_PARAMS;
 
+    if ((family != STUN_ADDR_FAMILY_IPV4) && (family != STUN_ADDR_FAMILY_IPV6))
+        return STUN_INVALID_PARAMS;
+
     attr = (stun_xor_mapped_addr_attr_t *) h_attr;
 
     if (attr->hdr.type != STUN_ATTR_XOR_MAPPED_ADDR)
@@ -307,6 +310,31 @@ int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_xor_relayed_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family)
+{
+    stun_xor_relayed_addr_attr_t *attr;
+
+    if ((address == NULL) || (h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    if ((family != STUN_ADDR_FAMILY_IPV4) && (family != STUN_ADDR_FAMILY_IPV6))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_relayed_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_RELAYED_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->family = family;
+    stun_strncpy((char *)attr->address, (char *)address, len);
+
+    return STUN_OK;
+}
+
+
+
 int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port)
 {
     stun_xor_relayed_addr_attr_t *attr;
@@ -320,6 +348,25 @@ int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port)
         return STUN_INVALID_PARAMS;
 
     *port = attr->port;
+
+    return STUN_OK;
+}
+
+
+
+int32_t stun_attr_xor_relayed_addr_set_port(handle h_attr, uint32_t port)
+{
+    stun_xor_relayed_addr_attr_t *attr;
+
+    if ((h_attr == NULL) || (port == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_relayed_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_RELAYED_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->port = port;
 
     return STUN_OK;
 }
@@ -846,7 +893,7 @@ int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type)
 #ifdef MB_ENABLE_TURN
 
 int32_t stun_attr_requested_transport_set_protocol(
-                        handle h_attr, stun_transport_protocol_type_t proto)
+                                    handle h_attr, uint32_t proto)
 {
     stun_req_transport_attr_t *tport;
 
@@ -861,11 +908,32 @@ int32_t stun_attr_requested_transport_set_protocol(
             (proto != STUN_TRANSPORT_UDP) && (proto != STUN_TRANSPORT_SCTP))
         return STUN_INVALID_PARAMS;
 
-    tport->protocol = proto;
+    tport->protocol = (u_char)proto;
     tport->hdr.length = 4;
 
     return STUN_OK;
 }
+
+
+
+int32_t stun_attr_requested_transport_get_protocol(
+                                    handle h_attr, uint32_t *proto)
+{
+    stun_req_transport_attr_t *tport;
+
+    if ((h_attr == NULL) || (proto == NULL))
+        return STUN_INVALID_PARAMS;
+
+    tport = (stun_req_transport_attr_t *) h_attr;
+
+    if (tport->hdr.type != STUN_ATTR_REQUESTED_TRANSPORT)
+        return STUN_INVALID_PARAMS;
+
+    *proto = (uint32_t) tport->protocol;
+
+    return STUN_OK;
+}
+
 
 
 int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num)
@@ -883,7 +951,25 @@ int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num)
     return STUN_OK;
 }
 
-#endif
+
+
+int32_t stun_attr_channel_number_get_channel(handle h_attr, uint16_t *num)
+{
+    stun_channel_number_attr_t *chnl = (stun_channel_number_attr_t *) h_attr;
+
+    if ((h_attr == NULL) || (num == NULL))
+        return STUN_INVALID_PARAMS;
+
+    if (chnl->hdr.type != STUN_ATTR_CHANNEL_NUMBER)
+        return STUN_INVALID_PARAMS;
+
+    *num = chnl->channel_number;
+
+    return STUN_OK;
+}
+
+
+#endif /** MB_ENABLE_TURN */
 
 
 #ifdef MB_ENABLE_ICE

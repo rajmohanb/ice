@@ -13,8 +13,8 @@
 *                                                                              *
 *******************************************************************************/
 
-#ifndef STUN_ENC_DEC_API__H
-#define STUN_ENC_DEC_API__H
+#ifndef TURNS_TABLE__H
+#define TURNS_TABLE__H
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,35 +23,44 @@ extern "C" {
 /******************************************************************************/
 
 
-#include "stun_base.h"
+
+int32_t turns_create_table(uint32_t max_allocs, handle *h_table);
 
 
-#define STUN_MSG_AUTH_PASSWORD_LEN  128
+int32_t turns_destroy_table(handle h_table);
 
 
-typedef struct 
-{
-    uint32_t key_len;
-    u_char key[STUN_MSG_AUTH_PASSWORD_LEN];
-} stun_auth_params_t;
-
-/**
- * Decode api. Decodes the given TLV message buffer into message structure and
- * returns a handle to the message. Further operations like set and get can 
- * be done on this returned h_msg.
- */
-int32_t stun_msg_decode(u_char *buf, uint32_t len, 
-                                    bool_t validate_fp, handle *tlv);
-
-/**
- * Encode api. Converts the given message to TLV format and returns the TLV
- * message buffer that can be sent on the network to the peer.
- */
-int32_t stun_msg_encode(handle tlv, 
-            stun_auth_params_t *auth, u_char *buf, uint32_t *size);
+int32_t turns_table_does_node_exist(handle h_table, turns_allocation_t *alloc);
 
 
-int32_t stun_msg_print (handle stun_msg, u_char *buf, uint32_t buf_len);
+int32_t turns_table_find_node(handle h_table, 
+        stun_inet_addr_t *src, handle transport_param, 
+        stun_transport_protocol_type_t protocol, turns_allocation_t **alloc);
+
+
+turns_allocation_t *turns_table_create_allocation(handle h_table);
+
+
+int32_t turns_table_delete_allocation(
+                    handle h_table, turns_allocation_t *alloc);
+
+
+int32_t turns_table_find_node_for_relayed_transport_address(
+        handle h_table, handle transport_param,
+        stun_transport_protocol_type_t protocol, turns_allocation_t **alloc);
+
+
+typedef void (*turns_alloc_iteration_cb)(handle h_alloc, turns_allocation_t *alloc);
+
+
+int32_t turns_table_iterate(handle h_table, turns_alloc_iteration_cb iter_cb);
+
+
+int32_t turns_table_init_allocations(handle h_table);
+
+
+int32_t turns_table_deinit_allocations(handle h_table);
+
 
 
 /******************************************************************************/

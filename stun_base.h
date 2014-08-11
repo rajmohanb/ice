@@ -117,9 +117,12 @@ typedef     void*           handle;
 
 typedef enum
 {
+    LOG_SEV_EMERG = 0,
+    LOG_SEV_ALERT,
     LOG_SEV_CRITICAL,
     LOG_SEV_ERROR,
     LOG_SEV_WARNING,
+    LOG_SEV_NOTICE,
     LOG_SEV_INFO,
     LOG_SEV_DEBUG,
     LOG_SEV_MAX,
@@ -132,6 +135,13 @@ typedef enum
     STUN_INET_ADDR_IPV6,
     STUN_INET_ADDR_MAX,
 } stun_inet_addr_type_t;
+
+
+typedef enum {
+    ICE_TRANSPORT_UDP = 0,
+    ICE_TRANSPORT_TCP,
+    ICE_TRANSPORT_INVALID,
+} stun_transport_protocol_type_t;
 
 
 typedef struct 

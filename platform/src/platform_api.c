@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2013, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -42,6 +42,10 @@ extern "C" {
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
+#ifdef MB_SMP_SUPPORT
+#include <sys/mman.h>
+#include <pthread.h>
+#endif
 
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
@@ -70,21 +74,45 @@ extern "C" {
 unsigned int compute_crc32(const unsigned char *s, unsigned int n);
 
 
+#ifdef PLATFORM_USE_MISC_API
+
 typedef struct tag_timer_node {
     unsigned int duration;
     unsigned int elapsed_time;
     unsigned int timer_id;
     void *arg;
     timer_expiry_callback timer_fxn;
+#ifndef MB_SMP_SUPPORT
     struct tag_timer_node *next;
     struct tag_timer_node *prev;
+#endif
 } struct_timer_node;
 
-#ifdef PLATFORM_USE_MISC_API
+
+#ifdef MB_SMP_SUPPORT
+typedef struct {
+    //pthread_rwlock_t table_lock;
+    pthread_mutex_t table_lock;
+    uint32_t mmap_len;
+    uint32_t max_timers;
+    uint32_t cur_timers;
+    unsigned int app_timer_id;
+    struct_timer_node *timer_list;
+} platform_timer_table_t;
+
+/** this must point to shared memory */
+platform_timer_table_t *g_timer_table = NULL;
+
+#else
+static unsigned int app_timer_id = 0;
+#endif
+
+
+
+
 static struct_timer_node *timer_head = NULL;
 static timer_t timerid;
 static sem_t timer_mutex;
-static unsigned int app_timer_id = 0;
 bool app_timer_id_wraparound = false;
 unsigned long last_timestamp;
 
@@ -101,6 +129,93 @@ static unsigned long platform_get_current_time (void)
 static void
 sys_timer_handler(union sigval sig_val)
 {
+#ifdef MB_SMP_SUPPORT
+    unsigned int i;
+    struct_timer_node *node;
+
+    //pthread_rwlock_rdlock(&g_timer_table->table_lock);
+    pthread_mutex_lock(&g_timer_table->table_lock);
+    //printf("TIMER HANDLER: PID %d Timer is read locked. No of timers %d\n", 
+    //                                     getpid(), g_timer_table->cur_timers);
+    
+    //ICE_LOG(LOG_SEV_ERROR, "****** Timer callback ****** Locked");
+
+    /** run through the list */
+    node = g_timer_table->timer_list;
+
+    if (g_timer_table->cur_timers == 0)
+    {
+        last_timestamp = platform_get_current_time();
+        //ICE_LOG(LOG_SEV_ERROR, "last timestamp: %u\n", last_timestamp);
+        //pthread_rwlock_unlock(&g_timer_table->table_lock);
+        pthread_mutex_unlock(&g_timer_table->table_lock);
+        //ICE_LOG(LOG_SEV_ERROR, "No timers");
+        //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
+        return;
+    }
+
+    for(i = 0; i < g_timer_table->max_timers; i++)
+    {
+        /** TODO - 
+         * store platform_get_current_time() in a variable. so that
+         * we need not call it every time
+         */
+        //if ((node->arg == NULL) && (!node->timer_id)) continue;
+
+        if (node->arg)
+            node->elapsed_time += platform_get_current_time() - last_timestamp;
+
+#if 0
+        ICE_LOG(LOG_SEV_ERROR, "[%d]: Timer ID=[%d] node->elapsed_time: %u "\
+                "node->duration: %u Arg: %p\n", i,  node->timer_id, 
+                node->elapsed_time, node->duration, node->arg);
+#endif
+
+        if ((node->arg) && (node->elapsed_time >= node->duration))
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                "[TIMER]: Timer id %d fired, about to notify app\n", 
+                node->timer_id);
+
+            //pthread_rwlock_unlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
+            node->timer_fxn((void *)node->timer_id, node->arg);
+            //pthread_rwlock_wrlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is write locked\n", getpid());
+
+            ICE_LOG (LOG_SEV_DEBUG, "[TIMER]: Freeing %d\n", node->timer_id);
+
+            node->duration = 0;
+            node->elapsed_time = 0;
+            node->arg = 0;
+            node->timer_fxn = NULL;
+            node->timer_id = 0;
+
+            //pthread_mutex_lock(&g_timer_table->table_lock);
+            g_timer_table->cur_timers -= 1;
+            //pthread_mutex_unlock(&g_timer_table->table_lock);
+
+            //pthread_rwlock_unlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is unlocked\n", getpid());
+            //pthread_rwlock_rdlock(&g_timer_table->table_lock);
+            //printf("TIMER HANDLER: PID %d Timer is read locked\n", getpid());
+
+            ICE_LOG (LOG_SEV_DEBUG, "[TIMER]: Freed timer node\n");
+        }
+
+        node++;
+    }
+
+    last_timestamp = platform_get_current_time();
+
+    //pthread_rwlock_unlock(&g_timer_table->table_lock);
+    pthread_mutex_unlock(&g_timer_table->table_lock);
+    //printf("TIMER HANDLER: PID %d Timer is unlocked. No of timers %d\n", 
+    //                                    getpid(), g_timer_table->cur_timers);
+    //ICE_LOG(LOG_SEV_DEBUG, 
+    //        "sys timer handler Exit: Num timers: %d", g_timer_table->cur_timers);
+
+#else
     struct_timer_node *node;
     
     sem_wait(&timer_mutex);
@@ -150,9 +265,116 @@ sys_timer_handler(union sigval sig_val)
     last_timestamp = platform_get_current_time();
 
     sem_post(&timer_mutex);
+#endif
 
     return;
 }
+
+
+#ifdef MB_SMP_SUPPORT
+static int32_t platform_timer_init_table(uint32_t max_timers)
+{
+    uint32_t size, fd, i;
+    platform_timer_table_t *table = NULL;
+    char zero = 0;
+    pthread_mutexattr_t mattr;
+
+    /** remove shared memory object if it existed */
+    shm_unlink(PLATFORM_TIMER_MMAP_FILE_PATH);
+
+    /** open file for shared memory access */
+    fd = shm_open(PLATFORM_TIMER_MMAP_FILE_PATH, O_RDWR | O_CREAT, S_IRWXU);
+    if (fd == -1)
+    {
+        perror("shared memory open");
+        ICE_LOG(LOG_SEV_ALERT, 
+                "PLATFORM: opening the shared memory file failed");
+        return STUN_INT_ERROR;
+    }
+
+    /** calculate the size to be allocated */
+    size = sizeof(platform_timer_table_t);
+    size += max_timers * sizeof(struct_timer_node);
+
+    if (ftruncate(fd, size) < 0)
+    {
+        perror("shared memory ftruncate");
+        ICE_LOG(LOG_SEV_ALERT, 
+                "PLATFORM: Truncating the shared mem file failed for timers");
+        close(fd);
+        return STUN_INT_ERROR;
+    }
+
+    /** write some data TODO - need to optimize? */ 
+    for (i = 0; i < size; i++) write(fd, &zero, sizeof(char));
+    //write(fd, &zero, size);
+
+    /**
+     * TODO - the allocation size is desired to be in multiple of the PAGESIZE
+     * since internally mmap deals only with pages, and it is desirable that
+     * they are aligned to the page boundary. Typical page sizes - 4096/8192.
+     */
+
+    /** allocate shared memory */
+    table = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (table == (void *) -1)
+    {
+        perror("shared mem mmap:");
+        ICE_LOG(LOG_SEV_ALERT, 
+                "PLATFORM: allocation of shared memory failed for timer");
+        return STUN_MEM_ERROR;
+    }
+
+    ICE_LOG(LOG_SEV_INFO, "Size of each timer "\
+            "allocation: [%d] bytes", sizeof(struct_timer_node));
+    ICE_LOG(LOG_SEV_INFO, "PLATFORM timer table : "\
+            "Allocated shared memory of size: [%d] bytes", size);
+
+    close(fd);
+    table->timer_list = 
+        (void *)(((char *)table) + sizeof(platform_timer_table_t));
+    table->mmap_len = size;
+    table->max_timers = max_timers;
+    table->cur_timers = 0;
+
+#if 0
+    /** TODO: Do we need to use non-default attr? */
+    if (pthread_rwlock_init(&table->table_lock, NULL) != 0)
+    {
+        /** TODO - unmmap, etc */
+        return STUN_INT_ERROR;
+    }
+#else
+    pthread_mutexattr_init(&mattr);
+    pthread_mutexattr_setpshared(&mattr, PTHREAD_PROCESS_SHARED);
+
+#if 0
+    if (pthread_mutexattr_settype(&mattr, PTHREAD_MUTEX_ERRORCHECK) != 0)
+    {
+        perror("pthread_mutexattr_settype: ");
+        ICE_LOG(LOG_SEV_ERROR,
+                "Error while setting the pthread mutexattr settype");
+    }
+#endif
+
+    /** TODO: Do we need to use non-default attr? */
+    if (pthread_mutex_init(&table->table_lock, &mattr) != 0)
+    {
+        /** TODO - unmmap, etc */
+        return STUN_INT_ERROR;
+    }
+#endif
+
+    ICE_LOG(LOG_SEV_DEBUG, "table = %p", table);
+    ICE_LOG(LOG_SEV_DEBUG, "table alloc list = %p", table->timer_list);
+
+    /** store the handle to the table in the global variable */
+    g_timer_table = table;
+
+    return STUN_OK;
+}
+#endif
+
 
 
 static bool platform_timer_init(void)
@@ -162,7 +384,10 @@ static bool platform_timer_init(void)
 #endif
     struct sigevent sev;
     struct itimerspec its;
-           
+
+#ifdef MB_SMP_SUPPORT
+    if (platform_timer_init_table(5000) != STUN_OK) return false;
+#else
     if (sem_init(&timer_mutex, 0, 1) == 0)
     {
         //ICE_LOG (LOG_SEV_INFO, "semaphore created\n");
@@ -172,6 +397,7 @@ static bool platform_timer_init(void)
     {
         ICE_LOG (LOG_SEV_INFO, "semaphore creation failed\n");
     }
+#endif
    
 #if 0 
     sa.sa_flags = SA_SIGINFO | SA_RESTART;
@@ -194,32 +420,59 @@ static bool platform_timer_init(void)
         return false;
 
     timer_head = NULL;
+#ifdef MB_SMP_SUPPORT
+    g_timer_table->app_timer_id = 0;
+#else
     app_timer_id = 0;
+#endif
     app_timer_id_wraparound = false;
     last_timestamp = platform_get_current_time();
 
     ICE_LOG (LOG_SEV_INFO, "timer ID is 0x%lx\n", (long) timerid);
 
     /* arm the timer */
+#if 0
     its.it_value.tv_sec = 0;
     its.it_value.tv_nsec = PLATFORM_TIMER_PERIODIC_TIME_VALUE * 1000000;
     its.it_interval.tv_sec = 0;
     its.it_interval.tv_nsec = PLATFORM_TIMER_PERIODIC_TIME_VALUE * 1000000;
+#else
+    its.it_value.tv_sec = 1;
+    its.it_value.tv_nsec = 0;
+    its.it_interval.tv_sec = 1;
+    its.it_interval.tv_nsec = 0;
+#endif
 
     if (timer_settime(timerid, CLOCK_REALTIME, &its, NULL) == -1)
-        return NULL;
+        return false;
 
 
     return true;
 }
 
+
+
 static void platform_timer_exit(void)
 {
+#ifndef MB_SMP_SUPPORT
     struct_timer_node *node, *temp;
+#endif
 
     if (timer_delete(timerid) != 0)
         ICE_LOG (LOG_SEV_ERROR, "timer_delete() failed\n");
 
+#ifdef MB_SMP_SUPPORT
+    //pthread_rwlock_destroy(&g_timer_table->table_lock);
+    pthread_mutex_destroy(&g_timer_table->table_lock);
+
+    if (munmap(g_timer_table, g_timer_table->mmap_len) != 0)
+    {
+        perror("platform shared mem munmap");
+        ICE_LOG(LOG_SEV_ALERT, "PLATFORM: Shared memory release failed");
+        return;
+    }
+#else
+    
     sem_destroy(&timer_mutex);
     node = timer_head;
 
@@ -229,6 +482,7 @@ static void platform_timer_exit(void)
         node = node->next;
         platform_free(temp);
     }
+#endif
 
     return;
 }
@@ -287,6 +541,60 @@ void *platform_start_timer(int duration,
 {
     struct_timer_node *new_node;
 
+#ifdef MB_SMP_SUPPORT
+    uint32_t i;
+    new_node = g_timer_table->timer_list;
+
+    if (g_timer_table->cur_timers == g_timer_table->max_timers)
+        return NULL;
+
+    //pthread_rwlock_wrlock(&g_timer_table->table_lock);
+    pthread_mutex_lock(&g_timer_table->table_lock);
+    //printf("START TIMER: PID %d timer write locked\n", getpid());
+
+    /** find a free node */
+    for (i = 0; i < g_timer_table->max_timers; i++)
+    {
+        if ((new_node->arg == NULL) && (new_node->timer_fxn == NULL))
+            break;
+
+        //new_node += sizeof(struct_timer_node);
+        new_node++;
+    }
+
+    if (i == g_timer_table->max_timers)
+    {
+        //pthread_rwlock_unlock(&g_timer_table->table_lock);
+        pthread_mutex_unlock(&g_timer_table->table_lock);
+        //printf("START TIMER: PID %d timer unlocked\n", getpid());
+        return NULL;
+    }
+
+    new_node->duration = duration;
+    new_node->timer_fxn = timer_cb;
+    new_node->arg = arg;
+    new_node->elapsed_time = 0;
+
+    new_node->timer_id = ++g_timer_table->app_timer_id;
+    if (new_node->timer_id == 0xFFFFFFFF)
+    { 
+        /** TODO:
+         * check if this timer id still exists in the list
+         */
+        g_timer_table->app_timer_id = 0; 
+    }
+
+    g_timer_table->cur_timers += 1;
+
+    //pthread_rwlock_unlock(&g_timer_table->table_lock);
+    pthread_mutex_unlock(&g_timer_table->table_lock);
+    //printf("START TIMER: PID %d timer unlocked. No of timers %d\n", 
+    //                                    getpid(), g_timer_table->cur_timers);
+
+    //printf("Added a new timer node %p. timer_id %d and arg %p\n", 
+    //                        new_node, new_node->timer_id, new_node->arg);
+
+#else
     new_node = (struct_timer_node *) 
                 platform_malloc (sizeof(struct_timer_node));
     if (new_node == NULL) return NULL;
@@ -315,20 +623,76 @@ void *platform_start_timer(int duration,
 
     sem_post(&timer_mutex);
 
-    ICE_LOG (LOG_SEV_DEBUG, 
-        "[TIMER]: Added timer node %p for %d ms\n", new_node, duration);
-    ICE_LOG (LOG_SEV_DEBUG,
-        "[TIMER]: returned Timer handle is %d and arg is %p\n", 
-        new_node->timer_id, new_node->arg);
+#endif
+
+    ICE_LOG(LOG_SEV_ERROR, 
+        "[TIMER]: Added timer node %p for %d ms. "\
+        "Returned timer handle %d and arg %p. No of timers %d\n", new_node, 
+        duration, new_node->timer_id, new_node->arg, g_timer_table->cur_timers);
 
     return (void *)new_node->timer_id;
 }
+
+
 
 bool platform_stop_timer(void *timer_id)
 {
     struct_timer_node *node;
     bool found = false;
 
+    //printf("PLATFORM: Stopping timer %p. Timers on list:%d\n", 
+    //                                    timer_id, g_timer_table->cur_timers);
+
+#ifdef MB_SMP_SUPPORT
+    uint32_t i;
+
+    node = g_timer_table->timer_list;
+
+    //printf("STOP TIMER: PID %d Timer about to write lock\n", getpid());
+    //pthread_rwlock_wrlock(&g_timer_table->table_lock);
+    pthread_mutex_lock(&g_timer_table->table_lock);
+    //printf("STOP TIMER: PID %d Timer is write locked\n", getpid());
+    ICE_LOG(LOG_SEV_ERROR, "Stop timer: %p Mutex locked", timer_id);
+
+    for (i = 0; i < g_timer_table->max_timers; i++)
+    {
+#if 0
+        ICE_LOG(LOG_SEV_ERROR, "[%d]: Timer ID=[%d] node->elapsed_time: %u "\
+                "node->duration: %u Arg: %p\n", i,  node->timer_id, 
+                node->elapsed_time, node->duration, node->arg);
+#endif
+
+        if (timer_id == (void *)node->timer_id)
+        {
+            node->arg = NULL;
+            node->timer_fxn = NULL;
+            node->duration = 0;
+            node->elapsed_time = 0;
+            node->timer_id = 0;
+            found = true;
+
+            g_timer_table->cur_timers -= 1;
+
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "PLATFORM: Stopped timer %p. Timers on list:%d\n", 
+                    timer_id, g_timer_table->cur_timers);
+
+            break;
+        } 
+
+        //node += sizeof(struct_timer_node);
+        node++;
+    }
+
+    //pthread_rwlock_unlock(&g_timer_table->table_lock);
+    pthread_mutex_unlock(&g_timer_table->table_lock);
+    //printf("STOP TIMER: PID %d Timer is unlocked\n", getpid());
+    //if (found == false)
+    //    printf("PLATFORM: Timer %p not found. Timers on list:%d\n",
+    //                                    timer_id, g_timer_table->cur_timers);
+    ICE_LOG(LOG_SEV_ERROR, "Stop timer: Mutex UNLOCKED");
+
+#else
     sem_wait(&timer_mutex);
 
     node = timer_head;
@@ -362,6 +726,7 @@ bool platform_stop_timer(void *timer_id)
     }
 
     sem_post(&timer_mutex);
+#endif
 
     return found;
 }
