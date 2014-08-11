@@ -643,8 +643,8 @@ int32_t turns_inject_timer_event(handle timer_id, handle arg)
         return STUN_OK;
     }
 
-    /** make sure we allocation is valid & alive before injecting the event */
-    status = turns_table_does_node_exist(instance->h_table, timer->h_alloc);
+    /** make sure if allocation is valid & alive before injecting the event */
+    status = turns_table_does_node_exist(instance->h_table, alloc);
     if (status == STUN_NOT_FOUND)
     {
         ICE_LOG (LOG_SEV_INFO, 

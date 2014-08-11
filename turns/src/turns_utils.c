@@ -257,7 +257,7 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
     else
     {
         resp_code = 442;
-        goto MB_ERROR_EXIT2; /** TODO - reject with 442 */
+        goto MB_ERROR_EXIT2; /** reject with 442 */
     }
 
     num = 1;
@@ -340,6 +340,12 @@ int32_t turns_utils_pre_verify_info_from_alloc_request(
         goto MB_ERROR_EXIT3;
     }
 #endif /** TURNS_ENABLE_FINGERPRINT_VALIDATION */
+
+    /* TODO : handle udp specific stuff
+     * - DONT_FRAGMENT
+     * - RESERVATION_TOKEN
+     * - EVEN_PORT
+     */
 
     return status;
 
@@ -452,7 +458,8 @@ int32_t turns_utils_create_error_response(turns_allocation_t *ctxt,
     status = stun_attr_error_code_set_error_code(h_attrs[count-1], error_code);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "setting error code attribute value failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "setting error code attribute value = [%d] failed", error_code);
         goto MB_ERROR_EXIT2;
     }
 
@@ -755,6 +762,9 @@ int32_t turns_utils_init_allocation_context(
     int32_t status;
     context->instance = instance;
 
+    context->username_len = 0;
+    context->req_tport = ICE_TRANSPORT_INVALID;
+
     context->protocol = stun_pkt->protocol;
     context->transport_param = stun_pkt->transport_param;
     stun_memcpy(&context->client_addr, 
@@ -797,7 +807,7 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
         perm = &alloc->aps_perms[i];
         turns_utils_uninstall_permission(alloc, perm);
     }
- 
+
     /** stop allocation nonce stale timer if running */
     status = turns_utils_stop_nonce_stale_timer(alloc);
     if (status != STUN_OK)
@@ -814,8 +824,11 @@ int32_t turns_utils_deinit_allocation_context(turns_allocation_t *alloc)
                 "status [%d]", status);
     }
 
-    /** TODO: in the end, memset is safe? */
-    stun_memset(alloc, 0, sizeof(turns_allocation_t));
+    alloc->stun_msg_len = 0;
+    alloc->app_blob = alloc->transport_param = 0;
+
+    /** in the end, memset is safe? - no, dont do it! */
+    //stun_memset(alloc, 0, sizeof(turns_allocation_t));
 
     return status;
 }
@@ -1000,13 +1013,13 @@ int32_t turns_utils_start_permission_timer(
 
     if(!timer->timer_id)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Starting of channel binding timer "\
+        ICE_LOG(LOG_SEV_ERROR, "Starting of permission refresh timer "\
                 "for %d secs duration failed", TURNS_PERM_REFRESH_DURATION);
         return STUN_NO_RESOURCE;
     }
 
     ICE_LOG(LOG_SEV_DEBUG, "Started TURNS allocation context %p "\
-            "channel bind timer for duration %d seconds timer id %p ", 
+            "permission refresh timer for duration %d seconds timer id %p ", 
             alloc, TURNS_PERM_REFRESH_DURATION, timer->timer_id);
 
     perm->h_perm_timer = timer->timer_id;
@@ -1482,9 +1495,19 @@ int32_t turns_utils_uninstall_permission(
                 "timer for allocation %p", alloc);
     }
 
+    /**
+     * Before a permission is uninstalled, update the allocation with this
+     * permission's ingress and egress data size. Otherwise we lose the data!
+     */
+    alloc->ingress_bytes += perm->ingress_bytes;
+    alloc->egress_bytes += perm->egress_bytes;
+    ICE_LOG(LOG_SEV_NOTICE, "Permission expired. Allocation ingress %llu and "\
+            "egress %llu bytes", alloc->ingress_bytes, alloc->egress_bytes);
+
     stun_memset(&perm->peer_addr, 0, sizeof(stun_inet_addr_t));
     perm->channel_num = 0;
     perm->used = false;
+    perm->ingress_bytes = perm->egress_bytes = 0;
 
     return STUN_OK;
 }
@@ -1946,10 +1969,19 @@ turns_permission_t *turns_utils_search_for_permission(
     int32_t i;
     turns_permission_t *perm = NULL;
 
+#if 0
+    ICE_LOG(LOG_SEV_ERROR, "Searching for: %d:%s\n", addr.host_type, addr.ip_addr);
+#endif
+
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
         if (perm->used == false) continue;
+
+#if 0
+        ICE_LOG(LOG_SEV_ERROR, "Permissions [%d]: %d:%s\n", 
+                i, perm->peer_addr.host_type, perm->peer_addr.ip_addr);
+#endif
 
         /**
          * should we compare the port when checking if a permission has been 
@@ -1962,11 +1994,18 @@ turns_permission_t *turns_utils_search_for_permission(
             (turns_utils_host_compare(perm->peer_addr.ip_addr, 
                                       addr.ip_addr, addr.host_type) == true))
         {
+            ICE_LOG(LOG_SEV_DEBUG, "Permission found!");
+#if 0
+            ICE_LOG(LOG_SEV_ERROR, "Permission found!");
+#endif
             return perm;
         }
     }
 
     ICE_LOG(LOG_SEV_DEBUG, "Permission NOT found");
+#if 0
+    ICE_LOG(LOG_SEV_ERROR, "Permission NOT found");
+#endif
     return NULL;
 }
 
@@ -2390,20 +2429,25 @@ int32_t turns_utils_calculate_allocation_relayed_data(
                         uint64_t *egress_data)
 {
     turns_permission_t *perm = NULL;
-    uint64_t ingress = 0, egress = 0;
     uint16_t i;
+
 
     for (i = 0; i < TURNS_MAX_PERMISSIONS; i++)
     {
         perm = &alloc->aps_perms[i];
         if (perm->used == false) continue;
 
-        ingress += perm->ingress_bytes;
-        egress += perm->egress_bytes;
+        alloc->ingress_bytes += perm->ingress_bytes;
+        alloc->egress_bytes += perm->egress_bytes;
     }
 
-    *ingress_data = ingress;
-    *egress_data = egress;
+    *ingress_data = alloc->ingress_bytes;
+    *egress_data = alloc->egress_bytes;
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "TOTAL INGRESS DATA: %llu bytes\n", alloc->ingress_bytes);
+    ICE_LOG(LOG_SEV_ERROR, 
+            "TOTAL EGRESS DATA: %llu bytes\n", alloc->egress_bytes);
 
     return STUN_OK;
 }

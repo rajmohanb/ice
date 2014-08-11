@@ -105,9 +105,11 @@ typedef struct
     bool_t use_channel;
 #endif
 
+#if 0
     handle h_chnl_txn;
     handle h_chnl_req;
     handle h_chnl_resp;
+#endif
 
     /** ingress relay data to the client from the peer */
     uint64_t ingress_bytes;
@@ -203,7 +205,9 @@ typedef struct
 
     handle app_param;
 
+#if 0
     handle h_txn;
+#endif
     handle h_req;
     handle h_resp;
 
@@ -227,6 +231,12 @@ typedef struct
 
     /** lock */
     pthread_mutex_t lock;
+
+    /** Total ingress relay data to the client from the peers */
+    uint64_t ingress_bytes;
+
+    /** Total egress relay data from the client to the peers */
+    uint64_t egress_bytes;
 
 #ifdef MB_SMP_SUPPORT
     /** copy of stun message, required when interacting with decision process */

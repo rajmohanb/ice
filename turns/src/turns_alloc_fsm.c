@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -131,7 +131,7 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     uint32_t error_code = 0;
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     uint32_t raw_msg_len;
     u_char *raw_msg = NULL;
 #endif
@@ -179,7 +179,7 @@ int32_t turns_process_alloc_req (turns_allocation_t *alloc, handle h_msg)
 
     /** if we are here, then allocation request is ok */
 
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     /** 
      * Make a copy of the raw stun message that was received within the 
      * allocation context. This is because this process now needs to interact 
@@ -221,7 +221,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp = NULL;
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     handle h_origreq = NULL;
 #endif
     uint32_t error_code = 0;
@@ -234,7 +234,7 @@ int32_t turns_alloc_accepted (turns_allocation_t *alloc, handle h_msg)
     memcpy(&alloc->hmac_key, &decision->key, TURNS_HMAC_KEY_LEN);
     alloc->app_blob = decision->app_blob;
 
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     status = stun_msg_decode(
                 alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
     if (status != STUN_OK)
@@ -312,26 +312,28 @@ int32_t turns_alloc_rejected (turns_allocation_t *alloc, handle h_msg)
 {
     int32_t status;
     handle h_resp;
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     handle h_origreq = NULL;
 #endif
     turns_allocation_decision_t *decision = 
                 (turns_allocation_decision_t *) h_msg;
 
-#ifdef MB_SMP_SUPORT
+#ifdef MB_SMP_SUPPORT
     status = stun_msg_decode(
                 alloc->stun_msg, alloc->stun_msg_len, false, &h_origreq);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Allocation approved, stun_msg_decode() "\
                 "returned error %d while sending success response", status);
-        error_code = 500;
+        decision->code = 500;
         /** TODO: should the state of allocation be moved to unallocated? */
-        goto MB_ERROR_EXIT;
+        //goto MB_ERROR_EXIT;
     }
-
-    alloc->h_req = h_origreq;
-    alloc->stun_msg_len = 0;
+    else
+    {
+        alloc->h_req = h_origreq;
+        alloc->stun_msg_len = 0;
+    }
 #endif
 
     /** send the error response */
@@ -581,6 +583,7 @@ int32_t turns_channel_bind_timer (turns_allocation_t *alloc, handle h_msg)
 
 int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
 {
+    int32_t status;
     turns_permission_t *perm;
     turns_timer_params_t *timer = (turns_timer_params_t *) h_msg;
 
@@ -607,13 +610,14 @@ int32_t turns_perm_timer (turns_allocation_t *alloc, handle h_msg)
     }
 
     /** remove the installed permission */
-    perm->channel_num = 0;
-    perm->h_channel_timer = NULL;
-    perm->channel_timer.timer_id = NULL;
+    status = turns_utils_uninstall_permission(alloc, perm);
 
-    ICE_LOG(LOG_SEV_DEBUG, "Un-installed permission");
+    if (status == STUN_OK)
+        ICE_LOG(LOG_SEV_DEBUG, "Un-installed permission");
+    else
+        ICE_LOG(LOG_SEV_DEBUG, "Uninstalling of permission failed: %d", status);
 
-    return STUN_OK;
+    return status;
 }
 
 
@@ -811,6 +815,8 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
      */
     pthread_mutex_lock(&alloc->lock);
 
+    //printf("PID %d: Alloc: %p locked\n", getpid(), alloc);
+
     status = handler(alloc, h_msg);
 
     if (cur_state != alloc->state)
@@ -829,7 +835,6 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
 
         turns_utils_calculate_allocation_relayed_data(alloc, 
                 &event_params.ingress_bytes, &event_params.egress_bytes);
-        printf("TURNS = TOTAL INGRESS BYTES %d\n", event_params.ingress_bytes);
 
         /** notify the server application */
         alloc->instance->alloc_event_cb(TURNS_EV_DEALLOCATED, &event_params);
@@ -847,10 +852,14 @@ int32_t turns_allocation_fsm_inject_msg(turns_allocation_t *alloc,
         }
 
         turns_utils_deinit_allocation_context(alloc);
+
+        //printf("TURNS Allocation destroyed PID %d: Lock: %d\n", 
+        //                                            getpid(), alloc->lock);
     }
 
     pthread_mutex_unlock(&alloc->lock);
 
+    //printf("PID %d: Alloc: %p unlocked\n", getpid(), alloc);
     return status;
 }
 

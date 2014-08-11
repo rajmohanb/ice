@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2013, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -23,7 +23,7 @@ extern "C" {
 /******************************************************************************/
 
 /** some configuration stuff */
-#define MB_ICE_SERVER   "MindBricks ICE Server 0.1"
+#define MB_ICE_SERVER   "SeamConnect NAT Server 1.0"
 
 #define MB_ICE_SERVER_LISTEN_PORT   3478
 
@@ -78,6 +78,9 @@ typedef struct
     handle app_blob;
     uint64_t ingress_bytes;
     uint64_t egress_bytes;
+
+    /* udp specific */
+    bool df_attr; /* DONT_FRAGMENT attribute */
 } mb_ice_server_event_t;
 
 
@@ -96,7 +99,7 @@ typedef struct
 typedef struct
 {
     int op_type; /** 1 - add , 0 - remove */ /** TODO - can expand this? */
-    int sock_fd;
+    int port;
 } mb_ice_server_aux_data_t;
 
 
@@ -126,10 +129,10 @@ typedef struct
 
 typedef struct
 {
-    int relay_id;
+    //int relay_id;
     int relay_sock;
     int relay_port;
-} mb_ice_server_relay_socket;
+} mb_iceserver_relay_socket;
 
 
 typedef struct
@@ -140,12 +143,17 @@ typedef struct
     int timer_sockpair[2];
 
     /** data sockets on which to listen */
-    int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
-    //mb_ice_server_relay_socket relays[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    //int relay_sockets[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+    mb_iceserver_relay_socket relays[MB_ICE_SERVER_DATA_SOCK_LIMIT];
+
+#ifdef MB_USE_EPOLL
+    /** epoll instance */
+    int efd;
+#else
     /** master fd set used for listening - used by signaling workers only */
     fd_set master_rfds;
     int max_fd;
-
+#endif
 
     mb_ice_server_intf_t intf[2];
 
@@ -165,6 +173,15 @@ typedef struct
 
 } mb_ice_server_t;
 
+
+/** Function prototypes of the functions shared across the source files */
+int32_t mb_ice_server_make_socket_non_blocking(int sock_fd);
+
+int32_t iceserver_init_transport(void);
+
+int32_t iceserver_deinit_transport(void);
+
+int32_t iceserver_process_messages(mb_iceserver_worker_t *worker);
 
 /******************************************************************************/
 
