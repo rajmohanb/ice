@@ -689,7 +689,7 @@ int32_t stun_attr_username_set_username(handle h_attr,
     if (username->hdr.type != STUN_ATTR_USERNAME)
         return STUN_INVALID_PARAMS;
 
-    if (len > MAX_USERNAME_VAL_BYTES) return STUN_INVALID_PARAMS;
+    if (len > MAX_USERNAME_LEN) return STUN_INVALID_PARAMS;
 
     username->username = stun_calloc(1, len);
     if (username->username == NULL) return STUN_MEM_ERROR;

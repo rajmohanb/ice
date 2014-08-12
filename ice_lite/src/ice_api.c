@@ -177,13 +177,6 @@ static int32_t ice_format_and_send_message(handle h_msg,
             ip_addr, port, buf);
 #endif
 
-#ifdef MB_LOG_RX_TX_MSGS
-    stun_msg_print(h_msg, buf, buf_len);
-    ICE_LOG (LOG_SEV_INFO,
-            ">>>>>>>>>>\nTx STUN message to %s:%d\n\n%s\n\n<<<<<<<<<<\n\n", 
-            ip_addr, port, buf);
-#endif
-
     status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
     if (status != STUN_OK)
     {

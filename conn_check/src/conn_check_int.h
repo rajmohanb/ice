@@ -66,6 +66,7 @@ typedef struct
     conn_check_session_nwk_send_cb nwk_send_cb;
     conn_check_session_start_timer_cb start_timer_cb;
     conn_check_session_stop_timer_cb stop_timer_cb;
+    conn_check_session_state_change_cb state_change_cb;
 
     /** session list */
     handle ah_session[CONN_CHECK_MAX_CONCURRENT_SESSIONS];

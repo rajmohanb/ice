@@ -145,6 +145,7 @@ int32_t conn_check_instance_set_callbacks(
     instance->nwk_send_cb = cbs->nwk_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
+    instance->state_change_cb = cbs->session_state_cb;
 
     /** propagate app callbacks to stun txn */
     app_cbs.nwk_cb = cc_nwk_send_cb_fxn;
@@ -514,6 +515,7 @@ int32_t conn_check_session_inject_received_msg(
 
     stun_method_type_t method;
     stun_msg_type_t class;
+    conn_check_session_state_t cur_state;
 
     if ((h_inst == NULL) || (h_session == NULL) || (rx_msg == NULL))
         return STUN_INVALID_PARAMS;

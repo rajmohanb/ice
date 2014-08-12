@@ -769,6 +769,9 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     cc_cbs.start_timer_cb = ice_cc_start_timer;
     cc_cbs.stop_timer_cb = ice_stop_timer;
 
+    /** set callback function for conn check session state */
+    cc_cbs.session_state_cb = ice_cc_callback_fxn;
+
     status = conn_check_instance_set_callbacks(instance->h_cc_inst, &cc_cbs);
     if (status != STUN_OK)
     {

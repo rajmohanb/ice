@@ -11,7 +11,6 @@
 # form whatsoever without prior written approval from MindBricks Technologies. #
 #                                                                              #
 #******************************************************************************/
->>>>>>> ice_full_dev
 
 # Macros
 
