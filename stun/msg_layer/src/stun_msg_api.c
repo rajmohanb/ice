@@ -546,7 +546,7 @@ u_char* stun_msg_get_raw_buffer(handle h_msg, uint32_t *len)
 {
     stun_msg_t *msg;
 
-    if (h_msg == NULL) return STUN_INVALID_PARAMS;
+    if (h_msg == NULL) return NULL;
 
     msg = (stun_msg_t *)h_msg;
 

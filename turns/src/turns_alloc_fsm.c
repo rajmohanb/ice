@@ -24,6 +24,10 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#ifdef MB_SMP_SUPPORT
+#include "stun_enc_dec_api.h"
+#endif
+
 #ifndef MB_STATELESS_TURN_SERVER
 #include "stun_txn_api.h"
 #endif

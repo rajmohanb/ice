@@ -575,7 +575,9 @@ int32_t stun_attr_encode_message_integrity(handle h_msg,
     stun_method_type_t method;
     uint16_t val16; //, key_len = 0;
     u_char hmac[20]; //, md5_key[255];
+#if 0
     u_char mi_print[STUN_MI_PRINT_BUF_LEN] = {0};
+#endif
 
     integrity = (stun_msg_integrity_attr_t *) attr;
     integrity->hdr.length = STUN_ATTR_MSG_INTEGRITY_LEN;

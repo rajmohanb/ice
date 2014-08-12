@@ -82,10 +82,12 @@ int32_t turns_create_instance(uint32_t max_allocs, handle *h_inst)
 
     return status;
 
+#ifndef MB_STATELESS_TURN_SERVER
 MB_ERROR_EXIT:
     turns_destroy_table(instance->h_table);
     stun_free(instance);
     return status;
+#endif
 }
 
 

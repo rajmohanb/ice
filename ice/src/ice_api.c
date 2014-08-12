@@ -449,7 +449,7 @@ static int32_t ice_encode_and_send_message(handle h_msg,
     {
         /** turn message - calculate the long-term authentication hmac key */
         auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
-        status = ice_utils_compute_turn_hmac_key(media, auth.key, &auth.key_len);
+        status = ice_utils_compute_turn_hmac_key(ice_session, auth.key, &auth.key_len);
 
         if (status != STUN_OK) return status;
     }
