@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -85,7 +86,7 @@ int32_t stun_msg_create(stun_msg_type_t msg_type,
     if (method_type >= STUN_METHOD_MAX)
         return STUN_INVALID_PARAMS;
 
-    msg = (stun_msg_t *) stun_malloc (sizeof(stun_msg_t));
+    msg = (stun_msg_t *) stun_calloc (1, sizeof(stun_msg_t));
     if (msg == NULL)
         return STUN_MEM_ERROR;
 
@@ -234,6 +235,9 @@ int32_t stun_msg_get_specified_attributes(handle h_msg,
         }
     }
 
+    if (count == 0) 
+        return STUN_NOT_FOUND;
+
     *size = count;
 
     return STUN_OK;
@@ -337,6 +341,7 @@ ERROR_EXIT:
 }
 
 
+
 int32_t stun_msg_validate_message_integrity(
                             handle h_msg, u_char *key, uint32_t key_len)
 {
@@ -360,7 +365,7 @@ int32_t stun_msg_validate_message_integrity(
     {
         ICE_LOG(LOG_SEV_ERROR, 
             "Extracting message integrity attribute from message "\
-            "returned error: %d", status);
+            "returned error: %d. Attribute missing?", status);
         return STUN_VALIDATON_FAIL;
     }
 
@@ -426,7 +431,11 @@ int32_t stun_msg_validate_fingerprint(handle h_msg)
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
                             STUN_ATTR_FINGERPRINT, &h_fingerprint, &num);
-    if (status != STUN_OK)
+    if (status == STUN_NOT_FOUND)
+    {
+        return status;
+    }
+    else if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
             "Extracting fingerprint attribute from message "\
@@ -484,6 +493,66 @@ int32_t stun_msg_validate_fingerprint(handle h_msg)
     ICE_LOG(LOG_SEV_INFO, 
             "FINGERPRINT value matched. Validation succeeded");
     return STUN_OK;
+}
+
+
+
+int32_t stun_msg_verify_if_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
+{
+    uint16_t attr_len;
+
+    /** all stun messages MUST start with a 20-byte header */
+    if (pkt_len < STUN_MSG_HEADER_SIZE) return STUN_MSG_NOT;
+
+    /** most significant 2 bits of every STUN message MUST be zeroes */
+    if ((*pkt & 0xC0) > 0) return STUN_MSG_NOT;
+
+    /** 
+     * the magic cookie field MUST contain the 
+     * fixed value 0x2112A442 in network byte order.
+     */
+    if ((*(pkt+4) != 0x21) || (*(pkt+5) != 0x12) || 
+            (*(pkt+6) != 0xA4) || (*(pkt+7) != 0x42))
+        return STUN_MSG_NOT;
+
+    /**
+     * since all STUN attributes are padded to a multiple of 4 bytes, 
+     * the last 2 bits if the message length field are always zero.
+     */
+    stun_memcpy(&attr_len, pkt+2, sizeof(uint16_t));
+    attr_len = ntohs(attr_len);
+
+    if ((attr_len & 0x03) != 0) return STUN_MSG_NOT;
+
+    /** check is for UDP */
+    if ((attr_len + STUN_MSG_HEADER_SIZE) != pkt_len) return STUN_MSG_NOT;
+
+    /** 
+     * verify fingerprint? It can be verified with the assumption that 
+     * fingerprint is the last attribute in the stun message. But that 
+     * may not always be the case since the spec maintains that though FP 
+     * should be the last attribute, it does not forbid any application 
+     * from adding additional attributes after the FP attribute. In such 
+     * cases, it is recommended that the attributes following the FP must 
+     * be ignored. Hence not checking the ifngerprint as of now here. But 
+     * FP will be validated later during decoding if desired by the app.
+     */
+
+    return STUN_OK;
+}
+
+
+u_char* stun_msg_get_raw_buffer(handle h_msg, uint32_t *len)
+{
+    stun_msg_t *msg;
+
+    if (h_msg == NULL) return STUN_INVALID_PARAMS;
+
+    msg = (stun_msg_t *)h_msg;
+
+    *len = msg->stun_msg_len;
+
+    return msg->stun_msg;
 }
 
 

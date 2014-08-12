@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -74,7 +75,7 @@ typedef struct
     stun_inet_addr_type_t type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
     uint32_t port;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
 } ice_transport_t;
 
 
@@ -82,11 +83,15 @@ typedef struct tag_ice_candidate
 {
     ice_transport_t transport;
     ice_cand_type_t type;
+
+    /** local preference provided by the ICE agent */
+    uint32_t local_pref;
+
     uint32_t priority;
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t comp_id;
 
-    /** TODO -related address */
+    /** related address? */
     struct tag_ice_candidate *base;
 
     handle transport_param;
@@ -166,8 +171,7 @@ typedef struct
     /** pointer back to the parent ICE session */
     ice_session_t *ice_session; 
 
-    uint32_t num_comp;
-    uint32_t num_comp_gathered;
+    uint32_t num_comps;
 
     /** count of peer components */
     uint32_t num_peer_comp;

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -27,6 +28,10 @@ int32_t cc_initiate (conn_check_session_t *session, handle h_msg);
 int32_t cc_process_ic_check (conn_check_session_t *session, handle h_msg);
 
 int32_t cc_handle_resp (conn_check_session_t *session, handle h_rcvdmsg);
+
+int32_t cc_timeout (conn_check_session_t *session, handle h_rcvdmsg);
+
+int32_t cc_cancel (conn_check_session_t *session, handle h_txn);
 
 int32_t cc_ignore_event (conn_check_session_t *session, handle h_msg);
 

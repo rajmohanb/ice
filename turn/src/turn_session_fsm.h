@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -26,9 +27,29 @@ int32_t send_alloc_req (turn_session_t *session, handle h_msg);
 
 int32_t process_alloc_resp (turn_session_t *session, handle h_msg);
 
+int32_t turn_allocation_timeout (turn_session_t *session, handle h_msg);
+
 int32_t send_perm_req (turn_session_t *session, handle h_msg);
 
 int32_t process_perm_resp (turn_session_t *session, handle h_msg);
+
+int32_t turn_init_dealloc (turn_session_t *session, handle h_msg);
+
+int32_t turn_refresh_resp (turn_session_t *session, handle h_rcvdmsg);
+
+int32_t turn_dealloc_resp (turn_session_t *session, handle h_rcvdmsg);
+
+int32_t turn_refresh_allocation (turn_session_t *session, handle h_msg);
+
+int32_t turn_send_ind(turn_session_t *session, handle h_msg);
+
+int32_t turn_data_ind(turn_session_t *session, handle h_msg);
+
+int32_t turn_refresh_permission (turn_session_t *session, handle h_msg);
+
+int32_t turn_refresh_channel_binding (turn_session_t *session, handle h_msg);
+
+int32_t turn_refresh_nat_binding (turn_session_t *session, handle h_msg);
 
 int32_t turn_ignore_msg (turn_session_t *session, handle h_msg);
 

@@ -1,0 +1,7 @@
+valgrind --leak-check=yes --run-libc-freeres=yes --log-file=valgrind --leak-check=full --show-reachable=yes  --trace-children=yes ./mb_ice_server
+echo "*************   VALGRIND REPORT ****************"
+echo
+grep Invalid valgrind*
+echo
+echo "*************   VALGRIND REPORT ****************"
+

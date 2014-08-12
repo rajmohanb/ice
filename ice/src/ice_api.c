@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -25,6 +26,7 @@ extern "C" {
 #include "stun_enc_dec_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"
+#include "stun_binding_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_session_fsm.h"
@@ -37,7 +39,7 @@ extern "C" {
         if (instance->aps_sessions[i] == h_session) { break; } \
 \
     if (i == ICE_MAX_CONCURRENT_SESSIONS) { \
-        ICE_LOG(LOG_SEV_ERROR, "Invalid session handle"); \
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Invalid session handle"); \
         return STUN_INVALID_PARAMS; \
     } \
 } \
@@ -49,7 +51,9 @@ static char* turn_states[] =
     "TURN_OG_ALLOCATING",
     "TURN_OG_ALLOCATED",
     "TURN_OG_CREATING_PERM",
-    "TURN_OG_ACTIVE"
+    "TURN_OG_ACTIVE",
+    "TURN_OG_DEALLOCATING",
+    "TURN_OG_FAILED",
 };
 
 
@@ -65,6 +69,7 @@ int32_t ice_create_instance(handle *h_inst)
     instance = (ice_instance_t *) 
                         stun_calloc (1, sizeof(ice_instance_t));
     if (instance == NULL) return STUN_MEM_ERROR;
+
     status = turn_create_instance(&instance->h_turn_inst);
     if (status != STUN_OK)
     {
@@ -72,12 +77,24 @@ int32_t ice_create_instance(handle *h_inst)
         return status;
     }
 
+    status = stun_binding_create_instance(&instance->h_bind_inst);
+    if (status != STUN_OK)
+    {
+        turn_destroy_instance(instance->h_turn_inst);
+        stun_free(instance);
+        return status;
+    }
+
     status = conn_check_create_instance(&instance->h_cc_inst);
     if (status != STUN_OK)
     {
-       stun_free(instance);
+        turn_destroy_instance(instance->h_turn_inst);
+        stun_binding_destroy_instance(instance->h_bind_inst);
+        stun_free(instance);
         return status;
     }
+
+    instance->nomination_mode = ICE_DEFAULT_NOMINATION_TYPE;
 
     *h_inst = (handle) instance;
 
@@ -85,7 +102,7 @@ int32_t ice_create_instance(handle *h_inst)
 }
 
 
-void ice_turn_callback_fxn (handle h_turn_inst, 
+static void ice_turn_callback_fxn (handle h_turn_inst, 
         handle h_turn_session, turn_session_state_t turn_session_state)
 {
     int32_t status;
@@ -95,13 +112,17 @@ void ice_turn_callback_fxn (handle h_turn_inst,
 
     if ((h_turn_inst == NULL) || (h_turn_session == NULL))
     {
-        ICE_LOG(LOG_SEV_ERROR, "Invalid parameters received in turn "\
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Invalid parameters received in turn "\
                 "callback routine. Null turn instance/session handle");
         return;
     }
 
-    ICE_LOG(LOG_SEV_DEBUG, "TURN session state changed to %s for "\
+    ICE_LOG(LOG_SEV_DEBUG, "[ICE] TURN session state changed to %s for "\
             "turn session %p", turn_states[turn_session_state], h_turn_session);
+
+    /** get the ice session handle who owns this turn session */
+    status = turn_session_get_app_param(
+                        h_turn_inst, h_turn_session, (handle *)&media);
 
     switch(turn_session_state)
     {
@@ -113,10 +134,24 @@ void ice_turn_callback_fxn (handle h_turn_inst,
             event = ICE_GATHER_FAILED;
             break;
 
+        case TURN_IDLE:
+        {
+            /**
+             * This needs to be injected into ice session fsm? 
+             * For now, clear the turn session here itself...
+             */
+            ice_media_utils_clear_turn_session(media, 
+                                        h_turn_inst, h_turn_session);
+
+            event = ICE_SES_EVENT_MAX;
+        }
+        break;
+
         /** we are not interested in other states */
         case TURN_OG_ALLOCATING:
         case TURN_OG_CREATING_PERM:
         case TURN_OG_ACTIVE:
+        case TURN_OG_DEALLOCATING:
         default:
             event = ICE_SES_EVENT_MAX;
             break;
@@ -125,16 +160,13 @@ void ice_turn_callback_fxn (handle h_turn_inst,
     if (event == ICE_SES_EVENT_MAX)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
-            "Ignoring turn session state %d", turn_session_state);
+            "[ICE] Ignoring turn session state %d", turn_session_state);
         return;
     }
 
     event_params.h_inst = h_turn_inst;
     event_params.h_session = h_turn_session;
 
-    /** get the ice session handle who owns this turn session */
-    status = turn_session_get_app_param(
-                        h_turn_inst, h_turn_session, (handle *)&media);
 
     status = ice_session_fsm_inject_msg(
                     media->ice_session, event, &event_params, NULL);
@@ -143,7 +175,8 @@ void ice_turn_callback_fxn (handle h_turn_inst,
 }
 
 
-void ice_cc_callback_fxn (handle h_cc_inst, 
+
+static void ice_cc_callback_fxn (handle h_cc_inst, 
         handle h_cc_session, conn_check_session_state_t state, handle data)
 {
     int32_t status;
@@ -153,7 +186,7 @@ void ice_cc_callback_fxn (handle h_cc_inst,
 
     if ((h_cc_inst == NULL) || (h_cc_session == NULL))
     {
-        ICE_LOG (LOG_SEV_ERROR, "FIXME: parameters not valid\n");
+        ICE_LOG (LOG_SEV_ERROR, "[ICE] FIXME: parameters not valid");
         return;
     }
 
@@ -161,15 +194,14 @@ void ice_cc_callback_fxn (handle h_cc_inst,
     {
         case CC_OG_IDLE:
         case CC_OG_CHECKING:
-        case CC_OG_INPROGRESS:
             break;
 
         case CC_OG_TERMINATED:
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "Outgoing connectivity check terminated");
+                    "[ICE] Outgoing connectivity check terminated");
 
-            /** declare success now? TODO - check if it is success */
+            /** declare success now? check if it is success */
             event = ICE_CONN_CHECKS_DONE;
         }
         break;
@@ -180,11 +212,11 @@ void ice_cc_callback_fxn (handle h_cc_inst,
         case CC_IC_TERMINATED:
         {
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "*******************************************************************\n\n");
+                    "****************************************************\n\n");
             ICE_LOG (LOG_SEV_DEBUG,
-                    "Incoming connectivity check terminated");
+                    "[ICE] Incoming connectivity check terminated");
             ICE_LOG (LOG_SEV_DEBUG, 
-                    "\n\n*******************************************************************\n\n");
+                    "\n\n************************************************\n\n");
 
             /** feed this into the fsm */
             /* event = ICE_IC_CONN_CHECK; */
@@ -211,7 +243,8 @@ void ice_cc_callback_fxn (handle h_cc_inst,
 }
 
 
-handle ice_turn_start_timer(uint32_t duration, handle arg)
+
+static handle ice_turn_start_timer(uint32_t duration, handle arg)
 {
     int32_t status;
     ice_timer_params_t *timer;
@@ -244,12 +277,49 @@ handle ice_turn_start_timer(uint32_t duration, handle arg)
 }
 
 
-handle ice_cc_start_timer(uint32_t duration, handle arg)
+
+static handle ice_stun_bind_start_timer(uint32_t duration, handle arg)
+{
+    int32_t status;
+    ice_timer_params_t *timer;
+    handle h_bind_session, h_bind_inst;
+    ice_media_stream_t *media;
+
+    timer = (ice_timer_params_t *) 
+        stun_calloc (1, sizeof(ice_timer_params_t));
+    if (timer == NULL) return 0;
+
+    status = turn_session_timer_get_session_handle(
+                                        arg, &h_bind_session, &h_bind_inst);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = stun_binding_session_get_app_param( 
+                            h_bind_inst, h_bind_session, (handle *)&media);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    timer->h_instance = media->ice_session->instance;
+    timer->h_session = media->ice_session;
+    timer->arg = arg;
+    timer->type = ICE_BIND_TIMER;
+
+    timer->timer_id = 
+        media->ice_session->instance->start_timer_cb(duration, timer);
+    if (timer->timer_id)
+        return timer;
+
+ERROR_EXIT_PT:
+    stun_free(timer);
+    return 0;
+}
+
+
+
+static handle ice_cc_start_timer(uint32_t duration, handle arg)
 {
     int32_t status;
     ice_timer_params_t *timer;
     handle h_cc_session, h_cc_inst;
-    ice_media_stream_t *media;
+    ice_cand_pair_t *cp;
 
     timer = (ice_timer_params_t *) 
         stun_calloc (1, sizeof(ice_timer_params_t));
@@ -263,19 +333,20 @@ handle ice_cc_start_timer(uint32_t duration, handle arg)
     }
 
     status = conn_check_session_get_app_param( 
-                            h_cc_inst, h_cc_session, (handle *)&media);
+                            h_cc_inst, h_cc_session, (handle *)&cp);
     if (status != STUN_OK)
     {
         goto ERROR_EXIT;
     }
 
-    timer->h_instance = media->ice_session->instance;
-    timer->h_session = media->ice_session;
-    timer->h_media = media;
+    timer->h_instance = cp->media->ice_session->instance;
+    timer->h_session = cp->media->ice_session;
+    timer->h_media = cp->media;
     timer->arg = arg;
     timer->type = ICE_CC_TIMER;
 
-    timer->timer_id = media->ice_session->instance->start_timer_cb(duration, timer);
+    timer->timer_id = 
+        cp->media->ice_session->instance->start_timer_cb(duration, timer);
     if (timer->timer_id)
     {
         return timer;
@@ -287,7 +358,7 @@ ERROR_EXIT:
 }
 
 
-int32_t ice_stop_timer(handle timer_id)
+static int32_t ice_stop_timer(handle timer_id)
 {
     ice_timer_params_t *timer = (ice_timer_params_t *) timer_id;
     ice_session_t *session;
@@ -310,7 +381,7 @@ int32_t ice_stop_timer(handle timer_id)
 }
 
 
-int32_t ice_format_and_send_message(handle h_msg, 
+static int32_t ice_encode_and_send_message(handle h_msg, 
                 stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
                 uint32_t port, handle transport_param, handle app_param)
 {
@@ -320,42 +391,86 @@ int32_t ice_format_and_send_message(handle h_msg,
     ice_media_stream_t *media = (ice_media_stream_t *) app_param;
     ice_session_t *ice_session;
     stun_auth_params_t auth = {0};
+    stun_method_type_t method;
 
     if ((h_msg == NULL) || (ip_addr == NULL) || 
                             (port == 0) || (transport_param == NULL))
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "Invalid parameter, hence not sending message");
+                "[ICE] Invalid parameter, hence not sending message");
         return STUN_INVALID_PARAMS;
     }
 
-    /** for ice_lite, this wil always be a connectivity check session */
     if (!app_param) return STUN_INT_ERROR;
 
     ice_session = media->ice_session;
 
-    buf = (u_char *) platform_calloc(1, TRANSPORT_MTU_SIZE);
-    buf_len = TRANSPORT_MTU_SIZE;
-
     /** authentication parameters for message integrity */
-    auth.len = strlen(media->local_pwd);
-    if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-        auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+    status = stun_msg_get_method(h_msg, &method);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] Invalid message!! unable to retrieve STUN method type");
+        return STUN_INVALID_PARAMS;
+    }
 
-    stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+    if (method == STUN_METHOD_BINDING)
+    {
+        stun_msg_type_t msg_class;
+
+        /** connectivity check mesages - short term credential */
+        status = stun_msg_get_class(h_msg, &msg_class);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "[ICE] Invalid message!! unable to retrieve STUN msg class");
+            return STUN_INVALID_PARAMS;
+        }
+
+        if (msg_class == STUN_REQUEST)
+        {
+            auth.key_len = stun_strlen(media->peer_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->peer_pwd, auth.key_len);
+        }
+        else if ((msg_class == STUN_SUCCESS_RESP) || 
+                 (msg_class == STUN_ERROR_RESP))
+        {
+            auth.key_len = stun_strlen(media->local_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->local_pwd, auth.key_len);
+        }
+        
+        /** Indications are not authenticated */
+    }
+    else
+    {
+        /** turn message - calculate the long-term authentication hmac key */
+        auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+        status = ice_utils_compute_turn_hmac_key(media, auth.key, &auth.key_len);
+
+        if (status != STUN_OK) return status;
+    }
+
+    buf = (u_char *) stun_calloc(1, TRANSPORT_MTU_SIZE);
+    buf_len = TRANSPORT_MTU_SIZE;
 
     status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "stun_msg_format() returned error %d\n", status);
+                "[ICE] stun_msg_format() returned error %d", status);
+        stun_free(buf);
         return STUN_INT_ERROR;
     }
 
     if (!sock_fd)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-                "some error! transport socket handle is NULL\n");
+                "[ICE] some error! transport socket handle is NULL");
+        stun_free(buf);
         return STUN_INVALID_PARAMS;
     }
 
@@ -371,12 +486,235 @@ int32_t ice_format_and_send_message(handle h_msg,
 }
 
 
+
+static int32_t ice_encode_and_send_stun_binding_message(handle h_msg, 
+        stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, uint32_t port, 
+        handle transport_param, handle app_param, bool_t msg_intg_reqd)
+{
+    u_char *buf;
+    uint32_t sent_bytes, buf_len;
+    int32_t status, sock_fd = (int32_t) transport_param;
+    ice_cand_pair_t *cp = (ice_cand_pair_t *) app_param;
+    ice_media_stream_t *media;
+    ice_session_t *ice_session;
+    stun_auth_params_t auth = {0};
+    stun_msg_type_t msg_class;
+
+    if ((h_msg == NULL) || (ip_addr == NULL) || 
+                            (port == 0) || (transport_param == NULL))
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] Invalid parameter, hence not sending message");
+        return STUN_INVALID_PARAMS;
+    }
+
+    if (!app_param) return STUN_INT_ERROR;
+
+    if (msg_intg_reqd == true)
+    {
+        /** connectivity check mesages - short term credential */
+        status = stun_msg_get_class(h_msg, &msg_class);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, 
+                    "[ICE] Invalid message!! unable to retrieve STUN msg class");
+            return STUN_INVALID_PARAMS;
+        }
+
+        if (msg_class == STUN_REQUEST)
+        {
+            cp = (ice_cand_pair_t *) app_param;
+            media = cp->media;
+            ice_session = media->ice_session;
+
+            auth.key_len = stun_strlen(media->peer_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->peer_pwd, auth.key_len);
+        }
+        else if ((msg_class == STUN_SUCCESS_RESP) || 
+                 (msg_class == STUN_ERROR_RESP))
+        {
+            media = (ice_media_stream_t *) app_param;
+            ice_session = media->ice_session;
+            cp = NULL;
+
+            auth.key_len = stun_strlen(media->local_pwd);
+            if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+                auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
+            stun_strncpy((char *)auth.key, media->local_pwd, auth.key_len);
+        }
+            
+        /** Indications are not authenticated */
+    }
+    else
+    {
+        media = (ice_media_stream_t *) app_param;
+        ice_session = media->ice_session;
+    }
+
+    buf = (u_char *) stun_calloc(1, TRANSPORT_MTU_SIZE);
+    buf_len = TRANSPORT_MTU_SIZE;
+
+    status = stun_msg_encode(h_msg, &auth, buf, &buf_len);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] stun_msg_format() returned error %d", status);
+        stun_free(buf);
+        return STUN_INT_ERROR;
+    }
+
+    if (!sock_fd)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] some error! transport socket handle is NULL");
+        stun_free(buf);
+        return STUN_INVALID_PARAMS;
+    }
+
+    /** 
+     * connectivity check messages that are sent using the relayed 
+     * candidate must be encoded in a TURN DATA indication message
+     */
+    if((msg_intg_reqd == true) && (msg_class == STUN_REQUEST) && 
+       (cp->local->type == ICE_CAND_TYPE_RELAYED))
+    {
+        handle h_turn_session;
+        stun_inet_addr_t dest = {0};
+        handle h_turn_inst = cp->media->ice_session->instance->h_turn_inst;
+
+        /** better way to identify turn session? */
+        h_turn_session = cp->media->h_turn_sessions[cp->local->comp_id - 1];
+
+        dest.host_type = ip_addr_type;
+        dest.port = port;
+        stun_memcpy(dest.ip_addr, ip_addr, ICE_IP_ADDR_MAX_LEN);
+
+        status = turn_session_send_application_data(h_turn_inst, 
+                                        h_turn_session, &dest, buf, buf_len);
+    }
+    else
+    {
+        sent_bytes = ice_session->instance->nwk_send_cb(buf, 
+                buf_len, ip_addr_type, ip_addr, port, transport_param);
+
+        if (sent_bytes == -1)
+            status = STUN_INT_ERROR;
+        else
+            status = STUN_OK;
+    }
+
+    stun_free(buf);
+
+    return status;
+}
+
+
+
+static int32_t ice_encode_and_send_stun_bind_message (
+        handle h_msg, stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+        uint32_t port, handle transport_param, handle app_param)
+{
+    return ice_encode_and_send_stun_binding_message(h_msg, 
+            ip_addr_type, ip_addr, port, transport_param, app_param, false);
+}
+
+
+
+static int32_t ice_encode_and_send_conn_check_message(handle h_msg, 
+                    stun_inet_addr_type_t ip_addr_type, u_char *ip_addr, 
+                    uint32_t port, handle transport_param, handle app_param)
+{
+    return ice_encode_and_send_stun_binding_message(h_msg, 
+            ip_addr_type, ip_addr, port, transport_param, app_param, true);
+}
+
+
+
+void ice_handle_app_data(handle h_turn_inst, 
+                    handle h_turn_session, void *data, uint32_t data_len, 
+                    stun_inet_addr_t *src, handle transport_param)
+{
+    int32_t status;
+    ice_media_stream_t *media;
+    stun_method_type_t method;
+    handle h_msg;
+    ice_rx_stun_pkt_t pkt;
+
+    status = turn_session_get_app_param(h_turn_inst, 
+                                    h_turn_session, (handle) &media);
+    if (status != STUN_OK) return;
+
+    /** check if this is a STUN message */
+    status = stun_msg_verify_if_valid_stun_packet(data, data_len);
+    if (status == STUN_MSG_NOT)
+    {
+        ice_candidate_t *cand = NULL;
+        ice_instance_t *inst = (ice_instance_t *) media->ice_session->instance;
+
+        cand = ice_utils_get_local_cand_for_transport_param(
+                                            media, transport_param, false);
+
+        if (cand == NULL)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE] Could not locate component ID for received "\
+                    "application data. Discarding ....\n");
+            return;
+        }
+
+        /** This is application protocol data, pass it on to app */
+        inst->rx_app_data_cb(inst, 
+                media->ice_session, media, cand->comp_id, data, data_len);
+        return;
+    }
+
+    /*
+     * so, this is a stun message. Determine the media and ice session for 
+     * turn session.  decode the message. if the method type is BINDING, 
+     * then determine the conn check session and inject the message into 
+     * the conn check session.
+     */
+    status = stun_msg_decode(data, data_len, true, &h_msg);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "[ICE] Decoding of STUN message received via TURN failed [%d]",
+                status);
+        return;
+    }
+
+    status = stun_msg_get_method(h_msg, &method);
+    if (status != STUN_OK) return;
+
+    if (method != STUN_METHOD_BINDING)
+    {
+        ICE_LOG(LOG_SEV_ERROR,
+                "[ICE] The method of the decoded message received via "\
+                "TURN module DATA indication is %d. Hence discarding "\
+                "the message.", method);
+        return;
+    }
+
+    pkt.h_msg = h_msg;
+    pkt.transport_param = transport_param;
+    stun_memcpy(&pkt.src, src, sizeof(stun_inet_addr_t));
+    pkt.relayed_check = true;
+
+    ice_session_fsm_inject_msg(media->ice_session, ICE_MSG, (handle)&pkt, NULL);
+
+    return;
+}
+
+
 int32_t ice_instance_set_callbacks(handle h_inst, 
                                         ice_instance_callbacks_t *cbs)
 {
     ice_instance_t *instance;
     conn_check_instance_callbacks_t cc_cbs;
     turn_instance_callbacks_t turn_cbs;
+    stun_binding_instance_callbacks_t bind_cbs;
     int32_t status;
 
     if ((h_inst == NULL) || (cbs == NULL))
@@ -393,9 +731,12 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     instance->nwk_send_cb = cbs->nwk_cb;
     instance->start_timer_cb = cbs->start_timer_cb;
     instance->stop_timer_cb = cbs->stop_timer_cb;
+    instance->rx_app_data_cb = cbs->app_data_cb;
     
     /** set callbacks to turn module */
-    turn_cbs.nwk_cb = ice_format_and_send_message;
+    turn_cbs.nwk_cb = ice_encode_and_send_message;
+    turn_cbs.rx_data_cb = ice_handle_app_data;
+
     turn_cbs.start_timer_cb = ice_turn_start_timer;
     turn_cbs.stop_timer_cb = ice_stop_timer;
 
@@ -407,8 +748,24 @@ int32_t ice_instance_set_callbacks(handle h_inst,
     {
         return status;
     }
+    
+    /** set callbacks to stun binding module */
+    bind_cbs.nwk_cb = ice_encode_and_send_stun_bind_message;
+    bind_cbs.start_timer_cb = ice_stun_bind_start_timer;
+    bind_cbs.stop_timer_cb = ice_stop_timer;
+
+    status = stun_binding_instance_set_callbacks(
+                                instance->h_bind_inst, &bind_cbs);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "stun_binding_instance_set_callbacks() returned error: %d\n", 
+                status);
+        return status;
+    }
+
     /** set callbacks to connectivity check module */
-    cc_cbs.nwk_cb = ice_format_and_send_message;
+    cc_cbs.nwk_cb = ice_encode_and_send_conn_check_message;
     cc_cbs.start_timer_cb = ice_cc_start_timer;
     cc_cbs.stop_timer_cb = ice_stop_timer;
 
@@ -440,22 +797,65 @@ int32_t ice_instance_register_event_handlers(handle h_inst,
 
 
 
-int32_t ice_set_client_software_name(handle h_inst, u_char *name)
+int32_t ice_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len)
 {
     ice_instance_t *instance;
+    int32_t status = STUN_OK;
 
-    if ((h_inst == NULL) || (name == NULL))
+    if ((h_inst == NULL) || (client == NULL) || (len == 0))
         return STUN_INVALID_PARAMS;
 
     instance = (ice_instance_t *) h_inst;
 
-    stun_strncpy((char *)instance->client, 
-            (char *)name, (SOFTWARE_CLIENT_NAME_LEN - 1));
+    instance->client_name = (u_char *) stun_calloc (1, len);
+    if (instance->client_name == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE] Memory allocation failed for ICE instance client name");
+        return STUN_MEM_ERROR;
+    }
 
-    /** TODO: propagate to turn instance */
+    stun_memcpy(instance->client_name, client, len);
+    instance->client_name_len = len;
+
+    status = turn_instance_set_client_software_name(
+                                        instance->h_turn_inst, client, len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = conn_check_instance_set_client_software_name(
+                                        instance->h_cc_inst, client, len);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    return status;
+
+ERROR_EXIT_PT:
+
+    stun_free(instance->client_name);
+
+    return status;
+}
+
+
+
+int32_t ice_instance_set_connectivity_check_nomination_mode(
+                                handle h_inst, ice_nomination_type_t nom_type)
+{
+    ice_instance_t *instance;
+
+    if (h_inst == NULL) return STUN_INVALID_PARAMS;
+
+    if ((nom_type != ICE_NOMINATION_TYPE_REGULAR) && 
+        (nom_type != ICE_NOMINATION_TYPE_AGGRESSIVE))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+
+    instance->nomination_mode = nom_type;
 
     return STUN_OK;
 }
+
 
 
 int32_t ice_destroy_instance(handle h_inst)
@@ -476,6 +876,10 @@ int32_t ice_destroy_instance(handle h_inst)
     }
 
     conn_check_destroy_instance(instance->h_cc_inst);
+    turn_destroy_instance(instance->h_turn_inst);
+    stun_binding_destroy_instance(instance->h_bind_inst);
+
+    stun_free(instance->client_name);
 
     stun_free(instance);
 
@@ -539,12 +943,17 @@ int32_t ice_create_session(handle h_inst,
         session->role = ICE_AGENT_ROLE_CONTROLLED;
     }
 
+    /** select a random number as tie-breaker */
+    session->tie_breaker = platform_64bit_random_number();
+
     session->state = ICE_SES_IDLE;
     session->peer_mode = ICE_INVALID_MODE;
+    session->o_destroyed = false;
 
     *h_session = session;
 
-    ICE_LOG(LOG_SEV_DEBUG, "ICE session created successfully");
+    ICE_LOG(LOG_SEV_DEBUG, "[ICE] ICE session created successfully with "\
+            "Agent role [%d] mode [%d]", session->role, session->local_mode);
 
     return STUN_OK;
 }
@@ -596,10 +1005,6 @@ int32_t ice_session_set_stun_server_cfg(handle h_inst,
     if (session->stun_cfg.server.port == 0)
         session->stun_cfg.server.port = STUN_SERVER_DEFAULT_PORT;
 
-#if 0
-    /** TODO - propagate this configuration to stun binding module */
-#endif
-
     return STUN_OK;
 }
 
@@ -609,7 +1014,7 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
 {
     ice_instance_t *instance;
     ice_session_t *session;
-    uint32_t i, j;
+    uint32_t i, j, count = 0;
 
     if ((h_inst == NULL) || (h_session == NULL))
         return STUN_INVALID_PARAMS;
@@ -619,6 +1024,8 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
 
     ICE_VALIDATE_SESSION_HANDLE(h_session);
 
+    session->o_destroyed = true;
+
     /** clean up media */
     for (j = 0; j < ICE_MAX_MEDIA_STREAMS; j++)
     {
@@ -626,11 +1033,23 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
         {
             ice_session_remove_media_stream(h_inst, 
                             h_session, session->aps_media_streams[j]);
+            count++;
         }
     }
 
-    instance->aps_sessions[i] = NULL;
-    stun_free(session);
+    if (session->use_relay == false)
+    {
+        instance->aps_sessions[i] = NULL;
+        stun_free(session);
+    }
+    else
+    {
+        if (count == 0)
+        {
+            instance->aps_sessions[i] = NULL;
+            stun_free(session);
+        }
+    }
 
     return STUN_OK;
 }
@@ -653,7 +1072,7 @@ int32_t ice_session_add_media_stream (handle h_inst, handle h_session,
 
     if (session->num_media_streams >= ICE_MAX_MEDIA_STREAMS)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Adding of media stream failed. "\
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Adding of media stream failed. "\
                "Maximum allowed media streams per session already reached.");
         return STUN_NO_RESOURCE;
     }
@@ -682,7 +1101,8 @@ int32_t ice_session_remove_media_stream (handle h_inst,
 }
 
 
-int32_t ice_session_gather_candidates(handle h_inst, handle h_session)
+int32_t ice_session_gather_candidates(handle h_inst, 
+                                        handle h_session, bool_t use_relay)
 {
     ice_instance_t *instance;
     ice_session_t *session;
@@ -695,6 +1115,23 @@ int32_t ice_session_gather_candidates(handle h_inst, handle h_session)
     session = (ice_session_t *) h_session;
 
     ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    if ((use_relay == true) && (session->turn_cfg.server.port == 0))
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] TURN/Relay server configuration not done for "\
+                "the session.");
+        return STUN_INVALID_PARAMS;
+    }
+
+    if ((use_relay == false) && (session->stun_cfg.server.port == 0))
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] STUN server configuration not done for the session.");
+        return STUN_INVALID_PARAMS;
+    }
+
+    session->use_relay = use_relay;
 
     return ice_session_fsm_inject_msg(session, 
                                         ICE_INIT_GATHERING, NULL, NULL);
@@ -847,7 +1284,8 @@ int32_t ice_session_set_peer_session_params(handle h_inst,
                                     ICE_REMOTE_PARAMS, session_params, NULL);
     if (status != STUN_OK)
     {
-        ICE_LOG (LOG_SEV_ERROR, "Processing of remote session params failed");
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE] Processing of remote session params failed");
     }
 
     return status;
@@ -875,8 +1313,8 @@ int32_t ice_session_set_peer_media_params(handle h_inst,
     if (session->peer_mode == ICE_INVALID_MODE)
     {
         ICE_LOG (LOG_SEV_ERROR,
-            "Peer ICE implementation mode is not yet set - ICE Full/Lite."\
-            "Set the same and then try to set the session parameters.");
+            "[ICE] Peer ICE implementation mode is not yet set - ICE Full/Lite"\
+            " Set the same and then try to set the session parameters.");
         return STUN_INVALID_PARAMS;
     }
 
@@ -912,6 +1350,7 @@ int32_t ice_session_set_peer_media_credentials(handle h_inst,
 
     return STUN_OK;
 }
+
 
 
 int32_t ice_session_set_peer_ice_mode(handle h_inst, 
@@ -974,17 +1413,22 @@ int32_t ice_session_inject_received_msg(handle h_inst,
     if (status != STUN_OK)
         return status;
 
-    /** TODO - check for class also */
+    /** need to check for class also? */
     switch(method)
     {
         case STUN_METHOD_BINDING:
         case STUN_METHOD_ALLOCATE:
         case STUN_METHOD_REFRESH:
-        case STUN_METHOD_SEND:
         case STUN_METHOD_DATA:
         case STUN_METHOD_CREATE_PERMISSION:
         case STUN_METHOD_CHANNEL_BIND:
             event = ICE_MSG;
+            break;
+
+        case STUN_METHOD_SEND:
+            status = STUN_INVALID_PARAMS;
+            ICE_LOG(LOG_SEV_ERROR,
+                    "[ICE] Received SEND message are ignored");
             break;
 
         default:
@@ -993,6 +1437,8 @@ int32_t ice_session_inject_received_msg(handle h_inst,
     }
 
     if (status != STUN_OK) return status;
+
+    stun_pkt->relayed_check = false;
 
     return ice_session_fsm_inject_msg(session, event, (handle)stun_pkt, NULL);
 }
@@ -1031,7 +1477,7 @@ int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session)
     if (session->local_mode == ICE_MODE_LITE)
     {
         ICE_LOG (LOG_SEV_ERROR,
-            "Connectivity checks are not performed for ice-lite session");
+            "[ICE] Connectivity checks are not performed for ice-lite session");
         return STUN_INVALID_PARAMS;
     }
 
@@ -1043,10 +1489,13 @@ int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session)
 
 
 
-int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
+int32_t ice_session_inject_timer_event(
+                    handle timer_id, handle arg, handle *ice_session)
 {
-    int32_t status = STUN_OK;
+    int32_t i, status = STUN_OK;
     ice_timer_params_t *timer;
+    ice_instance_t *instance;
+    ice_session_t *session;
 
     if ((timer_id == NULL) || (arg == NULL))
         return STUN_INVALID_PARAMS;
@@ -1065,30 +1514,77 @@ int32_t ice_session_inject_timer_event(handle timer_id, handle arg)
         return STUN_INVALID_PARAMS;
     }
 
+    instance = timer->h_instance;
+    ICE_VALIDATE_SESSION_HANDLE(timer->h_session);
+
+    session = (ice_session_t *) timer->h_session;
+    *ice_session = session;
+
     if(timer->type == ICE_TURN_TIMER)
     {
-        /** not valid for ice lite mode */
-        status = STUN_INVALID_PARAMS;
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_TURN_TIMER");
+        status = turn_session_inject_timer_message(timer_id, timer->arg);
+
+        stun_free(timer);
     }
     else if (timer->type == ICE_CC_TIMER)
     {
-        /** not valid for ice lite mode */
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CC_TIMER");
-        status = STUN_INVALID_PARAMS;
+
+        /** conn check timer event has to be fed thru the resp media fsm */
+        status = ice_session_fsm_inject_msg(session, 
+                                        ICE_CONN_CHECK_TIMER, arg, NULL);
+
+        stun_free(timer);
     }
     else if (timer->type == ICE_CHECK_LIST_TIMER)
     {
-        ice_session_t *session;
-        ice_instance_t *instance;
-
         ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_CHECK_LIST_TIMER");
         
-        /** find the session for this timer event */
-        session = (ice_session_t *) timer->h_session;
-        instance = (ice_instance_t *) timer->h_instance;
-
         status = ice_session_fsm_inject_msg(session, 
                                         ICE_CHECK_LIST_TIMER_EXPIRY, arg, NULL);
+        if (status == STUN_INVALID_PARAMS) stun_free(timer);
+    }
+    else if (timer->type == ICE_NOMINATION_TIMER)
+    {
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_NOMINATION_TIMER");
+        
+        status = ice_session_fsm_inject_msg(session, 
+                                        ICE_NOMINATION_TIMER_EXPIRY, arg, NULL);
+        if (status == STUN_INVALID_PARAMS) stun_free(timer);
+    }
+    else if (timer->type == ICE_BIND_TIMER)
+    {
+        handle h_bind_session;
+        ice_int_params_t event_params= {0};
+
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_BIND_TIMER");
+        status = stun_binding_session_inject_timer_event(
+                                timer_id, timer->arg, &h_bind_session);
+
+        if (status == STUN_TERMINATED)
+        {
+            ICE_LOG (LOG_SEV_DEBUG, 
+                    "[ICE]: STUN BINDING session terminated due to timeout. "\
+                    "Gathering of candidates failed");
+
+            event_params.h_inst = session->instance->h_turn_inst;
+            event_params.h_session = h_bind_session;
+
+            /** if the gathering failed, let the ice media know of it */
+            status = ice_session_fsm_inject_msg(session, 
+                                ICE_GATHER_FAILED, &event_params, NULL);
+        }
+
+        stun_free(timer);
+    }
+    else if (timer->type == ICE_KEEP_ALIVE_TIMER)
+    {
+        ICE_LOG (LOG_SEV_DEBUG, "[ICE]: Fired timer type ICE_KEEP_ALIVE_TIMER");
+        
+        status = ice_session_fsm_inject_msg(session, 
+                                        ICE_KEEP_ALIVE_EXPIRY, arg, NULL);
+        if (status == STUN_INVALID_PARAMS) stun_free(timer);
     }
     else
     {
@@ -1110,7 +1606,7 @@ int32_t ice_instance_find_session_for_received_msg(handle h_inst,
     if ((h_inst == NULL) || (h_msg == NULL) || 
             (h_session == NULL) || (transport_param == NULL))
     {
-        ICE_LOG(LOG_SEV_ERROR, "Invalid parameter passed when calling "\
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Invalid parameter passed when calling "\
                 "ice_instance_find_session_for_received_msg() api");
         return STUN_INVALID_PARAMS;
     }
@@ -1187,6 +1683,44 @@ int32_t ice_session_get_media_valid_pairs(handle h_inst, handle h_session,
 
 
 
+int32_t ice_session_get_nominated_pairs(handle h_inst, 
+            handle h_session, ice_session_valid_pairs_t *nom_pairs)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_stream_t *media;
+    int32_t i, j, status;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (nom_pairs == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    stun_memset(nom_pairs, 0, sizeof(ice_session_valid_pairs_t));
+
+    for (i = 0, j = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+    {
+        media = session->aps_media_streams[i];
+        if(!media) continue;
+
+        if (j >= ICE_MAX_MEDIA_STREAMS) break;
+
+        status = ice_media_utils_get_nominated_list(media, 
+                                            &nom_pairs->media_list[j]);
+        if (status != STUN_OK) break;
+        j += 1;
+    }
+
+    nom_pairs->num_media = j;
+
+    return status;
+}
+
+
+
 int32_t ice_session_restart_media_stream (handle h_inst,
                                 handle h_session, handle h_media)
 {
@@ -1205,6 +1739,41 @@ int32_t ice_session_restart_media_stream (handle h_inst,
     /** inject the event into the session fsm */
     return ice_session_fsm_inject_msg(
                                 session, ICE_RESTART, h_media, NULL);
+}
+
+
+
+int32_t ice_session_send_media_data (handle h_inst, handle h_session, 
+                handle h_media, uint32_t comp_id, u_char *data, uint32_t len)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_data_t media_data;
+    uint32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (h_media == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    ICE_VALIDATE_SESSION_HANDLE(h_session);
+
+    media_data.h_media = h_media;
+    media_data.comp_id = comp_id;
+    media_data.data = data;
+    media_data.len = len;
+
+    /** inject the event into the session fsm */
+    return ice_session_fsm_inject_msg(session, 
+                            ICE_SEND_MEDIA_DATA, &media_data, NULL);
+}
+
+
+
+int32_t ice_instance_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
+{
+    return stun_msg_verify_if_valid_stun_packet(pkt, pkt_len);
 }
 
 

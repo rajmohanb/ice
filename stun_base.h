@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -69,19 +70,22 @@ typedef     void*           handle;
 #define     NULL            0x00
 #endif
 
-#define STUN_OK             0
-#define STUN_INT_ERROR      1
-#define STUN_MEM_ERROR      2
-#define STUN_INVALID_PARAMS 3
-#define STUN_NOT_FOUND      4
-#define STUN_TERMINATED     5
-#define STUN_ENCODE_FAILED  6
-#define STUN_DECODE_FAILED  7
-#define STUN_MEM_INSUF      8
-#define STUN_NOT_SUPPORTED  9
-#define STUN_TRANSPORT_FAIL 10
-#define STUN_VALIDATON_FAIL 11
-#define STUN_NO_RESOURCE    12
+#define STUN_OK                 0
+#define STUN_INT_ERROR          1
+#define STUN_MEM_ERROR          2
+#define STUN_INVALID_PARAMS     3
+#define STUN_NOT_FOUND          4
+#define STUN_TERMINATED         5
+#define STUN_ENCODE_FAILED      6
+#define STUN_DECODE_FAILED      7
+#define STUN_MEM_INSUF          8
+#define STUN_NOT_SUPPORTED      9
+#define STUN_TRANSPORT_FAIL     10
+#define STUN_VALIDATON_FAIL     11
+#define STUN_NO_RESOURCE        12
+#define STUN_MSG_NOT            13
+#define STUN_BINDING_DONE       14
+#define STUN_BINDING_CHANGED    15
 
 
 #define stun_malloc platform_malloc
@@ -90,6 +94,10 @@ typedef     void*           handle;
 #define stun_memset platform_memset
 #define stun_memcpy platform_memcpy
 #define stun_memcmp platform_memcmp
+#define stun_MD5_CTX MD5_CTX
+#define stun_MD5_Init MD5_Init
+#define stun_MD5_Update MD5_Update
+#define stun_MD5_Final MD5_Final
 #define platform_md5 MD5
 #define platform_hmac_sha platform_hmac_sha
 #define stun_strcpy strcpy
@@ -109,9 +117,12 @@ typedef     void*           handle;
 
 typedef enum
 {
+    LOG_SEV_EMERG = 0,
+    LOG_SEV_ALERT,
     LOG_SEV_CRITICAL,
     LOG_SEV_ERROR,
     LOG_SEV_WARNING,
+    LOG_SEV_NOTICE,
     LOG_SEV_INFO,
     LOG_SEV_DEBUG,
     LOG_SEV_MAX,
@@ -126,6 +137,13 @@ typedef enum
 } stun_inet_addr_type_t;
 
 
+typedef enum {
+    ICE_TRANSPORT_UDP = 0,
+    ICE_TRANSPORT_TCP,
+    ICE_TRANSPORT_INVALID,
+} stun_transport_protocol_type_t;
+
+
 typedef struct 
 {
     stun_inet_addr_type_t   host_type;
@@ -134,10 +152,11 @@ typedef struct
 } stun_inet_addr_t;
 
 
-#define ICE_LOG app_log
+/** use __TIME__ !!! */
+#define ICE_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
 
-void app_log(/** char *file_name, uint32_t line_num, */
-                stun_log_level_t level, char *format, ...);
+void app_log(stun_log_level_t level,
+        char *file_name, uint32_t line_num, char *format, ...);
 
 
 /******************************************************************************/

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -28,12 +29,23 @@ typedef struct {
 } ice_int_params_t;
 
 
+typedef struct {
+    handle h_media;
+    uint32_t comp_id;
+    uint32_t len;
+    u_char *data;
+} ice_media_data_t;
+
+
 typedef enum {
-    ICE_TURN_TIMER = 0,/** timer type for turn layer */
-    ICE_CC_TIMER,      /** timer type for conn check layer */
-    /** timer used in this ice layer during connectivity checks */
-    ICE_CHECK_LIST_TIMER,
-    /** that's all we have as of now */
+    ICE_TURN_TIMER = 0,     /** timer type for turn */
+    ICE_BIND_TIMER,         /** timer type for stun binding */
+    ICE_CC_TIMER,           /** timer type for conn check module */
+    ICE_CHECK_LIST_TIMER,   /** checklist timer */
+    ICE_NOMINATION_TIMER,   /** nomination timer */
+    ICE_KEEP_ALIVE_TIMER,   /** keep alive timer for refreshing nat bindings */
+    
+    /** that's all we have as of now ... */
 } ice_timer_type_t;
 
 
@@ -58,9 +70,9 @@ typedef enum
 typedef enum
 {
     ICE_CP_EVENT_UNFREEZE = 0,
-    ICE_CP_EVENT_CC_INIT,
-    ICE_EP_EVENT_CC_SUCCESS,
-    ICE_CP_EVENT_CC_FAILED,
+    ICE_CP_EVENT_INIT_CHECK,
+    ICE_EP_EVENT_CHECK_SUCCESS,
+    ICE_CP_EVENT_CHECK_FAILED,
     ICE_CP_EVENT_MAX,
 } ice_cp_event_t;
 
@@ -81,7 +93,7 @@ typedef struct
     stun_inet_addr_type_t type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
     uint32_t port;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
 } ice_transport_t;
 
 
@@ -89,11 +101,15 @@ typedef struct tag_ice_candidate
 {
     ice_transport_t transport;
     ice_cand_type_t type;
+
+    /** local preference provided by the ICE agent */
+    uint32_t local_pref;
+
     uint32_t priority;
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t comp_id;
 
-    /** TODO -related address */
+    /** related address? */
     struct tag_ice_candidate *base;
 
     handle transport_param;
@@ -102,6 +118,24 @@ typedef struct tag_ice_candidate
 
 } ice_candidate_t;
 
+
+typedef struct
+{
+    ice_candidate_t *local_cand;
+
+    stun_inet_addr_t peer_addr;
+
+    uint32_t prflx_priority;
+    bool_t nominated;
+    bool_t controlling_role;
+
+    handle h_transport_conn;
+
+} ice_ic_check_t;
+
+
+/** Forward declaration */
+typedef struct struct_ice_media_stream ice_media_stream_t;
 
 typedef struct
 {
@@ -116,13 +150,19 @@ typedef struct
     /** pair priority */
     uint64_t priority;
 
+    /** whether the check is to be nominated or not */
+    bool_t check_nom_status;
+
     handle h_cc_session;
+    handle h_cc_cancel;
 
     handle h_transport_conn;
 
-    handle h_media_stream;
+    /** parent */
+    ice_media_stream_t *media;
 
 } ice_cand_pair_t;
+
 
 
 typedef enum 
@@ -139,6 +179,10 @@ typedef enum
     ICE_REMOTE_PARAMS,
     ICE_ADD_MEDIA,
     ICE_REMOVE_MEDIA,
+    ICE_CONN_CHECK_TIMER,
+    ICE_NOMINATION_TIMER_EXPIRY,
+    ICE_KEEP_ALIVE_EXPIRY,
+    ICE_SEND_MEDIA_DATA,
     ICE_SES_EVENT_MAX,
 } ice_session_event_t;
 
@@ -162,6 +206,7 @@ typedef enum
     ICE_MEDIA_GATHER = 0,
     ICE_MEDIA_RELAY_MSG,
     ICE_MEDIA_GATHER_RESP,
+    ICE_MEDIA_GATHER_FAILED,
     ICE_MEDIA_FORM_CHECKLIST,
     ICE_MEDIA_UNFREEZE,
     ICE_MEDIA_CHECKLIST_TIMER,
@@ -169,7 +214,11 @@ typedef enum
     ICE_MEDIA_RESTART,
     ICE_MEDIA_REMOTE_PARAMS,
     ICE_MEDIA_BOTH_LITE,
-    ICE_MEDIA_CC_EVENT_MAX,
+    ICE_MEDIA_CC_TIMER,
+    ICE_MEDIA_NOMINATION_TIMER,
+    ICE_MEDIA_KEEP_ALIVE_TIMER,
+    ICE_MEDIA_SEND_DATA,
+    ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 
 typedef enum
@@ -179,15 +228,37 @@ typedef enum
     ICE_MEDIA_GATHERED,
     ICE_MEDIA_FROZEN,
     ICE_MEDIA_CC_RUNNING,
+    ICE_MEDIA_NOMINATING,
     ICE_MEDIA_CC_COMPLETED,
     ICE_MEDIA_CC_FAILED,
-    ICE_MEDIA_CC_STATE_MAX,
+    ICE_MEDIA_STATE_MAX,
 } ice_media_stream_state_t;
+
+
+typedef struct ice_trigger_check_node
+{
+    ice_cand_pair_t *cp;
+    struct ice_trigger_check_node *next;
+} ice_trigger_check_node_t;
+
+
+typedef struct ice_component
+{
+    uint32_t comp_id;
+
+    /** keep alive timer */
+    ice_timer_params_t *keepalive_timer;
+
+    /** handle to the nominated pair */
+    ice_cand_pair_t *np;
+
+} ice_component_t;
+
 
 /** forward declaration */
 typedef struct struct_ice_session ice_session_t;
 
-typedef struct
+struct struct_ice_media_stream
 {
     /** pointer back to the parent ICE session */
     ice_session_t *ice_session; 
@@ -208,14 +279,14 @@ typedef struct
     ice_media_stream_state_t state;
 
     /** check list timer used during connectivity checks */
-    ice_timer_params_t *cc_timer;
+    ice_timer_params_t *checklist_timer;
+
+    /** connectivity checks valid pair evaluation timer */
+    ice_timer_params_t *nomination_timer;
 
     /** check list */
     uint32_t num_cand_pairs;
     ice_cand_pair_t ah_cand_pairs[ICE_MAX_CANDIDATE_PAIRS];
-
-    /** valid pairs */
-    ice_cand_pair_t ah_valid_pairs[ICE_MAX_CANDIDATE_PAIRS];
 
     /** previous selected pairs, used during media restart */
     ice_cand_pair_t ah_prev_sel_pair[ICE_MAX_COMPONENTS];
@@ -223,11 +294,25 @@ typedef struct
     ice_candidate_t as_local_cands[ICE_CANDIDATES_MAX_SIZE];
     ice_candidate_t as_remote_cands[ICE_CANDIDATES_MAX_SIZE];
 
+    /** triggered FIFO check queue */
+    ice_trigger_check_node_t *trig_check_list;
+
+    /** 
+     * list that stores incoming conn check pair details 
+     * when answer is not yet received from remote 
+     */
+    uint32_t ic_check_count;
+    ice_ic_check_t ic_checks[ICE_MAX_CANDIDATE_PAIRS];
+
     handle h_turn_sessions[ICE_MAX_COMPONENTS];
-
+    handle h_bind_sessions[ICE_MAX_COMPONENTS];
     handle h_cc_svr_session;
+ 
+    ice_component_t media_comps[ICE_MAX_COMPONENTS];
 
-} ice_media_stream_t;
+    bool_t o_removed;
+};
+
 
 
 typedef struct 
@@ -235,8 +320,12 @@ typedef struct
     /** turn instance handle */
     handle h_turn_inst;
 
+    /** stun binding instance handle */
+    handle h_bind_inst;
+
     /** software client name and version */
-    u_char client[SOFTWARE_CLIENT_NAME_LEN];
+    uint32_t client_name_len;
+    u_char *client_name;
 
     /** session list */
     handle  h_table;
@@ -248,6 +337,10 @@ typedef struct
     ice_session_nwk_send_cb nwk_send_cb;
     ice_session_start_timer_cb start_timer_cb;
     ice_session_stop_timer_cb stop_timer_cb;
+    ice_session_rx_app_data rx_app_data_cb;
+
+    /** ice nomination mode */
+    ice_nomination_type_t nomination_mode;
 
     /** 
      * agent application event handler callbacks 
@@ -269,10 +362,17 @@ struct struct_ice_session
     ice_mode_type_t local_mode;
     ice_mode_type_t peer_mode;
 
+    /** controlling or controlled */
     ice_agent_role_type_t role;
+
+    /** tie-breaker */
+    uint64_t tie_breaker;
 
     uint32_t num_media_streams;
     ice_media_stream_t *aps_media_streams[ICE_MAX_MEDIA_STREAMS];
+
+    bool_t use_relay;
+    bool_t o_destroyed;
 
     /**
      * turn/relay server configuration

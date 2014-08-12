@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -18,6 +19,7 @@ extern "C" {
 
 /******************************************************************************/
 
+
 #include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_msg.h"
@@ -27,6 +29,8 @@ extern "C" {
 #include "stun_txn_utils.h"
 #include "stun_txn_fsm.h"
 
+
+    
 int32_t stun_txn_create_instance(uint32_t max_txns, handle *h_inst)
 {
     int32_t status;
@@ -104,6 +108,7 @@ int32_t stun_txn_destroy_instance(handle h_inst)
     return STUN_OK;
 }
 
+
 int32_t stun_create_txn(handle h_inst, stun_txn_type_t type, 
                             stun_transport_type_t tport, handle *h_txn)
 {
@@ -164,6 +169,7 @@ int32_t stun_create_txn(handle h_inst, stun_txn_type_t type,
 
     txn->rc_count = 0;
     txn->last_rto = 0;
+    txn->cancelled = false;
 
     /** do not add it to the transaction table yet */
      
@@ -229,6 +235,23 @@ int32_t stun_txn_get_app_param(handle h_inst, handle h_txn, handle *h_param)
     instance = (stun_txn_instance_t *) h_inst;
 
     *h_param = txn_ctxt->app_param;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_cancel_txn(handle h_inst, handle h_txn)
+{
+    stun_txn_context_t *txn_ctxt;
+    stun_txn_instance_t *instance;
+
+    if ((h_inst == NULL) || (h_txn == NULL))
+        return STUN_INVALID_PARAMS;
+
+    txn_ctxt = (stun_txn_context_t *) h_txn;
+    instance = (stun_txn_instance_t *) h_inst;
+
+    txn_ctxt->cancelled = true;
 
     return STUN_OK;
 }
@@ -308,8 +331,11 @@ int32_t stun_destroy_txn(handle h_inst,
 
     stun_free(txn_ctxt);
 
+    ICE_LOG(LOG_SEV_DEBUG, "Destroyed transaction with handle %p", h_txn);
+
     return STUN_OK;
 }
+
 
 int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
 {
@@ -328,7 +354,7 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
     if (status != STUN_OK)
         return status;
 
-    if (msg_class ==  STUN_REQUEST)
+    if (msg_class == STUN_REQUEST)
     {
         stun_txn_utils_generate_txn_id(txn->txn_id, STUN_TXN_ID_BYTES);
 
@@ -337,7 +363,7 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         /** set in the message */
         stun_msg_set_txn_id(h_msg, txn->txn_id);
 
-        stun_txn_fsm_inject_msg(txn, STUN_REQ, h_msg);
+        status = stun_txn_fsm_inject_msg(txn, STUN_REQ, h_msg);
     }
     else if (msg_class == STUN_INDICATION)
     {
@@ -345,7 +371,11 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
 
         stun_txn_utils_generate_txn_id(txn_id, STUN_TXN_ID_BYTES);
 
+        stun_msg_set_txn_id(h_msg, txn_id);
+        txn->h_req = h_msg;
+
         /** send message to remote */
+        status = instance->nwk_send_cb(h_msg, txn->app_transport_param);
     }
     else
     {
@@ -354,13 +384,24 @@ int32_t stun_txn_send_stun_message(handle h_inst, handle h_txn, handle h_msg)
         /** STUN_SUCCESS_RESP or STUN_ERROR_RESP */
         status = stun_txn_table_find_txn(instance->h_table, h_msg, &h_temp);
         if ((status == STUN_NOT_FOUND) || (h_temp != h_txn))
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[STUN TXN] Could not find the transaction while "\
+                    "sending response");
             return STUN_INVALID_PARAMS;
+        }
 
-        stun_txn_fsm_inject_msg(txn, STUN_RESP, h_msg);
+        status = stun_txn_fsm_inject_msg(txn, STUN_RESP, h_msg);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR,
+                    "stun_txn_send_stun_message() returned %d", status);
+        }
     }
 
-    return STUN_OK;
+    return status;
 }
+
 
 int32_t stun_txn_inject_timer_message(handle h_timerid,
                                         handle h_timer_arg, handle *h_txn)
@@ -467,17 +508,17 @@ int32_t stun_txn_inject_received_msg (handle h_inst,
     /** make sure given transaction is still alive */
     status = stun_txn_table_find_txn(inst->h_table, h_msg, &h_temp);
 
-    if (msg_class ==  STUN_REQUEST)
+    if (msg_class == STUN_REQUEST)
     {
-        /** hmm... a farm fresh juicy server transaction */ 
+        /** hmm... server transaction */ 
     	stun_msg_get_txn_id(h_msg, txn_ctxt->txn_id);
-
-        ICE_LOG (LOG_SEV_DEBUG, "incoming cc check - about to add new transaction %p to table\n", h_txn);
 
         /** add it the table */
         stun_txn_table_add_txn(inst->h_table, h_txn);
 
-        ICE_LOG (LOG_SEV_DEBUG, "incoming cc check - added transaction %p to table\n", h_txn);
+        ICE_LOG (LOG_SEV_DEBUG, 
+                "[STUN TXN] incoming STUN request - added transaction "\
+                "%p to table", h_txn);
 
         status = stun_txn_fsm_inject_msg(txn_ctxt, STUN_REQ, h_msg);
     }
@@ -494,7 +535,8 @@ int32_t stun_txn_inject_received_msg (handle h_inst,
         /** just to clear doubt, if any */
         if (h_temp != txn_ctxt)
         { 
-            ICE_LOG (LOG_SEV_WARNING, "Transaction found but no match!\n");
+            ICE_LOG (LOG_SEV_WARNING, 
+                    "[STUN TXN] Transaction found but no match!");
             return STUN_INT_ERROR;
         }
 

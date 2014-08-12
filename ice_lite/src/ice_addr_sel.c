@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -45,6 +46,7 @@ typedef struct
  */
 static rfc3484_addr_sel_rule_t def_policy_table[RFC3484_DEFAULT_POLICY_TBL_SIZE] =
 {
+#if 0
     {
         { .__in6_u = { .__u6_addr8 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 } }
@@ -68,6 +70,32 @@ static rfc3484_addr_sel_rule_t def_policy_table[RFC3484_DEFAULT_POLICY_TBL_SIZE]
     {
         { .__in6_u = { .__u6_addr8 = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                                     0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 } }
+        }, 96, 10, 4
+    }
+#endif
+    {
+        { .s6_addr = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01 }
+        }, 128, 50, 0
+    },
+    {
+        { .s6_addr = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+        }, 0, 40, 1
+    },
+    {
+        { .s6_addr = { 0x20, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+        }, 16, 30, 2
+    },
+    {
+        { .s6_addr = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }
+        }, 96, 20, 3
+    },
+    {
+        { .s6_addr = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                       0x00, 0x00, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00 }
         }, 96, 10, 4
     }
 };

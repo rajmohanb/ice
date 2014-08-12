@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -22,7 +23,14 @@ extern "C" {
 /******************************************************************************/
 
 
-int32_t stun_binding_utils_create_request_msg(handle *h_req);
+int32_t stun_binding_utils_create_msg(stun_msg_type_t msg_type, handle *h_req);
+
+
+int32_t stun_binding_utils_start_refresh_timer(stun_binding_session_t *session);
+
+
+int32_t stun_binding_utils_initiate_session_refresh(
+                                        stun_binding_session_t *session);
 
 
 /******************************************************************************/

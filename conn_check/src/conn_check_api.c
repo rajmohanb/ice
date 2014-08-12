@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -17,6 +18,7 @@ extern "C" {
 #endif
 
 /******************************************************************************/
+
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
@@ -114,7 +116,7 @@ int32_t cc_stop_timer(handle timer_id)
 
     if (status == STUN_OK)
     {
-        /** timer stopped successfully, so free the memory for turn timer */
+        /** timer stopped successfully, so free the memory for the timer */
         stun_free(timer);
     }
 
@@ -155,6 +157,26 @@ int32_t conn_check_instance_set_callbacks(
 }
 
 
+int32_t conn_check_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len)
+{
+    conn_check_instance_t *instance;
+
+    if ((h_inst == NULL) || (client == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+
+    instance->client_name = (u_char *) stun_calloc (1, len);
+    if (instance->client_name == NULL) return STUN_MEM_ERROR;
+
+    instance->client_name_len = len;
+    stun_memcpy(instance->client_name, client, len);
+
+    return STUN_OK;
+}
+
+
 int32_t conn_check_destroy_instance(handle h_inst)
 {
     conn_check_instance_t *instance;
@@ -173,6 +195,8 @@ int32_t conn_check_destroy_instance(handle h_inst)
     }
 
     stun_txn_destroy_instance(instance->h_txn_inst);
+
+    stun_free(instance->client_name);
 
     stun_free(instance);
 
@@ -226,7 +250,10 @@ int32_t conn_check_create_session(handle h_inst,
     }
 
     session->nominated = false;
+    session->controlling_role = false;
+    session->prflx_cand_priority = 0;
     session->cc_succeeded = false;
+    session->error_code = 0;
 
     *h_session = session;
 
@@ -257,6 +284,7 @@ int32_t conn_check_session_set_peer_transport_params(
 }
 
 
+
 int32_t conn_check_session_set_local_credentials(handle h_inst, 
                 handle h_session, conn_check_credentials_t *cred)
 {
@@ -280,6 +308,7 @@ int32_t conn_check_session_set_local_credentials(handle h_inst,
 
     return STUN_OK;
 }
+
 
 
 int32_t conn_check_session_set_peer_credentials(handle h_inst, 
@@ -307,6 +336,7 @@ int32_t conn_check_session_set_peer_credentials(handle h_inst,
 }
 
 
+
 int32_t conn_check_session_set_app_param(handle h_inst, 
                                     handle h_session, handle h_param)
 {
@@ -325,6 +355,8 @@ int32_t conn_check_session_set_app_param(handle h_inst,
 
     return STUN_OK;
 }
+
+
 
 int32_t conn_check_session_set_transport_param(handle h_inst, 
                                     handle h_session, handle h_param)
@@ -346,6 +378,7 @@ int32_t conn_check_session_set_transport_param(handle h_inst,
 }
 
 
+
 int32_t conn_check_session_get_app_param(handle h_inst, 
                                     handle h_session, handle *h_param)
 {
@@ -363,6 +396,50 @@ int32_t conn_check_session_get_app_param(handle h_inst,
     *h_param = session->app_param;
 
     return STUN_OK;
+}
+
+
+int32_t conn_check_session_set_session_params(handle h_inst, 
+                        handle h_session, conn_check_session_params_t *params)
+{
+    conn_check_instance_t *instance;
+    conn_check_session_t *session;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+    session = (conn_check_session_t *) h_session;
+
+    /** TODO - make sure the session still exists */
+
+    session->nominated = params->nominated;
+    session->controlling_role = params->controlling_role;
+    session->prflx_cand_priority = params->prflx_cand_priority;
+    session->tie_breaker = params->tie_breaker;
+
+    return STUN_OK;
+}
+
+
+int32_t conn_check_cancel_session(handle h_inst, handle h_session)
+{
+    conn_check_instance_t *instance;
+    conn_check_session_t *session;
+    uint32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+    session = (conn_check_session_t *) h_session;
+
+    for (i = 0; i < CONN_CHECK_MAX_CONCURRENT_SESSIONS; i++)
+        if (instance->ah_session[i] == h_session) { break; }
+
+    if (i == CONN_CHECK_MAX_CONCURRENT_SESSIONS) { return STUN_INVALID_PARAMS; }
+
+    return conn_check_session_fsm_inject_msg(session, CONN_CHECK_CANCEL, NULL);
 }
 
 
@@ -395,8 +472,40 @@ int32_t conn_check_destroy_session(handle h_inst, handle h_session)
 }
 
 
+int32_t conn_check_session_initiate_check(handle h_inst, handle h_session)
+{
+    conn_check_instance_t *instance;
+    conn_check_session_t *session;
+    int32_t status = STUN_OK;
+    conn_check_session_state_t cur_state;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+    session = (conn_check_session_t *) h_session;
+
+    if (session->sess_type != CC_CLIENT_SESSION)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Invalid session type for initiating "\
+                "connectivity checks");
+        return STUN_INVALID_PARAMS;
+    }
+
+    cur_state = session->state;
+    status = conn_check_session_fsm_inject_msg(session, CONN_CHECK_REQ, NULL);
+
+    if (cur_state != session->state)
+        instance->state_change_cb(h_inst, h_session, session->state, NULL);
+
+    return status;
+}
+
+
+
 int32_t conn_check_session_inject_received_msg(
-                        handle h_inst, handle h_session, handle h_msg)
+            handle h_inst, handle h_session, conn_check_rx_pkt_t *rx_msg)
 {
     conn_check_instance_t *instance;
     conn_check_session_t *session;
@@ -406,17 +515,17 @@ int32_t conn_check_session_inject_received_msg(
     stun_method_type_t method;
     stun_msg_type_t class;
 
-    if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
+    if ((h_inst == NULL) || (h_session == NULL) || (rx_msg == NULL))
         return STUN_INVALID_PARAMS;
 
     instance = (conn_check_instance_t *) h_inst;
     session = (conn_check_session_t *) h_session;
 
-    status = stun_msg_get_class(h_msg, &class);
+    status = stun_msg_get_class(rx_msg->h_msg, &class);
     if (status != STUN_OK)
         return status;
 
-    status = stun_msg_get_method(h_msg, &method);
+    status = stun_msg_get_method(rx_msg->h_msg, &method);
     if (status != STUN_OK)
         return status;
 
@@ -430,11 +539,8 @@ int32_t conn_check_session_inject_received_msg(
             break;
 
         case STUN_SUCCESS_RESP:
-            event = CONN_CHECK_OK_RESP;
-            break;
-
         case STUN_ERROR_RESP:
-            event = CONN_CHECK_ERROR_RESP;
+            event = CONN_CHECK_RESP;
             break;
 
         case STUN_INDICATION:
@@ -447,10 +553,53 @@ int32_t conn_check_session_inject_received_msg(
 
     /** TODO: make sure this session exists by searching in the instance */
     
-    session->h_resp = h_msg;
+    session->h_resp = rx_msg->h_msg;
 
-    return conn_check_session_fsm_inject_msg(session, event, h_msg);
+    cur_state = session->state;
+    return conn_check_session_fsm_inject_msg(session, event, rx_msg);
 }
+
+
+
+int32_t conn_check_instance_inject_timer_event(
+                    handle h_timerid, handle arg, handle *h_session)
+{
+    handle h_txn;
+    int32_t status;
+    cc_timer_params_t *timer;
+    conn_check_session_t *session;
+
+    if ((h_timerid == NULL) || (arg == NULL))
+        return STUN_INVALID_PARAMS;
+
+    timer = (cc_timer_params_t *) arg;
+    session = (conn_check_session_t *)timer->h_cc_session;
+
+    switch (timer->type)
+    {
+        case CC_STUN_TXN_TIMER:
+        {
+            status = stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
+            if (status == STUN_TERMINATED)
+            {
+                /** connectivity check transaction timed out */
+                status = conn_check_session_fsm_inject_msg(
+                                        session, CONN_CHECK_TIMER, h_txn);
+            }
+            *h_session = (handle) session;
+            stun_free(timer);
+
+            break;
+        }
+
+        default:
+            status = STUN_INVALID_PARAMS;
+            break;
+    }
+
+    return status;
+}
+
 
 
 int32_t conn_check_find_session_for_recv_msg(handle h_inst, 
@@ -513,10 +662,10 @@ int32_t conn_check_session_get_check_result(handle h_inst,
     result->controlling_role = session->controlling_role;
     result->error_code = session->error_code;
     result->nominated = session->nominated;
-    result->prflx_priority = session->prflx_cand_priority;
+    result->priority = session->prflx_cand_priority;
 
-    stun_memcpy(&result->prflx_addr,
-                    &session->prflx_addr, sizeof(stun_inet_addr_t));
+    stun_memcpy(&result->mapped_addr, 
+            &session->mapped_addr, sizeof(stun_inet_addr_t));
 
     return STUN_OK;
 }

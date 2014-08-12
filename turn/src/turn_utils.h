@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -21,14 +22,15 @@ extern "C" {
 
 /******************************************************************************/
 
-int32_t turn_utils_create_request_msg(
-                            stun_method_type_t method, handle *h_msg);
+int32_t turn_utils_create_request_msg(turn_session_t *session, 
+                                    stun_method_type_t method, handle *h_msg);
 
-int32_t turn_utils_create_indication(handle *h_msg);
-
-int32_t turn_utils_create_response_msg(handle *h_inst);
+int32_t turn_utils_cache_auth_params(turn_session_t *session, handle h_msg);
 
 int32_t turn_utils_create_alloc_req_msg_with_credential(
+                            turn_session_t *session, handle *h_newmsg);
+
+int32_t turn_utils_create_dealloc_req_msg(
                             turn_session_t *session, handle *h_newmsg);
 
 int32_t turn_utils_get_app_data_for_current_state(
@@ -37,7 +39,56 @@ int32_t turn_utils_get_app_data_for_current_state(
 int32_t turn_utils_extract_data_from_alloc_resp(
                                 turn_session_t *session, handle h_msg);
 
+int32_t turn_utils_extract_data_from_refresh_resp(
+                                turn_session_t *session, handle h_msg);
+
+int32_t turn_utils_create_refresh_req_msg(
+                            turn_session_t *session, handle *h_newmsg);
+
+int32_t turn_utils_create_permission_req_msg(
+                            turn_session_t *session, handle *h_newmsg);
+
+int32_t turn_utils_create_channel_bind_req_msg(turn_session_t *session, 
+                                    turn_permission_t *perm, handle *h_newmsg);
+
+int32_t turn_utils_create_send_ind_msg(
+        turn_session_t *session, turn_app_data_t *data, handle *h_newmsg);
+
+int32_t turn_utils_process_data_indication(
+                                turn_session_t *session, handle h_msg);
+
 int32_t turn_session_utils_notify_state_change_event(turn_session_t *session);
+
+int32_t turn_utils_start_alloc_refresh_timer(
+                                turn_session_t *session, uint32_t duration);
+
+int32_t turn_utils_stop_alloc_refresh_timer(turn_session_t *session);
+
+int32_t turn_utils_start_perm_refresh_timer(
+                                turn_session_t *session, uint32_t duration);
+
+int32_t turn_utils_stop_perm_refresh_timer(turn_session_t *session);
+
+int32_t turn_utils_start_keep_alive_timer(
+                                turn_session_t *session, uint32_t duration);
+
+int32_t turn_utils_stop_keep_alive_timer(turn_session_t *session);
+
+int32_t turn_table_validate_session_handle(handle h_inst, handle h_session);
+
+void turn_utils_free_all_session_timers(turn_session_t *session);
+
+void turn_utils_delete_all_permissions(turn_session_t *session);
+
+int32_t turn_utils_send_create_permission_req(turn_session_t *session);
+
+int32_t turn_utils_send_channel_bind_request (
+                            turn_session_t *session, turn_permission_t *perm);
+
+int32_t turn_utils_validate_integrity_for_rcvd_msg(
+                                    turn_session_t *session, handle h_rcvdmsg);
+
+
 
 
 /******************************************************************************/

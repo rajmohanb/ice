@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -158,11 +159,12 @@ ERROR_EXIT:
 
 
 
-int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
+int32_t stun_msg_decode(u_char *buf, uint32_t len, 
+                                    bool_t validate_fp, handle *tlv)
 {
     stun_msg_t *msg;
     u_char *pkt = buf;
-    uint16_t val16, attr_len, i;
+    uint16_t val16, i;
     uint32_t val32;
     handle h_msg;
     int32_t status;
@@ -207,7 +209,7 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
     pkt += 2;
 
     stun_memcpy(&val16, pkt, sizeof(uint16_t));
-    attr_len = ntohs(val16);
+    msg->hdr.length = ntohs(val16);
 
     pkt += 2;
     stun_memcpy(&val32, pkt, sizeof(uint32_t));
@@ -253,6 +255,17 @@ int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv)
 
     stun_memcpy(msg->stun_msg, buf, len);
     msg->stun_msg_len = len;
+
+    /** validate fingerprint if desired */
+    if (validate_fp == true)
+    {
+        status = stun_msg_validate_fingerprint((handle)msg);
+        if (status != STUN_OK)
+        {
+            ICE_LOG (LOG_SEV_ERROR, "Fingerprint Validation Failed");
+            goto ERROR_EXIT;
+        }
+    }
 
     *tlv = msg;
 

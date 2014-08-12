@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -23,6 +24,28 @@ extern "C" {
 
 
 #define STUN_BINDING_TXN_TABLE_SIZE     10
+
+
+typedef enum
+{
+    /** timer started by turn transactions */
+    BIND_STUN_TXN_TIMER = 0,
+
+    BIND_REFRESH_TIMER,
+    
+    /** that's all we have as of now */
+} stun_bind_timer_type_t;
+
+
+typedef struct {
+
+    handle h_instance;
+    handle h_bind_session;
+    stun_bind_timer_type_t type;
+    handle timer_id;
+    handle arg;
+} stun_bind_timer_params_t;
+
 
 typedef struct 
 {
@@ -54,6 +77,10 @@ typedef struct
     handle h_txn;
     handle h_req;
     handle h_resp;
+
+    uint32_t refresh_duration; /** milliseconds */
+    stun_bind_timer_params_t *refresh_timer;
+    bool_t refresh_started;
 
 } stun_binding_session_t;
 

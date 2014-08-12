@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -110,21 +111,44 @@ typedef enum {
 } stun_addr_family_type_t;
 
 
-typedef enum {
-    STUN_TRANSPORT_TCP = 6,
-    STUN_TRANSPORT_UDP = 17,
-    STUN_TRANSPORT_SCTP = 132,
-    STUN_TRANSPORT_MAX,
-} stun_transport_protocol_type_t;
+//typedef enum {
+/** standard well defined IP protocol types */
+#define STUN_TRANSPORT_TCP              6
+#define STUN_TRANSPORT_UDP              17
+#define STUN_TRANSPORT_SCTP             132
+//} stun_transport_protocol_type_t;
+
+
+/** list of stun error codes reason phrase */
+#define STUN_ERROR_TRY_ALTERNATE     300
+#define STUN_ERROR_BAD_REQUEST       400
+#define STUN_ERROR_UNAUTHORIZED      401
+#define STUN_ERROR_FORBIDDEN         403
+#define STUN_ERROR_UNKNOWN_ATTR      420
+#define STUN_ERROR_ALLOC_MISMATCH    437
+#define STUN_ERROR_STALE_NONCE       438
+#define STUN_ERROR_WRONG_CREDS       441
+#define STUN_ERROR_UNSUPPORTED_PROTO 442
+#define STUN_ERROR_QUOTA_REACHED     486
+#define STUN_ERROR_ROLE_CONFLICT     487
+#define STUN_ERROR_SERVER_ERROR      500
+#define STUN_ERROR_INSUF_CAPACITY    508
 
 
 /** list of stun error codes reason phrase */
 #define STUN_REJECT_RESPONSE_300 "Try Alternate"
 #define STUN_REJECT_RESPONSE_400 "Bad Request"
 #define STUN_REJECT_RESPONSE_401 "Unauthorized"
+#define STUN_REJECT_RESPONSE_403 "Forbidden"
 #define STUN_REJECT_RESPONSE_420 "Unknown Attribute"
+#define STUN_REJECT_RESPONSE_437 "Allocation Mismatch"
 #define STUN_REJECT_RESPONSE_438 "Stale Nonce"
+#define STUN_REJECT_RESPONSE_441 "Wrong Credentials"
+#define STUN_REJECT_RESPONSE_442 "Unsupported Transport Protocol"
+#define STUN_REJECT_RESPONSE_486 "Allocation Quota Reached"
+#define STUN_REJECT_RESPONSE_487 "Role Conflict"
 #define STUN_REJECT_RESPONSE_500 "Server Error"
+#define STUN_REJECT_RESPONSE_508 "Insufficient Capacity"
 
 
 /** instance specific apis */
@@ -169,6 +193,12 @@ int32_t stun_msg_validate_message_integrity(
 
 int32_t stun_msg_validate_fingerprint(handle h_msg);
 
+int32_t stun_msg_verify_if_valid_stun_packet(u_char *pkt, uint32_t pkt_len);
+
+u_char* stun_msg_get_raw_buffer(handle h_msg, uint32_t *len);
+
+
+/* ========================================================================== */
 
 /** generic attribute apis */
 int32_t stun_attr_create(stun_attribute_type_t attr_type, handle *h_attr);
@@ -176,24 +206,28 @@ int32_t stun_attr_create(stun_attribute_type_t attr_type, handle *h_attr);
 int32_t stun_attr_destroy(handle h_attr);
 
 
+/* ========================================================================== */
+
 /** attribute specific apis */
 int32_t stun_attr_software_set_value(handle h_attr, 
-                                            s_char *value, uint16_t len);
+                                            u_char *value, uint16_t len);
+
+int32_t stun_attr_software_get_value_length(handle h_attr, uint32_t *len);
 
 int32_t stun_attr_software_get_value(handle h_attr, 
-                                            s_char *value, uint16_t *len);
+                                        u_char *value, uint16_t *len);
 
 /* ========================================================================== */
 
 int32_t stun_attr_mapped_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len);
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len);
 
 int32_t stun_attr_mapped_addr_get_port(handle h_attr, uint32_t *port);
 
 /* ========================================================================== */
 
 int32_t stun_attr_xor_mapped_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len);
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len);
 
 int32_t stun_attr_xor_mapped_addr_set_address(handle h_attr, 
             u_char *address, uint32_t len, stun_addr_family_type_t family);
@@ -205,20 +239,40 @@ int32_t stun_attr_xor_mapped_addr_set_port(handle h_attr, uint32_t port);
 /* ========================================================================== */
 
 int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len);
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len);
+
+int32_t stun_attr_xor_relayed_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family);
 
 int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port);
+
+int32_t stun_attr_xor_relayed_addr_set_port(handle h_attr, uint32_t port);
 
 /* ========================================================================== */
 
 int32_t stun_attr_xor_peer_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len);
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len);
+
+int32_t stun_attr_xor_peer_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family);
 
 int32_t stun_attr_xor_peer_addr_get_port(handle h_attr, uint32_t *port);
+
+int32_t stun_attr_xor_peer_addr_set_port(handle h_attr, uint32_t port);
 
 /* ========================================================================== */
 
 int32_t stun_attr_lifetime_get_duration(handle h_attr, uint32_t *duration);
+
+int32_t stun_attr_lifetime_set_duration(handle h_attr, uint32_t duration);
+
+/* ========================================================================== */
+
+int32_t stun_attr_data_get_data_length(handle h_attr, uint32_t *len);
+
+int32_t stun_attr_data_get_data(handle h_attr, u_char *data, uint32_t len);
+
+int32_t stun_attr_data_set_data(handle h_attr, u_char *data, uint32_t len);
 
 /* ========================================================================== */
 
@@ -231,13 +285,17 @@ int32_t stun_attr_error_code_set_error_reason(
 
 /* ========================================================================== */
 
-int32_t stun_attr_username_get_user_name(
-                    handle h_attr, u_char *user_name, uint32_t *len);
+int32_t stun_attr_username_get_username_length(handle h_attr, uint32_t *len);
 
-int32_t stun_attr_username_set_user_name(handle h_attr, 
-                                                u_char *name, uint32_t len);
+int32_t stun_attr_username_get_username(handle h_attr, 
+                                            u_char *name, uint32_t *len);
+
+int32_t stun_attr_username_set_username(handle h_attr, 
+                                            u_char *name, uint32_t len);
 
 /* ========================================================================== */
+
+int32_t stun_attr_realm_get_realm_length(handle h_attr, uint32_t *len);
 
 int32_t stun_attr_realm_get_realm(
                             handle h_attr, u_char *realm_val, uint32_t *len);
@@ -253,14 +311,56 @@ int32_t stun_attr_unknown_attributes_add_attr_type(
 
 int32_t stun_attr_nonce_set_nonce(
                             handle h_attr, u_char *nonce_val, uint32_t len);
+
+int32_t stun_attr_nonce_get_nonce_length(handle h_attr, uint32_t *len);
+
 int32_t stun_attr_nonce_get_nonce(
                             handle h_attr, u_char *nonce_val, uint32_t *len);
 
 /* ========================================================================== */
 
 int32_t stun_attr_requested_transport_set_protocol(
-                        handle h_attr, stun_transport_protocol_type_t proto);
+                                        handle h_attr, uint32_t proto);
 
+int32_t stun_attr_requested_transport_get_protocol(
+                                        handle h_attr, uint32_t *proto);
+
+/* ========================================================================== */
+
+
+int32_t stun_attr_priority_get_priority(handle h_attr, uint32_t *priority);
+
+int32_t stun_attr_priority_set_priority(handle h_attr, uint32_t priority);
+
+int32_t stun_attr_ice_controlling_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak);
+
+int32_t stun_attr_ice_controlling_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak);
+
+int32_t stun_attr_ice_controlled_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak);
+
+int32_t stun_attr_ice_controlled_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak);
+
+int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num);
+
+int32_t stun_attr_channel_number_get_channel(handle h_attr, uint16_t *num);
+
+
+/* ========================================================================== */
+
+#if 0
+#define stun_attr_ice_controlled_get_tiebreaker_value(h_attr, tiebreak) \
+            stun_attr_ice_controlling_get_tiebreaker_value(h_attr, tiebreak)
+
+#define stun_attr_ice_controlled_set_tiebreaker_value(h_attr, tiebreak) \
+            stun_attr_ice_controlling_set_tiebreaker_value(h_attr, tiebreak)
+#endif
+        
+/* ========================================================================== */
+/* ========================================================================== */
 /* ========================================================================== */
 
 

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -21,6 +22,7 @@ extern "C" {
 
 #include "stun_base.h"
 #include "msg_layer_api.h"
+#include "conn_check_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_utils.h"
@@ -40,27 +42,33 @@ static ice_cand_pair_fsm_handler
     /** ICE_CP_WAITING */
     {
         ice_cp_ignore_msg,
-        ice_cp_initiate_cc,
-        ice_cp_ignore_msg,
+        ice_cp_initiate_check,
+        /** 
+         * For scenarios where current conn check is in progress, and a remote 
+         * request is received. In this case, the agent cancels the current 
+         * check for this pair, and adds a new check to the triggered queue 
+         * and moves the state of the pair to waiting. explained in sec 7.2.1.4
+         */
+        ice_cp_check_succeeded,
         ice_cp_ignore_msg,
     },
     /** ICE_CP_INPROGRESS */
     {
+        ice_cp_unfreeze,
         ice_cp_ignore_msg,
-        ice_cp_ignore_msg,
-        ice_cp_cc_succeeded,
-        ice_cp_cc_failed,
+        ice_cp_check_succeeded,
+        ice_cp_check_failed,
     },
     /** ICE_CP_SUCCEEDED */
     {
-        ice_cp_ignore_msg,
+        ice_cp_unfreeze,
         ice_cp_ignore_msg,
         ice_cp_ignore_msg,
         ice_cp_ignore_msg,
     },
     /** ICE_CP_FAILED */
     {
-        ice_cp_ignore_msg,
+        ice_cp_unfreeze,
         ice_cp_ignore_msg,
         ice_cp_ignore_msg,
         ice_cp_ignore_msg,
@@ -76,20 +84,37 @@ int32_t ice_cp_unfreeze(ice_cand_pair_t *cp, handle h_msg)
 }
 
 
-int32_t ice_cp_initiate_cc(ice_cand_pair_t *cp, handle h_msg)
+int32_t ice_cp_initiate_check(ice_cand_pair_t *cp, handle h_msg)
 {
+    int32_t status = ice_cand_pair_utils_init_connectivity_check(cp);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+                "[ICE CAND PAIR] Sending of connectivity check failed");
+        
+        cp->state = ICE_CP_FAILED;
+
+        return status;
+    }
+
+    cp->state = ICE_CP_INPROGRESS;
+
     return STUN_OK;
 }
 
 
-int32_t ice_cp_cc_succeeded(ice_cand_pair_t *cp, handle h_msg)
+int32_t ice_cp_check_succeeded(ice_cand_pair_t *cp, handle h_msg)
 {
+    cp->state = ICE_CP_SUCCEEDED;
+
     return STUN_OK;
 }
 
 
-int32_t ice_cp_cc_failed(ice_cand_pair_t *cp, handle h_msg)
+int32_t ice_cp_check_failed(ice_cand_pair_t *cp, handle h_msg)
 {
+    cp->state = ICE_CP_FAILED;
+
     return STUN_OK;
 }
 
@@ -100,17 +125,29 @@ int32_t ice_cp_ignore_msg(ice_cand_pair_t *cp, handle h_msg)
 }
 
 
-int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *session, 
+int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *cp, 
                                     ice_cp_event_t event, handle h_msg)
 {
+    int32_t status;
+    ice_cp_state_t old_state;
     ice_cand_pair_fsm_handler handler;
 
-    handler = ice_cand_pair_fsm[session->state][event];
+    old_state = cp->state;
+    handler = ice_cand_pair_fsm[cp->state][event];
 
     if (!handler)
         return STUN_INVALID_PARAMS;
 
-    return handler(session, h_msg);
+    status = handler(cp, h_msg);
+
+    if (old_state != cp->state)
+    {
+        ICE_LOG(LOG_SEV_DEBUG,
+                "[ICE CAND PAIR] Candidate pair state changed from %d to %d",
+                old_state, cp->state);
+    }
+
+    return status;
 }
 
 

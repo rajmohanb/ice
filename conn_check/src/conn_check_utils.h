@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -22,6 +23,9 @@ extern "C" {
 /******************************************************************************/
 
 
+#define CONN_CHECK_SIZEOF_IPV6_ADDR    16      /** sizeof(struct in_addr) */
+#define CONN_CHECK_SIZEOF_IPV4_ADDR    4       /** sizeof(struct in6_addr) */
+
 
 int32_t cc_utils_create_request_msg(
                             conn_check_session_t *session, handle *h_req);
@@ -30,16 +34,7 @@ int32_t cc_utils_create_indication(handle *h_msg);
 
 int32_t cc_utils_create_response_msg(handle *h_inst);
 
-int32_t cc_utils_create_binding_req_msg_with_credential(
-                    conn_check_session_t *session, handle *h_newmsg);
-
 int32_t conn_check_utils_get_app_data_for_current_state(
-                                conn_check_session_t *session, handle *data);
-
-int32_t cc_utils_extract_data_from_binding_resp(
-                                conn_check_session_t *session, handle h_msg);
-
-int32_t cc_utils_get_app_data_for_current_state(
                                 conn_check_session_t *session, handle *data);
 
 int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
@@ -58,6 +53,18 @@ int32_t conn_check_utils_send_error_resp(
 int32_t conn_check_utils_extract_username_components(
                 u_char *username, uint32_t len, u_char **local_user, 
                 uint32_t *local_len, u_char **peer_user, uint32_t *peer_len);
+
+int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code);
+
+uint32_t cc_utils_extract_conn_check_info(handle h_msg, 
+                                            conn_check_session_t *session);
+
+int32_t conn_check_detect_repair_role_conflicts(
+        conn_check_session_t *session, handle h_msg, int32_t *resp_code);
+
+bool_t conn_check_utils_host_compare (u_char *host1, 
+                    u_char *host2, stun_inet_addr_type_t addr_type);
+
 
 /******************************************************************************/
 

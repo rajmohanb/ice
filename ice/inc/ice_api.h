@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -34,11 +35,6 @@ typedef enum
 } ice_state_t;
 
 
-typedef enum {
-    ICE_TRANSPORT_UDP = 0,
-    ICE_TRANSPORT_TCP,
-} ice_transport_type_t;
-
 
 typedef enum
 {
@@ -56,6 +52,15 @@ typedef enum
     ICE_SESSION_OUTGOING = 0,
     ICE_SESSION_INCOMING,
 } ice_session_type_t;
+
+
+typedef enum
+{
+    ICE_NOMINATION_TYPE_INVALID = 0,
+    ICE_NOMINATION_TYPE_REGULAR,
+    ICE_NOMINATION_TYPE_AGGRESSIVE,
+    ICE_NOMINATION_TYPE_MAX,
+} ice_nomination_type_t;
 
 
 typedef enum
@@ -78,6 +83,9 @@ typedef struct
     /** source address of stun packet */
     stun_inet_addr_t src;
 
+    /** whether message is relayed - application should always set it false */
+    bool_t relayed_check;
+
 } ice_rx_stun_pkt_t;
 
 
@@ -86,12 +94,15 @@ typedef int32_t (*ice_session_nwk_send_cb) (u_char *buf,
                         u_char *ip_addr, uint32_t port, handle param);
 typedef handle (*ice_session_start_timer_cb) (uint32_t duration, handle arg);
 typedef int32_t (*ice_session_stop_timer_cb) (handle timer_id);
+typedef void (*ice_session_rx_app_data) (handle h_inst, handle h_session, 
+            handle h_media, uint32_t comp_id, void *data, uint32_t data_len);
 
 
 typedef struct {
     ice_session_nwk_send_cb nwk_cb;
     ice_session_start_timer_cb start_timer_cb;
     ice_session_stop_timer_cb  stop_timer_cb;
+    ice_session_rx_app_data app_data_cb;
 } ice_instance_callbacks_t;
 
 
@@ -126,17 +137,17 @@ typedef struct {
     /**
      * username if relay server requires authentication.
      */
-    u_char              username[TURN_MAX_USERNAME_LEN];
+    u_char                username[TURN_MAX_USERNAME_LEN];
 
     /**
      * credentials if relay server requires authentication.
      */
-    u_char              credential[TURN_MAX_PASSWORD_LEN];
+    u_char                credential[TURN_MAX_PASSWORD_LEN];
 
     /**
      * realm if relay server requires authentication
      */
-    u_char              realm[TURN_MAX_REALM_LEN];
+    u_char                realm[TURN_MAX_REALM_LEN];
 
 } ice_relay_server_cfg_t;
 
@@ -150,10 +161,16 @@ typedef struct {
 typedef struct
 {
     /** host candidate transport details */
-    stun_inet_addr_type_t type;
-    u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
-    uint32_t port;
-    ice_transport_type_t protocol;
+    stun_inet_addr_t addr;
+    stun_transport_protocol_type_t protocol;
+
+    /** 
+     * local preference for this candidate as defined in ICE RFC 4.1.2.1. 
+     * It must be an integer from 0 to 65535 inclusive. If the device is 
+     * multi-homed only, then set the value as per preference. Otherwise, 
+     * if a single IP address, then set it to 65535.
+     */
+    uint32_t local_pref;
 
     /** component id */
     uint32_t comp_id;
@@ -189,7 +206,7 @@ typedef struct
 {
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t component_id;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
     uint64_t priority;
     stun_inet_addr_type_t ip_addr_type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
@@ -265,6 +282,7 @@ typedef struct
 
 /******************************************************************************/
 
+
 int32_t ice_create_instance(handle *h_inst);
 
 int32_t ice_instance_set_callbacks(handle h_inst, 
@@ -273,14 +291,22 @@ int32_t ice_instance_set_callbacks(handle h_inst,
 int32_t ice_instance_register_event_handlers(handle h_inst, 
                         ice_state_event_handlers_t *event_handlers);
 
-int32_t ice_set_client_software_name(handle h_inst, u_char *name);
+int32_t ice_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len);
+
+int32_t ice_instance_set_connectivity_check_nomination_mode(
+                                handle h_inst, ice_nomination_type_t nom_type);
 
 int32_t ice_destroy_instance(handle h_inst);
 
-int32_t ice_instance_verify_valid_stun_packet(void);
 
-int32_t ice_create_session(handle h_inst, 
-        ice_session_type_t session_type, ice_mode_type_t mode, handle *h_session);
+int32_t ice_instance_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len);
+
+
+int32_t ice_create_session(handle h_inst,
+                           ice_session_type_t session_type, 
+                           ice_mode_type_t mode, 
+                           handle *h_session);
 
 int32_t ice_session_set_relay_server_cfg(handle h_inst, 
                             handle h_session, ice_relay_server_cfg_t *relay);
@@ -294,7 +320,8 @@ int32_t ice_session_add_media_stream (handle h_inst, handle h_session,
 int32_t ice_session_remove_media_stream (handle h_inst,
                                 handle h_session, handle h_media);
 
-int32_t ice_session_gather_candidates(handle h_inst, handle h_session);
+int32_t ice_session_gather_candidates(handle h_inst, 
+                                        handle h_session, bool_t use_relay);
 
 int32_t ice_session_get_session_params(handle h_inst, 
                 handle h_session, ice_session_params_t *session_params);
@@ -320,7 +347,8 @@ int32_t ice_session_form_check_lists(handle h_inst, handle h_session);
 
 int32_t ice_session_start_connectivity_checks(handle h_inst, handle h_session);
 
-int32_t ice_session_inject_timer_event(handle timer_id, handle arg);
+int32_t ice_session_inject_timer_event(
+                    handle timer_id, handle arg, handle *ice_session);
 
 int32_t ice_instance_find_session_for_received_msg(handle h_inst, 
                     handle h_msg, handle transport_param, handle *h_session);
@@ -328,11 +356,19 @@ int32_t ice_instance_find_session_for_received_msg(handle h_inst,
 int32_t ice_session_get_session_valid_pairs(handle h_inst, 
             handle h_session, ice_session_valid_pairs_t *valid_pairs);
 
+int32_t ice_session_get_nominated_pairs(handle h_inst, 
+            handle h_session, ice_session_valid_pairs_t *valid_pairs);
+
 int32_t ice_session_get_media_valid_pairs(handle h_inst, handle h_session, 
                 handle h_media, ice_media_valid_pairs_t *valid_pairs);
 
+int32_t ice_session_send_media_data (handle h_inst, handle h_session, 
+                handle h_media, uint32_t comp_id, u_char *data, uint32_t len);
+
 int32_t ice_session_restart_media_stream (handle h_inst,
                                 handle h_session, handle h_media);
+
+
 
 /******************************************************************************/
 

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -27,100 +28,155 @@ extern "C" {
 #include "conn_check_utils.h"
 
 
+
 int32_t cc_utils_create_request_msg(
                             conn_check_session_t *session, handle *h_req)
 {
-    handle h_msg, h_attr[4];
-    int32_t status;
+    handle h_msg, ah_attr[MAX_STUN_ATTRIBUTES] = {0};
+    int32_t status, i, attr_count = 0;
+    u_char username[48] = {0}; // better way? no hardcode of size?
+    uint32_t temp; // same as above
 
     status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Creating message failed");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creating BINDING req message failed - %d",
+                status);
         return status;
     }
 
+    /** software attribute */
+    if (session->instance->client_name)
+    {
+        status = stun_attr_create(STUN_ATTR_SOFTWARE, &(ah_attr[attr_count]));
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+        attr_count++;
+
+        status = stun_attr_software_set_value(ah_attr[attr_count - 1], 
+                                            session->instance->client_name, 
+                                            session->instance->client_name_len);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+    }
+
+    /** use candidate */
     if (session->nominated == true)
     {
-        status = stun_attr_create(STUN_ATTR_USE_CANDIDATE, &(h_attr[0]));
+        status = stun_attr_create(STUN_ATTR_USE_CANDIDATE, 
+                                                    &(ah_attr[attr_count]));
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of use candidate attribute failed");
-            goto ERROR_EXIT_PT1;
+                "[CONN CHECK] Creation of use candidate attribute failed");
+            goto ERROR_EXIT_PT;
         }
+        attr_count++;
+    }
 
-        status = stun_msg_add_attribute(h_msg, h_attr[0]);
+    /** priority */
+    status = stun_attr_create(STUN_ATTR_PRIORITY, &(ah_attr[attr_count]));
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[CONN CHECK] Creation of PRIORITY attribute failed");
+        goto ERROR_EXIT_PT;
+    }
+    attr_count++;
+
+    status = stun_attr_priority_set_priority(
+                        ah_attr[attr_count - 1], session->prflx_cand_priority);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+
+    /** ice controlling/controlled */
+    if (session->controlling_role == true)
+    {
+        status = stun_attr_create(STUN_ATTR_ICE_CONTROLLING, 
+                                                    &(ah_attr[attr_count]));
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of use candidate attribute failed");
-            goto ERROR_EXIT_PT2;
+                "[CONN CHECK] Creation of ICE CONTROLLING attribute failed");
+            goto ERROR_EXIT_PT;
         }
+        attr_count++;
+
+        status = stun_attr_ice_controlling_set_tiebreaker_value(
+                            ah_attr[attr_count - 1], session->tie_breaker);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
+    }
+    else
+    {
+        status = stun_attr_create(STUN_ATTR_ICE_CONTROLLED, 
+                                                    &(ah_attr[attr_count]));
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Creation of ICE CONTROLLED attribute failed");
+            goto ERROR_EXIT_PT;
+        }
+        attr_count++;
+
+        status = stun_attr_ice_controlled_set_tiebreaker_value(
+                            ah_attr[attr_count - 1], session->tie_breaker);
+        if (status != STUN_OK) goto ERROR_EXIT_PT;
     }
 
-#if 0
-    status = stun_attr_create(STUN_ATTR_PRIORITY, &(h_attr[0]));
+    /** username */
+    temp = stun_snprintf((char *)username, 48, "%s:%s", 
+                                session->peer_user, session->local_user);
+    status = stun_attr_create(STUN_ATTR_USERNAME, &(ah_attr[attr_count]));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "creation of priority attribute failed");
-        goto ERROR_EXIT_PT1;
+            "[CONN CHECK] Creation of USERNAME attribute failed");
+        goto ERROR_EXIT_PT;
     }
+    attr_count++;
 
-    status = stun_attr_priority_set_priority(h_attr[0], session->priority);
-    if (status != STUN_OK) goto ERROR_EXIT_PT1;
+    status = stun_attr_username_set_username(
+                                ah_attr[attr_count - 1], username, temp);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
 
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of priority attribute failed");
-        goto ERROR_EXIT_PT2;
-    }
-#endif
 
     /** message integrity */
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[0]));
+    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, 
+                                                    &(ah_attr[attr_count]));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "creation of message integrity attribute failed");
-        goto ERROR_EXIT_PT1;
+            "[CONN CHECK] Creation of MESSAGE-INTEGRITY attribute failed");
+        goto ERROR_EXIT_PT;
     }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of message integrity attribute failed");
-        goto ERROR_EXIT_PT2;
-    }
+    attr_count++;
 
     /** fingerprint */
-    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(h_attr[0]));
+    status = stun_attr_create(STUN_ATTR_FINGERPRINT, &(ah_attr[attr_count]));
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "creation of fingerprint attribute failed");
-        goto ERROR_EXIT_PT1;
+            "[CONN CHECK] Creation of FINGERPRINT attribute failed");
+        goto ERROR_EXIT_PT;
     }
+    attr_count++;
 
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
+    status = stun_msg_add_attributes(h_msg, ah_attr, attr_count);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of fingerprint attribute failed");
-        goto ERROR_EXIT_PT2;
+            "[CONN CHECK] Adding of attributes to BINDING request msg failed");
+        goto ERROR_EXIT_PT;
     }
 
     *h_req = h_msg;
 
     return status;
 
-ERROR_EXIT_PT2:
-    stun_attr_destroy(h_attr[0]);
-ERROR_EXIT_PT1:
+ERROR_EXIT_PT:
+
+    for (i = 0; i < attr_count; i++)
+        stun_attr_destroy(ah_attr[i]);
+
     stun_msg_destroy(h_msg);
 
     return status;
@@ -136,181 +192,13 @@ int32_t cc_utils_create_response_msg(handle *h_inst)
     return STUN_OK;
 }
 
-int32_t cc_utils_create_binding_req_msg_with_credential(
-                    conn_check_session_t *session, handle *h_newmsg)
-{
-    int32_t status;
-    uint32_t num, len, i;
-    handle h_temp, h_msg,  h_attr[5] = {0};
-    u_char buf[1000] = {0};
-
-    status = stun_msg_create(STUN_REQUEST, STUN_METHOD_BINDING, &h_msg);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of STUN BINDING request message failed");
-        return status;
-    }
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_USERNAME, &(h_attr[0]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of username attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_attr_username_set_user_name(h_attr[0], 
-            session->local_user, session->local_user_len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Setting of user name value to username attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[0]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of username attribute to request message failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[0] = NULL;
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_NONCE, &(h_attr[1]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Creation of nonce attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(
-                                session->h_resp, STUN_ATTR_NONCE, &h_temp, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting of nonce attribute from resp msg failed");
-        goto ERROR_EXIT;
-    }
-
-    len = 1000;
-    status = stun_attr_nonce_get_nonce(h_temp, buf, &len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Getting nonce value from nonce attribute in response msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_attr_nonce_set_nonce(h_attr[1], buf, len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Setting of nonce value to nonce attribute in request msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[1]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of nonce attribute to request msg failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[1] = NULL;
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_REALM, &(h_attr[2]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, "Creation of realm attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(
-                    session->h_resp, STUN_ATTR_REALM, &h_temp, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting of realm attributes from response msg failed");
-        goto ERROR_EXIT;
-    }
-
-    len = 1000;
-    status = stun_attr_realm_get_realm(h_temp, buf, &len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Getting the realm value from real attribute in resp msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_attr_realm_set_realm(h_attr[2], buf, len);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Setting the realm value in real attribute in req msg failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[2]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of realm attribute to request msg failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[2] = NULL;
-
-    /*------------------------------------------------------------*/
-
-    status = stun_attr_create(STUN_ATTR_MESSAGE_INTEGRITY, &(h_attr[3]));
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Creation of message integrity attribute failed");
-        goto ERROR_EXIT;
-    }
-
-    status = stun_msg_add_attribute(h_msg, h_attr[3]);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Adding of message integrity attribute to request msg failed");
-        goto ERROR_EXIT;
-    }
-    h_attr[3] = NULL;
-    
-    /*------------------------------------------------------------*/
-
-    *h_newmsg = h_msg;
-
-    return status;
-
-ERROR_EXIT:
-    for (i = 0; i < 5; i++)
-        if (h_attr[i]) stun_attr_destroy(h_attr[i]);
-
-    stun_msg_destroy(h_msg);
-
-    return status;
-}
-
 
 int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
                      handle h_req, stun_msg_type_t msg_type, handle *h_resp)
 {
     int32_t status;
     uint32_t num;
-    s_char software[MAX_STR_LEN];
+    u_char software[MAX_STR_LEN];
     handle h_msg, h_req_attr[1], h_resp_attr[1];
     stun_addr_family_type_t addr_family = STUN_ADDR_FAMLY_INVALID;
 
@@ -347,8 +235,7 @@ int32_t cc_utils_create_resp_from_req(conn_check_session_t *session,
             goto ERROR_EXIT_PT1;
         }
 
-        status = stun_attr_software_set_value(
-                            h_resp_attr[0], (s_char *)software, len);
+        status = stun_attr_software_set_value(h_resp_attr[0], software, len);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
@@ -472,132 +359,38 @@ ERROR_EXIT_PT1:
 }
 
 
-int32_t cc_utils_extract_data_from_binding_resp(
-                                conn_check_session_t *session, handle h_msg)
-{
-#if 0
-    handle h_attr[0];
-    int32_t num, len, status;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_XOR_MAPPED_ADDR, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_mapped_addr_get_address(
-                                    h_attr[0], session->srflx_ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_xor_mapped_addr_get_port(
-                                    h_attr[0], &session->srflx_port);
-    if (status != STUN_OK) return status;
-
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_XOR_RELAYED_ADDR, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    len = TURN_SVR_IP_ADDR_MAX_LEN;
-    status = stun_attr_xor_relayed_addr_get_address(
-                                    h_attr[0], session->relay_ip_addr, &len);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_xor_relayed_addr_get_port(
-                                    h_attr[0], &session->relay_port);
-    if (status != STUN_OK) return status;
-
-    num = 1;
-    status = stun_msg_get_specified_attributes(h_msg, 
-                                STUN_ATTR_LIFETIME, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    status = stun_attr_lifetime_get_duration(
-                                    h_attr[0], &session->lifetime);
-    if (status != STUN_OK) return status;
-#endif
-    int32_t status = STUN_OK;
-    return status;
-}
-
-
-
-int32_t cc_utils_get_app_data_for_current_state(
-                                conn_check_session_t *session, handle *data)
-{
-    conn_check_result_t *result = NULL;
-
-    switch(session->state)
-    {
-        case CC_OG_IDLE:
-        case CC_OG_CHECKING:
-            break;
-
-        case CC_OG_TERMINATED:
-        {
-            result = (conn_check_result_t *)
-                        stun_calloc(1, sizeof(conn_check_result_t));
-            if (result == NULL) return STUN_MEM_ERROR;
-
-            result->check_succeeded = session->cc_succeeded;
-
-            /** TODO - copy peer reflexive address if learned */
-        }
-        break;
-
-        case CC_IC_TERMINATED:
-        {
-            result = (conn_check_result_t *)
-                        stun_calloc(1, sizeof(conn_check_result_t));
-            if (result == NULL) return STUN_MEM_ERROR;
-
-            result->check_succeeded = session->cc_succeeded;
-            result->nominated = session->nominated;
-        }
-        break;
-
-        case CC_IC_IDLE:
-            break;
-
-        default:
-            break;
-    }
-
-    *data = result;
-    return STUN_OK;
-}
-
-
 int32_t conn_check_utils_verify_request_msg(
                     conn_check_session_t *session, handle h_msg)
 {
     int32_t status;
     uint32_t num, local_len, peer_len;
     handle h_username_attr, h_fingerprint_attr, h_msg_int_attr, h_unknown;
-    u_char username[MAX_USERNAME_LEN] = {0};
+    u_char *username = NULL;
     u_char *localuser, *peeruser;
 
     /** fingerprint is a MUST in the request */
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_FINGERPRINT, &h_fingerprint_attr, &num);
-    if (status != STUN_OK)
+    if (status == STUN_NOT_FOUND)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting FingerPrint attribute from the message failed");
+                "[CONN CHECK] FingerPrint attribute missing. Message "\
+                "validation failed");
+        return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting FingerPrint attribute from the "\
+                "message failed");
         return status;
     }
 
-    if (num == 0)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "FingerPrint attribute missing. Message validation failed");
-        return STUN_VALIDATON_FAIL;
-    }
 
     ICE_LOG(LOG_SEV_INFO, 
-            "FINGERPRINT attribute is present in the received message");
+            "[CONN CHECK] FINGERPRINT attribute is present in "\
+            "the received message");
 
     status = stun_msg_validate_fingerprint(h_msg);
     if (status == STUN_VALIDATON_FAIL)
@@ -625,14 +418,7 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_MESSAGE_INTEGRITY, &h_msg_int_attr, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Extracting Message Integrity attribute from the message failed");
-        return status;
-    }
-
-    if (num == 0)
+    if (status == STUN_NOT_FOUND)
     { 
         ICE_LOG(LOG_SEV_ERROR, 
                 "Message Integrity attribute missing. Message validation "\
@@ -640,6 +426,12 @@ int32_t conn_check_utils_verify_request_msg(
         conn_check_utils_send_error_resp(session, 
                                         400, STUN_REJECT_RESPONSE_400);
         return STUN_VALIDATON_FAIL;
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "Extracting Message Integrity attribute from the message failed");
+        return status;
     }
 
     ICE_LOG(LOG_SEV_INFO, 
@@ -649,14 +441,7 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_USERNAME, &h_username_attr, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting Username attribute from the message failed");
-        return status;
-    }
-
-    if (num == 0)
+    if (status == STUN_NOT_FOUND)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Username attribute missing. Message validation "\
@@ -665,6 +450,13 @@ int32_t conn_check_utils_verify_request_msg(
                                         400, STUN_REJECT_RESPONSE_400);
         return STUN_VALIDATON_FAIL;
     }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Extracting Username attribute from the message failed");
+        return status;
+    }
+
 
     ICE_LOG(LOG_SEV_INFO, 
             "USERNAME attribute is present in the received message");
@@ -678,13 +470,29 @@ int32_t conn_check_utils_verify_request_msg(
      *   an error response. This response must use an error code of i
      *   401 (Unauthorized)
      */
-    num = MAX_USERNAME_LEN;
-    status = stun_attr_username_get_user_name(h_username_attr, username, &num);
+    status = stun_attr_username_get_username_length(h_username_attr, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Extracting username length from USERNAME attribute failed");
+        return STUN_VALIDATON_FAIL;
+    }
+
+    username = (u_char *) stun_calloc(1, num);
+    if (username == NULL)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Memory allocation failed while extracting username value");
+        return STUN_MEM_ERROR;
+    }
+
+    status = stun_attr_username_get_username(h_username_attr, username, &num);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "Extracting username value from USERNAME attribute failed");
-        return STUN_VALIDATON_FAIL;
+        status = STUN_VALIDATON_FAIL;
+        goto ERROR_EXIT_PT;
     }
 
     status = conn_check_utils_extract_username_components(
@@ -695,13 +503,16 @@ int32_t conn_check_utils_verify_request_msg(
                 "username value validation failed. Sending 400 Bad Request");
         conn_check_utils_send_error_resp(session, 
                                         400, STUN_REJECT_RESPONSE_400);
-        return STUN_VALIDATON_FAIL;
+        status = STUN_VALIDATON_FAIL;
+        goto ERROR_EXIT_PT;
     }
 
+#ifdef DEBUG2
     ICE_LOG(LOG_SEV_INFO, 
             "Local username value %s and %d length", localuser, local_len);
     ICE_LOG(LOG_SEV_INFO, 
             "Peer username value %s and %d length", peeruser, peer_len);
+#endif
     
     /** check if the username is valid for this session */
     if ((local_len != session->local_user_len) ||
@@ -713,10 +524,13 @@ int32_t conn_check_utils_verify_request_msg(
                 "401 Unauthorized");
         conn_check_utils_send_error_resp(session, 
                                         401, STUN_REJECT_RESPONSE_401);
-        return STUN_VALIDATON_FAIL;
+
+        status = STUN_VALIDATON_FAIL;
+        goto ERROR_EXIT_PT;
     }
 
     ICE_LOG(LOG_SEV_INFO, "username is valid for this session");
+    stun_free(username);
 
     /*
      * rfc5389 sec 10.1.2 Receiving a request or indication
@@ -757,16 +571,7 @@ int32_t conn_check_utils_verify_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 
                     STUN_ATTR_UNKNOWN_COMP_REQUIRED, &h_unknown, &num);
-    if (status != STUN_OK)
-    {
-        ICE_LOG(LOG_SEV_ERROR, 
-                "Extracting unknown comprehension required attributes "\
-                "from the message failed");
-
-        return status;
-    }
-
-    if (num > 0)
+    if ((status == STUN_OK) && (num > 0))
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "%d Unknown comprehension required attributes are present "\
@@ -776,9 +581,22 @@ int32_t conn_check_utils_verify_request_msg(
                                         420, STUN_REJECT_RESPONSE_420);
         return STUN_VALIDATON_FAIL;
     }
+    else if (status != STUN_NOT_FOUND)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Extracting unknown comprehension required attributes "\
+                "from the message failed");
+
+        return status;
+    }
 
 
     return STUN_OK;
+
+ERROR_EXIT_PT:
+
+    if (username) stun_free(username);
+    return status;
 }
 
 
@@ -792,21 +610,32 @@ int32_t conn_check_utils_extract_info_from_request_msg(
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_USE_CANDIDATE, &h_attr, &num);
-    if (status != STUN_OK) return status;
-
-    if (num == 1)
+    if (status == STUN_OK)
+    {
         session->nominated = true;
-    else
-        session->nominated = false;
 
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USE-CANDIDATE attribute present in the request message");
+    }
+    else if (status == STUN_NOT_FOUND)
+    {
+        session->nominated = false;
+        status = STUN_OK;
+    }
+
+    /** extract priority */
     num = 1;
     status = stun_msg_get_specified_attributes(
                     h_msg, STUN_ATTR_PRIORITY, &h_attr, &num);
-    if (status != STUN_OK) return status;
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Priority attribute missing in received request msg?");
+        status = STUN_INVALID_PARAMS;
+    }
 
     status = stun_attr_priority_get_priority(
-                        h_attr, &session->prflx_cand_priority);
-    if (status != STUN_OK) return status;
+                        h_attr, &(session->prflx_cand_priority));
 
     return status;
 }
@@ -871,7 +700,8 @@ int32_t conn_check_utils_send_error_resp(
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Adding of error code attribute to response message failed");
+                "Retrieving unknown comp required attribute from "\
+                "request message failed");
             goto ERROR_EXIT_PT1;
         }
 
@@ -879,7 +709,7 @@ int32_t conn_check_utils_send_error_resp(
                                         session->h_resp, h_unknown_attr, num);
     }
 
-    /** send the message to perr */
+    /** send the message to peer */
     status = stun_txn_send_stun_message(
                         h_txn_inst, session->h_txn, session->h_resp);
     if (status != STUN_OK)
@@ -934,6 +764,240 @@ int32_t conn_check_utils_extract_username_components(
     return STUN_OK;
 }
 
+
+int32_t cc_utils_extract_error_code(handle h_msg, uint32_t *error_code)
+{
+    handle h_attr;
+    int32_t status;
+    uint32_t num = 1;
+
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_ERROR_CODE, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    status = stun_attr_error_code_get_error_code(h_attr, error_code);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting of the error code failed - %d",
+                status);
+    }
+
+    return status;
+}
+
+
+uint32_t cc_utils_extract_conn_check_info(handle h_msg, 
+                                            conn_check_session_t *session)
+{
+    handle h_attr;
+    int32_t status;
+    uint32_t num = 1;
+    stun_addr_family_type_t addr_family;
+
+    status = stun_msg_get_specified_attributes(h_msg, 
+                                STUN_ATTR_XOR_MAPPED_ADDR, &h_attr, &num);
+    if (status != STUN_OK) return status;
+
+    num = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_xor_mapped_addr_get_address(h_attr, 
+                        &addr_family, session->mapped_addr.ip_addr, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting xor mapped addr failed - %d", status);
+        return status;
+    }
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        session->mapped_addr.host_type = STUN_INET_ADDR_IPV4;
+    else if (addr_family == STUN_ADDR_FAMILY_IPV6)
+        session->mapped_addr.host_type = STUN_INET_ADDR_IPV6;
+    else
+        session->mapped_addr.host_type = STUN_INET_ADDR_MAX;
+
+    status = stun_attr_xor_mapped_addr_get_port(h_attr, 
+                                            &session->mapped_addr.port);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting xor mapped port failed = %d", status);
+        return status;
+    }
+
+    return status;
+}
+
+
+
+int32_t conn_check_detect_repair_role_conflicts(
+        conn_check_session_t *session, handle h_msg, int32_t *resp_code)
+{
+    handle h_attr = NULL;
+    bool_t controlling, controlled;
+    uint64_t tie_breaker;
+    uint32_t num;
+    int32_t status;
+
+    *resp_code = 0;
+    controlling = controlled = false;
+
+    /** sec 7.2.1.1 of RFC5245 - Detecting and Repairing Role Conflicts */
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_ICE_CONTROLLING, &h_attr, &num);
+    if (status == STUN_NOT_FOUND)
+    {
+        num = 1;
+        status = stun_msg_get_specified_attributes(
+                        h_msg, STUN_ATTR_ICE_CONTROLLED, &h_attr, &num);
+
+        if (status == STUN_NOT_FOUND)
+        {
+            ICE_LOG(LOG_SEV_INFO, 
+                    "[CONN CHECK] Request message does not contain either "\
+                    "ICE-CONTROLLING or ICE-CONTROLLED attribute. Peer agent"\
+                    "is compliant to previous version?");
+            /** 
+             * the peer agent may have implemented a previous version of this
+             * spec. There may be a conflict, but it can not be detected.
+             */
+            return STUN_OK;
+        }
+        else if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting ICE-CONTROLLING attribute from "\
+                    "the message failed");
+            return status;
+        }
+        else
+        {
+            controlled = true;
+        }
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting ICE-CONTROLLING attribute from the "\
+                "message failed");
+        return status;
+    }
+    else
+    {
+        controlling = true;
+    }
+
+    if ((session->controlling_role == true) && (controlling == true))
+    {
+        status = stun_attr_ice_controlling_get_tiebreaker_value(
+                                                    h_attr, &tie_breaker);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting tie-breaker value from "\
+                    "ICE-CONTROLLING attribute failed");
+            return status;
+        }
+
+        if (session->tie_breaker >= tie_breaker)
+        {
+            /** 
+             * Agent generates binding error response with an error 
+             * code of 487 (role conflict) but retains it's role.
+             */
+            *resp_code = STUN_ERROR_ROLE_CONFLICT;
+        }
+        else
+        {
+            /** agent switches the role */
+            session->controlling_role = false;
+        }
+    }
+
+    /** if this agent is in controlled role */
+    if ((session->controlling_role == false) && (controlled == true))
+    {
+        status = stun_attr_ice_controlled_get_tiebreaker_value(
+                                                    h_attr, &tie_breaker);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting tie-breaker value from "\
+                    "ICE-CONTROLLED attribute failed");
+            return status;
+        }
+
+        if (session->tie_breaker >= tie_breaker)
+        {
+            /** agent switches the role */
+            session->controlling_role = true;
+        }
+        else
+        {
+            /** 
+             * Agent generates binding error response with an error 
+             * code of 487 (role conflict) but retains it's role.
+             */
+            *resp_code = STUN_ERROR_ROLE_CONFLICT;
+        }
+    }
+    
+    return STUN_OK;
+}
+
+
+
+bool_t conn_check_utils_host_compare (u_char *host1, 
+                    u_char *host2, stun_inet_addr_type_t addr_type)
+{
+    int32_t retval, size, family;
+    u_char addr1[CONN_CHECK_SIZEOF_IPV6_ADDR] = {0};
+	u_char addr2[CONN_CHECK_SIZEOF_IPV6_ADDR] = {0};
+
+    if (addr_type == STUN_INET_ADDR_IPV4)
+    {
+        family = AF_INET;
+        size = CONN_CHECK_SIZEOF_IPV4_ADDR;
+    }
+    else if (addr_type == STUN_INET_ADDR_IPV6)
+    {
+        family = AF_INET6;
+        size = CONN_CHECK_SIZEOF_IPV6_ADDR;
+    }
+    else
+        return false;
+
+    retval = inet_pton(family, (const char *)host1, &addr1);
+    if (retval != 1)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+            "[CONN CHECK] inet_pton failed, probably invalid address [%s]", 
+            host1);
+        return false;
+    }
+
+    retval = inet_pton(family, (const char *)host2, &addr2);
+    if (retval != 1)
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+            "[CONN CHECK] inet_pton failed, probably invalid address [%s]",
+            host2);
+        return false;
+    }
+    
+    retval = stun_memcmp(addr1, addr2, size);
+    if (retval == 0)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "[CONN CHECK] Given IP addresses matched");
+        return true;
+    }
+
+    ICE_LOG(LOG_SEV_DEBUG, "[CONN CHECK] Given IP addresses differ");
+
+    return false;
+}
 
 
 /******************************************************************************/

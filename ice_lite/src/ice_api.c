@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -163,11 +164,18 @@ static int32_t ice_format_and_send_message(handle h_msg,
     buf_len = TRANSPORT_MTU_SIZE;
 
     /** authentication parameters for message integrity */
-    auth.len = strlen(media->local_pwd);
-    if(auth.len > STUN_MSG_AUTH_PASSWORD_LEN)
-        auth.len = STUN_MSG_AUTH_PASSWORD_LEN;
+    auth.key_len = strlen(media->local_pwd);
+    if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
+        auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
 
-    stun_strncpy((char *)auth.password, media->local_pwd, auth.len);
+    stun_strncpy((char *)auth.key, media->local_pwd, auth.key_len);
+
+#ifdef MB_LOG_RX_TX_MSGS
+    stun_msg_print(h_msg, buf, buf_len);
+    ICE_LOG (LOG_SEV_INFO,
+            ">>>>>>>>>>\nTx STUN message to %s:%d\n\n%s\n\n<<<<<<<<<<\n\n", 
+            ip_addr, port, buf);
+#endif
 
 #ifdef MB_LOG_RX_TX_MSGS
     stun_msg_print(h_msg, buf, buf_len);
@@ -271,8 +279,6 @@ int32_t ice_set_client_software_name(handle h_inst, u_char *name)
 
     stun_strncpy((char *)instance->client, 
             (char *)name, (SOFTWARE_CLIENT_NAME_LEN - 1));
-
-    /** TODO: propagate to turn instance */
 
     return STUN_OK;
 }

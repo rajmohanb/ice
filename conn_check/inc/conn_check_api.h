@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -21,11 +22,11 @@ extern "C" {
 
 /******************************************************************************/
 
-#define CONN_CHECK_MAX_CONCURRENT_SESSIONS    10
-#define STUN_MAX_USERNAME_LEN           128
-#define STUN_MAX_PASSWORD_LEN           128
-#define STUN_MAX_REALM_LEN              64
-#define STUN_IP_ADDR_MAX_LEN            46
+#define CONN_CHECK_MAX_CONCURRENT_SESSIONS  20
+#define STUN_MAX_USERNAME_LEN               128
+#define STUN_MAX_PASSWORD_LEN               128
+#define STUN_MAX_REALM_LEN                  64
+#define STUN_IP_ADDR_MAX_LEN                46
 
 /******************************************************************************/
 
@@ -70,13 +71,46 @@ typedef struct {
 
 
 typedef struct {
+
+    /** role: controlling or controlled */
+    bool_t controlling_role;
+
+    /** conn check: nominated one or not */
+    bool_t nominated;
+
+    /** tie-breaker value */
+    uint64_t tie_breaker;
+
+    /** candidate priority for peer reflexive candidate */
+    uint32_t prflx_cand_priority;
+
+} conn_check_session_params_t;
+
+
+
+typedef struct {
     bool_t check_succeeded;
     bool_t nominated;
     bool_t controlling_role;
     uint32_t error_code;
-    stun_inet_addr_t prflx_addr;
-    uint32_t prflx_priority;
+    uint32_t priority;
+    stun_inet_addr_t mapped_addr;
 } conn_check_result_t;
+
+
+
+typedef struct
+{
+    /** parsed stun packet handle */
+    handle h_msg;
+
+    /** transport parameter */
+    handle transport_param;
+
+    /** source address of stun packet */
+    stun_inet_addr_t src;
+
+} conn_check_rx_pkt_t;
 
 
 /******************************************************************************/
@@ -85,6 +119,9 @@ int32_t conn_check_create_instance(handle *h_inst);
 
 int32_t conn_check_instance_set_callbacks(handle h_inst, 
                                 conn_check_instance_callbacks_t *cb);
+
+int32_t conn_check_instance_set_client_software_name(handle h_inst, 
+                                                u_char *client, uint32_t len);
 
 int32_t conn_check_destroy_instance(handle h_inst);
 
@@ -110,13 +147,25 @@ int32_t conn_check_session_set_local_credentials(handle h_inst,
 int32_t conn_check_session_set_peer_credentials(handle h_inst, 
                 handle h_session, conn_check_credentials_t *cred);
 
+int32_t conn_check_cancel_session(handle h_inst, handle h_session);
+
+
 int32_t conn_check_destroy_session(handle h_inst, handle h_session);
 
+
 int32_t conn_check_session_inject_received_msg(
-                        handle h_inst, handle h_session, handle h_msg);
+            handle h_inst, handle h_session, conn_check_rx_pkt_t *rx_msg);
+
+int32_t conn_check_instance_inject_timer_event(
+                    handle h_timerid, handle arg, handle *h_session);
 
 int32_t conn_check_find_session_for_recv_msg(handle h_inst, 
                                         handle h_msg, handle *h_session);
+
+int32_t conn_check_session_initiate_check(handle h_inst, handle h_session);
+
+int32_t conn_check_session_set_session_params(handle h_inst, 
+                        handle h_session, conn_check_session_params_t *params);
 
 int32_t conn_check_session_timer_get_session_handle (
                     handle arg, handle *h_session, handle *h_instance);

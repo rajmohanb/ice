@@ -1,15 +1,16 @@
 #*******************************************************************************
-# 
-#             Copyright (C) 2009-2011, MindBricks Technologies
-#			         MindBricks Confidential Proprietary.
-#                             All Rights Reserved.
-#
+#                                                                              #
+#               Copyright (C) 2009-2012, MindBricks Technologies               #
+#                  Rajmohan Banavi (rajmohan@mindbricks.com)                   #
+#                     MindBricks Confidential Proprietary.                     #
+#                            All Rights Reserved.                              #
+#                                                                              #
 #*******************************************************************************
-#
-# This document contains information that is confidential and proprietary to 
-# MindBricks Technologies. No part of this document may be reproduced in any 
-# form whatsoever without prior written approval from MindBricks Technologies.
-#
+#                                                                              #
+# This document contains information that is confidential and proprietary to   #
+# MindBricks Technologies. No part of this document may be reproduced in any   #
+# form whatsoever without prior written approval from MindBricks Technologies. #
+#                                                                              #
 #******************************************************************************/
 
 # Makefile for creating ice lite agent library
@@ -27,12 +28,12 @@ INCLUDE := -I ../../ -I ../inc -I ../../conn_check/inc \
 	-I ../../stun/txn/inc -I ../../stun/msg_layer/inc \
 	-I ../../stun/enc_dec/inc -I $(ICE_APP_INCLUDE_PATH)
 
-CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) $(INCLUDE) -DMB_ENABLE_ICE
+CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) \
+		  $(INCLUDE) -DMB_ENABLE_ICE
 
 OBJS:=$(SRC:c=o)
-#
+
 #object Build Rules
-#
 .c.o :
 	@echo "[CC] " $< ...
 	@$(CC) $(CFLAGS) -o $*.o $<

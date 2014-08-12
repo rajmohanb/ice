@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -23,6 +24,7 @@ extern "C" {
 #include "msg_layer_api.h"
 #include "conn_check_api.h"
 #include "turn_api.h"
+#include "stun_binding_api.h"
 #include "ice_api.h"
 #include "ice_int.h"
 #include "ice_utils.h"
@@ -35,7 +37,7 @@ extern "C" {
         if (session->aps_media_streams[i] == h_media) { break; } \
 \
     if (i == ICE_MAX_MEDIA_STREAMS) { \
-        ICE_LOG(LOG_SEV_ERROR, "Invalid media handle"); \
+        ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Invalid media handle"); \
         return STUN_INVALID_PARAMS; \
     } \
 } \
@@ -58,21 +60,29 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_add_media_stream,
         ice_ignore_msg,
+        ice_ignore_msg,
+        ice_ignore_msg,
+        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_GATHERING */
     {
         ice_ignore_msg,
         handle_gather_result,
+        ice_gather_failed,
+        ice_ignore_msg,
+        ice_ignore_msg,
+        ice_ignore_msg,
+        process_gather_resp,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        process_relay_server_msg,
+        ice_remove_media_stream,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_ignore_msg,
-        ice_ignore_msg,
-        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_GATHERED */
     {
@@ -87,7 +97,11 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_remote_params,
         ice_ignore_msg,
+        ice_remove_media_stream,
         ice_ignore_msg,
+        ice_ignore_msg,
+        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_CC_RUNNING */
     {
@@ -103,6 +117,10 @@ static ice_session_fsm_handler
         ice_remote_params,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
+        ice_nomination_timer_expired,
+        ice_keep_alive_timer_expired,
+        ice_send_media_data,
     },
     /** ICE_SES_CC_COMPLETED */
     {
@@ -113,11 +131,15 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         handle_peer_msg,
-        ice_ignore_msg,
+        ice_handle_checklist_timer_expiry,
         ice_restart,
         ice_remote_params,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
+        ice_ignore_msg,
+        ice_keep_alive_timer_expired,
+        ice_send_media_data,
     },
     /** ICE_SES_CC_FAILED */
     {
@@ -133,6 +155,10 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
+        ice_ignore_msg,
+        ice_ignore_msg,
+        ice_send_media_data,
     },
     /** ICE_SES_NOMINATING */
     {
@@ -148,6 +174,10 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
+        ice_ignore_msg,
+        ice_keep_alive_timer_expired,
+        ice_send_media_data,
     },
     /** ICE_SES_ACTIVE */
     {
@@ -163,6 +193,10 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_ignore_msg,
         ice_remove_media_stream,
+        ice_conn_check_timer_event,
+        ice_ignore_msg,
+        ice_keep_alive_timer_expired,
+        ice_send_media_data,
     }
 };
 
@@ -183,7 +217,8 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
         if(status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Initiation of candidate gathering for media %d failed.", i);
+                    "[ICE SESSION] Initiation of candidate gathering for "\
+                    "media %d failed.", i);
             return STUN_INT_ERROR;
         }
     }
@@ -191,10 +226,9 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
-
-    //session->state = ICE_SES_GATHERING;
 
     return status;
 }
@@ -213,7 +247,8 @@ int32_t handle_gather_result(ice_session_t *session,
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "unable to get application param from TURN handle");
+                "[ICE SESSION] unable to get application param "\
+                "from TURN handle");
         return status;
     }
 
@@ -222,14 +257,16 @@ int32_t handle_gather_result(ice_session_t *session,
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "processing of gathered candidates by media fsm failed");
+                "[ICE SESSION] processing of gathered candidates "\
+                "by media fsm failed");
         goto EXIT_PT;
     }
 
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
 EXIT_PT:
@@ -238,7 +275,55 @@ EXIT_PT:
 
 
 
-int32_t process_relay_server_msg (ice_session_t *session, 
+int32_t ice_gather_failed(ice_session_t *session, handle h_msg, handle *h_param)
+{
+    int32_t status;
+    ice_int_params_t *param = (ice_int_params_t *)h_msg;
+    ice_media_stream_t *media;
+
+    if (session->use_relay == true)
+    {
+        status = turn_session_get_app_param(
+                            param->h_inst, param->h_session, (handle *)&media);
+    }
+    else
+    {
+        status = stun_binding_session_get_app_param(
+                            param->h_inst, param->h_session, (handle *)&media);
+    }
+
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] unable to get application param from "\
+                "STUN/TURN handle");
+        return status;
+    }
+
+    status = ice_media_stream_fsm_inject_msg(media, 
+                                        ICE_MEDIA_GATHER_FAILED, h_msg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] processing of gathered candidates by "\
+                "media fsm failed");
+        goto EXIT_PT;
+    }
+
+    status = ice_utils_determine_session_state(session);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
+    }
+
+EXIT_PT:
+    return status;
+}
+
+
+
+int32_t process_gather_resp (ice_session_t *session, 
                                             handle h_msg, handle *h_param)
 {
     int32_t status, index;
@@ -251,10 +336,19 @@ int32_t process_relay_server_msg (ice_session_t *session,
     stun_msg_get_method(stun_pkt->h_msg, &method);
 
     /** 
-     * at this stage, we only entertain responses from relay server
-     * for turn alloc requests initiated by this session.
+     * at this stage, we only entertain responses either from relay server
+     * for turn alloc requests initiated by this session OR response from
+     * stun server for the binding requests.
      */
-    if (method != STUN_METHOD_ALLOCATE) return STUN_INVALID_PARAMS;
+    if (session->use_relay == true)
+    {
+        if (method != STUN_METHOD_ALLOCATE) return STUN_INVALID_PARAMS;
+    }
+    else
+    {
+        if (method != STUN_METHOD_BINDING) return STUN_INVALID_PARAMS;
+    }
+
     if ((msg_class != STUN_SUCCESS_RESP) && (msg_class != STUN_ERROR_RESP))
         return STUN_INVALID_PARAMS;
 
@@ -263,31 +357,37 @@ int32_t process_relay_server_msg (ice_session_t *session,
     if(status == STUN_NOT_FOUND)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-            "Could not find media handle for the received message with "\
-            "transport param %p\n", stun_pkt->transport_param);
+            "[ICE SESSION] Could not find media handle for the received "\
+            "message with transport param %p\n", stun_pkt->transport_param);
 
         return STUN_INVALID_PARAMS;
     }
 
-    ICE_LOG (LOG_SEV_INFO, "Found media stream for received message");
+    ICE_LOG (LOG_SEV_INFO, 
+            "[ICE SESSION] Found media stream for received message");
 
     media = session->aps_media_streams[index];
 
-    status = ice_media_stream_fsm_inject_msg(media, ICE_MEDIA_RELAY_MSG, h_msg);
+    status = ice_media_stream_fsm_inject_msg(
+                                media, ICE_MEDIA_RELAY_MSG, h_msg);
     if(status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Injecting of received stun message failed.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Injecting of received stun message failed.");
         return STUN_INT_ERROR;
     }
 
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
     return status;
 }
+
+
 
 int32_t ice_form_checklist(ice_session_t *session, 
                                             handle h_msg, handle *h_param)
@@ -305,8 +405,8 @@ int32_t ice_form_checklist(ice_session_t *session,
                             media, ICE_MEDIA_FORM_CHECKLIST, NULL);
         if(status != STUN_OK)
         {
-            ICE_LOG(LOG_SEV_ERROR, 
-                "Forming of check list for media stream %d failed.", i);
+            ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] "\
+                    "Forming of check list for media stream %d failed.", i);
             return STUN_INT_ERROR;
         }
     }
@@ -341,8 +441,8 @@ int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
                         media, ICE_MEDIA_UNFREEZE, NULL);
     if(status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "Unfreezing of the checklist for first media failed.");
+        ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] "\
+                "Unfreezing of the checklist for first media failed.");
         return STUN_INT_ERROR;
     }
 
@@ -352,67 +452,80 @@ int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
 }
 
 
+
 int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
 {
-    int32_t status, index, count;
+    int32_t status, index, cmp_count, fail_count;
     stun_msg_type_t msg_class;
     stun_method_type_t method;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) pkt;
     ice_media_stream_t *media;
+    ice_media_stream_event_t event;
 
     stun_msg_get_class(stun_pkt->h_msg, &msg_class);
     stun_msg_get_method(stun_pkt->h_msg, &method);
-
-    /** 
-     * at this stage, we only entertain responses to connectivity checks 
-     * initiated by this session and new incoming stun binding requests
-     */
-    if (method != STUN_METHOD_BINDING) return STUN_INVALID_PARAMS;
-    if (msg_class == STUN_INDICATION) return STUN_INVALID_PARAMS;
 
     status = ice_utils_find_media_for_transport_handle(
                                 session, stun_pkt->transport_param, &index);
     if(status == STUN_NOT_FOUND)
     {
         ICE_LOG (LOG_SEV_ERROR, 
-            "Could not find media handle for the received message with "\
-            "transport param %p\n", stun_pkt->transport_param);
+            "[ICE SESSION] Could not find media handle for the received "\
+            "message with transport param %p\n", stun_pkt->transport_param);
 
         return STUN_INVALID_PARAMS;
     }
 
-    ICE_LOG (LOG_SEV_INFO, "Found media stream for received message");
+    ICE_LOG (LOG_SEV_INFO, 
+            "[ICE SESSION] Found media stream for received message");
 
     media = session->aps_media_streams[index];
 
-    status = ice_media_stream_fsm_inject_msg(media, ICE_MEDIA_CC_MSG, pkt);
+    if (method == STUN_METHOD_BINDING)
+        event = ICE_MEDIA_CC_MSG;
+    else
+        event = ICE_MEDIA_RELAY_MSG;
+
+    status = ice_media_stream_fsm_inject_msg(media, event, pkt);
     if(status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Injecting of received stun message failed.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Injecting of received stun message failed.");
         return STUN_INT_ERROR;
     }
 
     /** 
-     * for an ice-lite agent, session becomes completed as soon 
-     * as connectivity checks are done and valid pairs are
+     * for an ice agent, session becomes completed as soon 
+     * as connectivity checks are done and nominated pairs are
      * present for each component of each media, that is, each
      * media moves into COMPLETED state
      */
-    count = 0;
+    cmp_count = fail_count = 0;
     for (index = 0; index < ICE_MAX_MEDIA_STREAMS; index++)
     {
         media = session->aps_media_streams[index];
         if (!media) continue;
 
-        if(media->state == ICE_MEDIA_CC_COMPLETED) count++;
+        if(media->state == ICE_MEDIA_CC_COMPLETED) cmp_count++;
+        if(media->state == ICE_MEDIA_CC_FAILED) fail_count++;
     }
 
-    if (count == session->num_media_streams)
+    if (cmp_count == session->num_media_streams)
     {
         ICE_LOG(LOG_SEV_DEBUG, 
-            "All media streams have moved to ICE_MEDIA_CC_COMPLETED state. "\
-            "Hence ICE session state entering ICE_SES_CC_COMPLETED state");
+            "[ICE SESSION] All media streams have moved to "\
+            "ICE_MEDIA_CC_COMPLETED state. Hence ICE session state entering "\
+            "ICE_SES_CC_COMPLETED state");
         session->state = ICE_SES_CC_COMPLETED;
+    }
+
+    if (fail_count == session->num_media_streams)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+            "[ICE SESSION] All media streams have moved to "\
+            "ICE_MEDIA_CC_FAILED state. Hence ICE session state entering "\
+            "ICE_SES_CC_FAILED state");
+        session->state = ICE_SES_CC_FAILED;
     }
 
     return STUN_OK;
@@ -425,15 +538,12 @@ int32_t ice_nominate(ice_session_t *session, handle h_msg, handle *h_param)
 
     if (session->role == ICE_AGENT_ROLE_CONTROLLED)
     {
-        ICE_LOG (LOG_SEV_DEBUG, "Waiting for the peer to nominate a pair\n");
+        ICE_LOG (LOG_SEV_DEBUG, 
+                "[ICE SESSION] Waiting for the peer to nominate a pair\n");
         session->state = ICE_CC_COMPLETED;
     }
     else
     {
-        /** well as of now, we always nominate the first pair */
-        //status = ice_utils_nominate_candidate_pair(session, &session->ah_candidate_pairs[0]);
-        //if (status != STUN_OK) return status;
-
         session->state = ICE_SES_NOMINATING;
     }
 
@@ -448,27 +558,83 @@ int32_t ice_completed(ice_session_t *session, handle h_msg, handle *h_param)
     return STUN_OK;
 }
 
+
 int32_t ice_handle_checklist_timer_expiry(ice_session_t *session, 
                                                     handle arg, handle *h_param)
 {
-    int32_t status;
+    int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
     ice_media_stream_t *media;
 
     media = (ice_media_stream_t *)timer->h_media;
 
-    /** TODO - need a check for media handle? */
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+
     status = ice_media_stream_fsm_inject_msg(
                         media, ICE_MEDIA_CHECKLIST_TIMER, arg);
     if(status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-            "Unfreezing of the checklist for first media failed.");
+            "[ICE SESSION] Processing of the checklist timer failed "\
+            "for media %p", media);
         return STUN_INT_ERROR;
     }
 
     return status;
 }
+
+
+
+int32_t ice_nomination_timer_expired(
+            ice_session_t *session, handle arg, handle *h_param)
+{
+    int32_t i, status;
+    ice_timer_params_t *timer = (ice_timer_params_t *) arg;
+    ice_media_stream_t *media;
+
+    media = (ice_media_stream_t *)timer->h_media;
+
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_NOMINATION_TIMER, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Procesing of the nomination timer expiry "\
+                "event failed for media %p", media);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
+
+
+int32_t ice_keep_alive_timer_expired(
+            ice_session_t *session, handle arg, handle *h_param)
+{
+    int32_t i, status;
+    ice_timer_params_t *timer = (ice_timer_params_t *) arg;
+    ice_media_stream_t *media;
+
+    media = (ice_media_stream_t *)timer->h_media;
+
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+    
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_KEEP_ALIVE_TIMER, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Procesing of the Keep Alive timer expiry "\
+                "event failed for media %p", media);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
 
 
 int32_t ice_restart (ice_session_t *session, handle arg, handle *h_param)
@@ -498,8 +664,9 @@ int32_t ice_restart (ice_session_t *session, handle arg, handle *h_param)
         else
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "restarting of media stream %d failed.", i);
+                "[ICE SESSION] restarting of media stream %d failed.", i);
         }
+        break;
     }
 
     return status;
@@ -526,7 +693,8 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
 
         if (j == ICE_MAX_MEDIA_STREAMS)
         {
-            ICE_LOG(LOG_SEV_ERROR, "Media handle not found in the session");
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[ICE SESSION] Media handle not found in the session");
             return STUN_INVALID_PARAMS;
         }
 
@@ -535,7 +703,7 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
         if(status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                    "Processing of remote media params failed");
+                    "[ICE SESSION] Processing of remote media params failed");
             return STUN_INT_ERROR;
         }
     }
@@ -545,6 +713,10 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
         /** update the peer ice implementation mode */
         session->peer_mode = session_params->ice_mode;
     }
+
+    if ((session->peer_mode == ICE_MODE_LITE) &&
+        (session->local_mode == ICE_MODE_FULL))
+        session->role = ICE_AGENT_ROLE_CONTROLLING;
 
     /**
      * if this session's current implementation is ice-lite and remote/peer 
@@ -568,7 +740,8 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
     }
 
     return status;
@@ -597,8 +770,9 @@ int32_t ice_add_media_stream (ice_session_t *session,
 
     /** copy the media stream parameters */
     status = ice_utils_copy_media_host_candidates(add_media, media_stream);
-
     if (status != STUN_OK) goto EXIT_PT;
+
+    media_stream->o_removed = false;
 
     /**
      * if this is an ice-lite session, then the media needs to be 
@@ -611,8 +785,8 @@ int32_t ice_add_media_stream (ice_session_t *session,
         if(status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR, 
-                "Unfreezing of media stream failed for this ice-lite session."\
-               " Hence not moving into RUNNING state");
+                "[ICE SESSION] Unfreezing of media stream failed for this "\
+                "ice-lite session. Hence not moving into RUNNING state");
             status = STUN_INT_ERROR;
             goto EXIT_PT;
         }
@@ -627,7 +801,8 @@ int32_t ice_add_media_stream (ice_session_t *session,
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, "Unable to determine ICE session state.");
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
         session->num_media_streams -= 1;
         session->aps_media_streams[i] = NULL;
         goto EXIT_PT;
@@ -641,21 +816,163 @@ EXIT_PT:
 }
 
 
+
 int32_t ice_remove_media_stream (ice_session_t *session, 
                                             handle h_msg, handle *h_param)
 {
-    int32_t i;
+    int32_t i, status;
     ice_media_stream_t *media = (ice_media_stream_t *) h_msg;
 
     /** verify media handle */
     ICE_VALIDATE_MEDIA_HANDLE(media);
 
-    session->aps_media_streams[i] = NULL;
+    if (session->use_relay == false)
+        session->aps_media_streams[i] = NULL;
 
-    /** initiate removing of the media */
-    stun_free(media);
+    /** clean up all turn sessions, if any */
+    if (session->use_relay == true)
+    {
+        for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+        {
+            if (media->h_turn_sessions[i] == NULL) continue;
 
-    session->num_media_streams--;
+            status = turn_destroy_session(
+                    session->instance->h_turn_inst, media->h_turn_sessions[i]);
+
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "[ICE SESSION] Destroying of TURN session failed %d", 
+                        status);
+            }
+        }
+    }
+    else
+    {
+        /** clean up all STUN binding sessions, if any */
+        for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+        {
+            if (media->h_bind_sessions[i] == NULL) continue;
+
+            status = stun_binding_destroy_session(
+                    session->instance->h_bind_inst, media->h_bind_sessions[i]);
+
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "[ICE SESSION] Destroying of STUN Binding session "\
+                        "failed %d", status);
+            }
+            else
+            {
+                media->h_bind_sessions[i] = NULL;
+            }
+        }
+    }
+
+
+    /** clean up all connectivity check sessions, if any */
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+    {
+        ice_cand_pair_t *cp = &media->ah_cand_pairs[i];
+        if (cp->local == NULL) continue;
+        
+        if (cp->h_cc_session != NULL)
+        {
+            status = conn_check_destroy_session(
+                    session->instance->h_cc_inst, cp->h_cc_session);
+
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_ERROR, 
+                        "[ICE SESSION] Destroying of Connectivity Check "\
+                        "session failed %d", status);
+            }
+            else
+            {
+                cp->h_cc_session = NULL;
+            }
+        }
+
+        if (cp->h_cc_cancel != NULL)
+        {
+            status = conn_check_destroy_session(
+                    session->instance->h_cc_inst, cp->h_cc_cancel);
+            if (status == STUN_OK) cp->h_cc_cancel = NULL;
+        }
+    }
+
+    /** cleanup triggered checklist queue */
+    ice_media_utils_cleanup_triggered_check_queue(media);
+
+    /** 
+     * stop checklist timer, if running. Cleanup memory 
+     * only if the timer was stopped successfully.
+     */
+    status = ice_media_utils_stop_check_list_timer(media);
+    if (status == STUN_OK)
+        if (media->checklist_timer) 
+            stun_free(media->checklist_timer);
+
+    media->checklist_timer = NULL;
+
+    /** 
+     * stop nomination timer, if running. Cleanup memory 
+     * only if the timer was stopped successfully.
+     */
+    status = ice_media_utils_stop_nomination_timer(media);
+    if (status == STUN_OK)
+        if (media->nomination_timer)
+            stun_free(media->nomination_timer);
+
+    media->nomination_timer = NULL;
+
+    /**
+     * stop the media keep alive timers for all the components
+     */
+    for (i = 0; i < ICE_MAX_COMPONENTS; i++)
+    {
+        if (media->media_comps[i].keepalive_timer)
+        {
+            ice_component_t *comp = &media->media_comps[i];
+            status = STUN_OK;
+
+            if (comp->keepalive_timer->timer_id)
+            {
+                status = media->ice_session->instance->stop_timer_cb(
+                                            comp->keepalive_timer->timer_id);
+                if (status == STUN_OK) comp->keepalive_timer->timer_id = NULL;
+            }
+            
+            /** 
+             * if the timer was not successfully stopped, then do not free 
+             * the memory. The memory will be freed when the timer fires and 
+             * is injected into ICE stack by the application.
+             */
+            if (status == STUN_OK)
+                stun_free(comp->keepalive_timer);
+
+            comp->keepalive_timer = NULL;
+        }
+    }
+
+    /** 
+     * free the memory for media context. Incase the TURN server is used 
+     * for the session, then the TURN session will be destroyed when the 
+     * de-allocation response is received. Hence the media context will
+     * be freed at the same time.
+     */
+    if (session->use_relay == false)
+    {
+        media->ice_session = NULL;
+        stun_free(media);
+
+        session->num_media_streams--;
+    }
+    else
+    {
+        media->o_removed = true;
+    }
 
     /** no change in session state */
     
@@ -663,8 +980,58 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 }
 
 
+
+int32_t ice_conn_check_timer_event (ice_session_t *session, 
+                                            handle arg, handle *h_param)
+{
+    int32_t i, status;
+    ice_timer_params_t *timer = (ice_timer_params_t *) arg;
+    ice_media_stream_t *media;
+
+    media = (ice_media_stream_t *)timer->h_media;
+
+    /** validate media handle? */
+    ICE_VALIDATE_MEDIA_HANDLE(media);
+
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_CC_TIMER, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE SESSION] CC timer processing failed %d.", status);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
+
+
+int32_t ice_send_media_data (ice_session_t *session, 
+                                            handle arg, handle *h_param)
+{
+    int32_t status;
+    ice_media_data_t *data = (ice_media_data_t *) arg;
+    ice_media_stream_t *media = (ice_media_stream_t *) data->h_media;
+
+    /** TODO - validate media handle? */
+    status = ice_media_stream_fsm_inject_msg(
+                        media, ICE_MEDIA_SEND_DATA, arg);
+    if(status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE SESSION] Sending of media data failed %d.", status);
+        return STUN_INT_ERROR;
+    }
+
+    return status;
+}
+
+
+
 int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param)
 {
+    ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Event ignored");
     return STUN_OK;
 }
 

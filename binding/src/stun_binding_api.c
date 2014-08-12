@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -18,6 +19,8 @@ extern "C" {
 
 /******************************************************************************/
 
+
+
 #include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_txn_api.h"
@@ -25,6 +28,9 @@ extern "C" {
 #include "stun_binding_int.h"
 #include "stun_binding_utils.h"
 
+
+
+    
 int32_t stun_binding_create_instance(handle *h_inst)
 {
     stun_binding_instance_t *instance;
@@ -59,15 +65,97 @@ int32_t stun_binding_create_instance(handle *h_inst)
 }
 
 
+
 int32_t stun_binding_nwk_send_cb_fxn(handle h_msg, handle h_param)
 {
+    int32_t sent_bytes;
     stun_binding_session_t *session = 
                                 (stun_binding_session_t *) h_param;
 
-    return session->instance->nwk_send_cb (h_msg, 
+    sent_bytes = session->instance->nwk_send_cb (h_msg, 
             session->server_type, session->stun_server, session->stun_port, 
             session->transport_param, session->app_param);
+
+    if (sent_bytes == -1)
+        return STUN_INT_ERROR;
+    else
+        return STUN_OK;
 }
+
+
+
+handle stun_bind_start_txn_timer(uint32_t duration, handle arg)
+{
+    handle h_txn, h_txn_inst, app_param = NULL;
+    int32_t status;
+    stun_binding_session_t *session;
+    stun_bind_timer_params_t *timer;
+
+    timer = (stun_bind_timer_params_t *) 
+                stun_calloc (1, sizeof(stun_bind_timer_params_t));
+
+    if (timer == NULL) return 0;
+
+    status = stun_txn_timer_get_txn_handle(arg, &h_txn, &h_txn_inst);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    status = stun_txn_get_app_param(h_txn_inst, h_txn, &app_param);
+    if (status != STUN_OK) goto ERROR_EXIT_PT;
+
+    session = (stun_binding_session_t *) app_param;
+
+    timer->h_instance = session->instance;
+    timer->h_bind_session = session;
+    timer->arg = arg;
+    timer->type = BIND_STUN_TXN_TIMER;
+
+    timer->timer_id = session->instance->start_timer_cb(duration, timer);
+    if (!timer->timer_id) goto ERROR_EXIT_PT;
+
+    ICE_LOG(LOG_SEV_INFO, 
+            "Started STUN BINDING transaction timer for %d msec duration. "\
+            "STUN BINDING timer handle is %p", duration, timer);
+
+    return timer;
+
+ERROR_EXIT_PT:
+    stun_free(timer);
+    return 0;
+}
+
+
+
+int32_t stun_bind_stop_txn_timer(handle timer_id)
+{
+    stun_bind_timer_params_t *timer = (stun_bind_timer_params_t *) timer_id;
+    stun_binding_session_t *session;
+    int32_t status;
+
+    if (timer_id == NULL) return STUN_INVALID_PARAMS;
+
+    session = (stun_binding_session_t *) timer->h_bind_session;
+
+    status = session->instance->stop_timer_cb(timer->timer_id);
+
+    if (status == STUN_OK)
+    {
+        /** timer stopped successfully, so free the memory for the stun timer */
+        stun_free(timer);
+
+        ICE_LOG(LOG_SEV_INFO, 
+                "Stopped STUN BINDING transaction timer with timer "\
+                "id %p", timer_id);
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+                "Unable to stop STUN BINDING transaction timer "\
+                "with timer id %p", timer_id);
+    }
+
+    return status;
+}
+
 
 
 int32_t stun_binding_instance_set_callbacks(handle h_inst, 
@@ -94,13 +182,14 @@ int32_t stun_binding_instance_set_callbacks(handle h_inst,
 
     /** propagate app callbacks to stun txn */
     app_cbs.nwk_cb = stun_binding_nwk_send_cb_fxn;
-    app_cbs.start_timer_cb = cbs->start_timer_cb;
-    app_cbs.stop_timer_cb = cbs->stop_timer_cb;
+    app_cbs.start_timer_cb = stun_bind_start_txn_timer;
+    app_cbs.stop_timer_cb = stun_bind_stop_txn_timer;
 
     status = stun_txn_instance_set_callbacks(instance->h_txn_inst, &app_cbs);
 
     return status;
 }
+
 
 
 int32_t stun_binding_destroy_instance(handle h_inst)
@@ -146,6 +235,7 @@ ERROR_EXIT:
 }
 
 
+
 int32_t stun_binding_create_session(handle h_inst, 
             binding_session_type_t type, handle *h_session)
 {
@@ -165,6 +255,9 @@ int32_t stun_binding_create_session(handle h_inst,
 
     session->instance = instance;
     session->h_txn = NULL;
+    session->refresh_started = false;
+    session->refresh_duration = 0;
+    session->refresh_timer = NULL;
 
     for (i = 0; i < STUN_BINDING_MAX_CONCURRENT_SESSIONS; i++)
     {
@@ -245,6 +338,7 @@ int32_t stun_binding_session_get_app_param(handle h_inst,
     return STUN_OK;
 }
 
+
 int32_t stun_binding_session_set_stun_server(handle h_inst, 
                     handle h_session, stun_inet_addr_type_t stun_srvr_type, 
                     u_char *stun_srvr, uint32_t stun_port)
@@ -294,11 +388,25 @@ int32_t stun_binding_destroy_session(handle h_inst, handle h_session)
 
     if (session->h_txn != NULL)
     {
-       status = stun_destroy_txn(instance->h_txn_inst, session->h_txn, false, false);
+       status = stun_destroy_txn(instance->h_txn_inst, 
+                                        session->h_txn, false, false);
 		if (status != STUN_OK) {
         	ICE_LOG(LOG_SEV_ERROR,"Error in stun_destroy_txn()");
 			/* fallthrough to free the session */
 		}
+    }
+
+    /** stop timer and free timer memory */
+    if (session->refresh_timer)
+    {
+        status = session->instance->stop_timer_cb(
+                            session->refresh_timer->timer_id);
+        if (status == STUN_OK)
+        {
+            stun_free(session->refresh_timer);
+        }
+        else
+            status = STUN_OK;
     }
 
     stun_free(session);
@@ -306,6 +414,7 @@ int32_t stun_binding_destroy_session(handle h_inst, handle h_session)
 
     return status;
 }
+
 
 int32_t stun_binding_session_send_message(handle h_inst, 
                 handle h_session, stun_msg_type_t msg_type)
@@ -324,11 +433,12 @@ int32_t stun_binding_session_send_message(handle h_inst,
     session = (stun_binding_session_t *) h_session;
 
     /** build the binding request message */
-    status = stun_binding_utils_create_request_msg(&(session->h_req));
+    status = stun_binding_utils_create_msg(msg_type, &(session->h_req));
+
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
-                "Error while creating the stun binding request message");
+                "Error while creating the stun binding message");
         return status;
     }
 
@@ -351,13 +461,16 @@ int32_t stun_binding_session_send_message(handle h_inst,
     return status;
 }
 
+
+
 int32_t stun_binding_session_inject_received_msg(
                         handle h_inst, handle h_session, handle h_msg)
 {
+    int32_t status;
     stun_binding_instance_t *instance;
     stun_binding_session_t *session;
-    int32_t status;
     stun_method_type_t method;
+    stun_msg_type_t msg_class;
 
     if ((h_inst == NULL) || (h_session == NULL) || (h_msg == NULL))
         return STUN_INVALID_PARAMS;
@@ -378,16 +491,86 @@ int32_t stun_binding_session_inject_received_msg(
 		"stun_binding_session_inject_received_msg() session[%p]", session);
     session->h_resp = h_msg;
 
-    return stun_txn_inject_received_msg(
+    status = stun_txn_inject_received_msg(
                 instance->h_txn_inst, session->h_txn, h_msg);
+
+    /** if session refresh not configured, return here */
+    if (session->refresh_duration == 0) return status;
+    
+    stun_msg_get_class(h_msg, &msg_class);
+
+    if ((session->refresh_started == false) && (status == STUN_TERMINATED))
+    {
+        if (msg_class == STUN_SUCCESS_RESP)
+        {
+            /** start refresh timer */
+            status = stun_binding_utils_start_refresh_timer(session);
+
+            if (status == STUN_OK)
+            {
+                session->refresh_started = true;
+                status = STUN_BINDING_DONE;
+            }
+            else
+                status = STUN_TERMINATED;
+        }
+        else
+        {
+            status = STUN_TERMINATED;
+        }
+    }
+    else
+    {
+        if (msg_class == STUN_SUCCESS_RESP)
+            status = STUN_OK;
+        else
+            status = STUN_TERMINATED;
+    }
+
+    return status;
 }
 
 
-int32_t stun_binding_session_inject_timer_event(handle timer_id, handle arg)
+
+int32_t stun_binding_session_inject_timer_event(
+                        handle timer_id, handle arg, handle *bind_session)
 {
     handle h_txn;
+    int32_t status = STUN_INVALID_PARAMS;
+    stun_bind_timer_params_t *timer;
+    stun_binding_session_t *session;
 
-    return stun_txn_inject_timer_message(timer_id, arg, &h_txn);
+    if ((timer_id == NULL) || (arg == NULL))
+        return STUN_INVALID_PARAMS;
+
+    timer = (stun_bind_timer_params_t *) arg;
+    session = (stun_binding_session_t *) timer->h_bind_session;
+
+    if (timer->type == BIND_STUN_TXN_TIMER)
+    {
+        *bind_session = session;
+        return stun_txn_inject_timer_message(timer, timer->arg, &h_txn);
+    }
+    else if (timer->type == BIND_REFRESH_TIMER)
+    {
+        status = stun_binding_utils_initiate_session_refresh(session);
+
+        if (status != STUN_OK)
+        {
+            status = STUN_TERMINATED;
+        }
+    }
+
+    /**
+     * Note - timer handling.
+     * Can the timer be moved into session context, so that the timer is
+     * not allocated on the heap every time which not only saves time but
+     * also avoids unnecessary memory operation. The timer will be started
+     * and stopped as usual but the memory will be freed only when the
+     * stun binding session is destroyed.
+     */
+
+    return status;
 }
 
 
@@ -412,19 +595,20 @@ int32_t stun_binding_instance_find_session_for_received_msg(
 
     *h_session = h_binding;
 
-    ICE_LOG(LOG_SEV_DEBUG, "*h_binding[%p]", *h_session);
-
     return status;
 }
 
 
-int32_t stun_binding_session_get_mapped_address(handle h_inst, 
-        handle h_session, u_char *mapped_addr, uint32_t *len, uint32_t *port)
+
+int32_t stun_binding_session_get_xor_mapped_address(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *mapped_addr)
 {
     stun_binding_instance_t *instance;
     stun_binding_session_t *session;
+    stun_addr_family_type_t addr_family;
     handle h_attr;
-    int32_t status, num;
+    int32_t status;
+    uint32_t num;
 
     if ((h_inst == NULL) || (h_session == NULL) || (mapped_addr == NULL))
         return STUN_INVALID_PARAMS;
@@ -442,15 +626,101 @@ int32_t stun_binding_session_get_mapped_address(handle h_inst,
                 &h_attr, (uint32_t *)&num);
     if (status != STUN_OK) return status;
 
-    status = stun_attr_xor_mapped_addr_get_address(
-                        h_attr, (u_char *)mapped_addr, len);
+    num = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_xor_mapped_addr_get_address(h_attr, 
+                    &addr_family, (u_char *)mapped_addr->ip_addr, &num);
     if (status != STUN_OK) return status;
 
-    status = stun_attr_xor_mapped_addr_get_port(h_attr, port);
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        mapped_addr->host_type = STUN_INET_ADDR_IPV4;
+    else
+        mapped_addr->host_type = STUN_INET_ADDR_IPV6;
+
+    status = stun_attr_xor_mapped_addr_get_port(h_attr, &mapped_addr->port);
 
     return status;
 }
 
+
+
+int32_t stun_binding_session_timer_get_session_handle (
+                    handle arg, handle *h_session, handle *h_instance)
+{
+    stun_bind_timer_params_t *timer;
+
+    if ((arg == NULL) || (h_session == NULL) || (h_instance == NULL))
+        return STUN_INVALID_PARAMS;
+
+    timer = (stun_bind_timer_params_t *) arg;
+
+    *h_session = timer->h_bind_session;
+    *h_instance = timer->h_instance;
+
+    return STUN_OK;
+}
+
+
+
+int32_t stun_binding_session_get_mapped_address(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *mapped_addr)
+{
+    stun_binding_instance_t *instance;
+    stun_binding_session_t *session;
+    stun_addr_family_type_t addr_family;
+    handle h_attr;
+    int32_t status;
+    uint32_t num;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (mapped_addr == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (stun_binding_instance_t *) h_inst;
+    session = (stun_binding_session_t *) h_session;
+
+    /** TODO - make sure the session still exists */
+
+    if (!session->h_resp) return STUN_INVALID_PARAMS;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                session->h_resp, STUN_ATTR_MAPPED_ADDR, 
+                &h_attr, (uint32_t *)&num);
+    if (status != STUN_OK) return status;
+
+    num = ICE_IP_ADDR_MAX_LEN;
+    status = stun_attr_mapped_addr_get_address(h_attr, 
+                    &addr_family, (u_char *)mapped_addr->ip_addr, &num);
+    if (status != STUN_OK) return status;
+
+    if (addr_family == STUN_ADDR_FAMILY_IPV4)
+        mapped_addr->host_type = STUN_INET_ADDR_IPV4;
+    else
+        mapped_addr->host_type = STUN_INET_ADDR_IPV6;
+
+    status = stun_attr_mapped_addr_get_port(h_attr, &mapped_addr->port);
+
+    return status;
+}
+
+
+int32_t stun_binding_session_enable_session_refresh(
+                handle h_inst, handle h_session, uint32_t duration)
+{
+    stun_binding_instance_t *instance;
+    stun_binding_session_t *session;
+
+    if ((h_inst == NULL) || (h_session == NULL) || (duration == 0))
+        return STUN_INVALID_PARAMS;
+
+    instance = (stun_binding_instance_t *) h_inst;
+    session = (stun_binding_session_t *) h_session;
+
+    /** TODO - make sure the session still exists */
+
+    session->refresh_duration = duration;
+
+    return STUN_OK;
+}
 
 
 /******************************************************************************/

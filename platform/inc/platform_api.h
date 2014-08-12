@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -37,13 +38,15 @@ extern "C" {
 #include <fcntl.h>
 #include <unistd.h>
 
-#include "stun_base.h"
+#include <openssl/md5.h>
 
 #define PLATFORM_TIMER_PERIODIC_TIME_VALUE  20 /** milliseconds */
 
 #define IP_ADDR_MAX_LEN                     46
 
 #define DEV_RANDOM_FILE                     "/dev/urandom"
+
+#define PLATFORM_TIMER_MMAP_FILE_PATH       "/timertable"
 
 typedef struct
 {
@@ -100,6 +103,8 @@ unsigned int platform_socket_listen(
         int *sockfd_list, int num_fd, int *sockfd_act_list);
 
 bool platform_get_random_data(unsigned char *data, unsigned int len);
+
+unsigned long long int platform_64bit_random_number(void);
 
 void platform_hmac_sha
 (

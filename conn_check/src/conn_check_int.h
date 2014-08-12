@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -46,9 +47,9 @@ typedef struct {
 typedef enum 
 {
     CONN_CHECK_REQ = 0,
-    CONN_CHECK_OK_RESP,
-    CONN_CHECK_ERROR_RESP,
-    CONN_CHECK_TIMEOUT,
+    CONN_CHECK_RESP,
+    CONN_CHECK_TIMER,
+    CONN_CHECK_CANCEL,
     CONN_CHECK_EVENT_MAX,
 } conn_check_event_t;
 
@@ -57,6 +58,10 @@ typedef struct
 {
     /** transaction instance handle */
     handle h_txn_inst;
+
+    /** software client name and version */
+    uint32_t client_name_len;
+    u_char *client_name;
 
     conn_check_session_nwk_send_cb nwk_send_cb;
     conn_check_session_start_timer_cb start_timer_cb;
@@ -90,13 +95,13 @@ typedef struct
 
     cc_session_type_t sess_type;
     handle app_param;
-
     handle transport_param;
 
     /** behavioral params */
     bool_t nominated;
     bool_t controlling_role;
     uint32_t prflx_cand_priority;
+    uint64_t tie_breaker;
 
     /** session state */
     conn_check_session_state_t state;
@@ -105,7 +110,7 @@ typedef struct
     handle h_req;
     handle h_resp;
 
-    stun_inet_addr_t prflx_addr;
+    stun_inet_addr_t mapped_addr;
 
     /** connectivity check result */
     bool_t cc_succeeded;

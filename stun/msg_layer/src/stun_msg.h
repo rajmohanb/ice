@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -27,6 +28,7 @@ extern "C" {
 
 #define STUN_TXN_ID_BYTES           12
 
+#define STUN_ATTR_LIFETIME_VAL_SIZE 4
 
 #define DEFAULT_MTU                 1500
 
@@ -51,8 +53,14 @@ extern "C" {
 #define STUN_ATTR_ICE_CONTROLLED_LEN    8
 #define STUN_ATTR_USE_CANDIDATE_LEN     0
 #define STUN_ATTR_PRIORITY_LEN          4
-    
 
+#ifdef MB_ENABLE_TURN
+#define STUN_ATTR_CHANNEL_NUM_LEN       4
+#define STUN_ATTR_LIFETIME_LEN          4
+#define STUN_ATTR_EVEN_PORT_LEN         1
+#define STUN_ATTR_REQ_TRANSPORT_LEN     4
+#endif
+    
 
 typedef struct {
 
@@ -400,16 +408,7 @@ typedef struct
 } stun_ice_controlled_attr_t;
 
 
-typedef struct
-{
-    /**
-     * common STUN attribute header
-     */
-    stun_attr_hdr_t    hdr;
-
-    uint64_t           random_num;
-
-} stun_ice_controlling_attr_t;
+typedef stun_ice_controlled_attr_t stun_ice_controlling_attr_t;
 
 
 #endif

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -23,6 +24,9 @@ extern "C" {
 
 
 int32_t stun_txn_utils_generate_txn_id(u_char *txn_id, uint32_t bytes);
+
+
+int32_t stun_txn_utils_killall_timers (stun_txn_context_t *txn_ctxt);
 
 
 /******************************************************************************/

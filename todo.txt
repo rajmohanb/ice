@@ -20,7 +20,9 @@
 18. Add ip address type in nwk_send_callback as one more parameter.
 19. rename the values of the enumerator stun_inet_addr_type_t.
 20. rename ice_cand_type_t enumerator values to be more appropriate.
-
+21. Extend the main makefile to take architecture endian type (little endian or big endian) and build type (debug or release) and pass on the CFLAGS related parameters accordingly.
+22. Provision to build both release and debug mode from makefile
+23. Add an api in msg_layer to add multiple headers at once, rather than one by one
 
 
 
@@ -39,10 +41,8 @@
 13 In most of the layers, especially stun encoder and decoder layer, sizeof() is used multiple times for data structures like uint16. Instead of calculating this every time, better to keep it calculated once and just reuse. This will speed up the execution ana avoid unnecessary computation. This must be done for all such things.
 14. support rfc3484 - priority for multiple IPv6 candidates
 15. Need to validate the media handle before passing to media fsm. This needs to be done at multiple places in ice_session_fsm.c especially when media handle is passed directly by the application via an api.
-16. Provision to build both release and debug mode from makefile
-17. Add an api in msg_layer to add multiple headers at once, rather than one by one
-18. Extend the main makefile to take architecture endian type (little endian or big endian) and build type (debug or release) and pass on the CFLAGS related parameters accordingly.
-19. replace remaining usage's of inet_aton() with inet_pton() in stun encoder and decoder library source
+16. replace remaining usage's of inet_aton() with inet_pton() in stun encoder and decoder library source
+17. Currently compilation flags like MB_ENABLE_TURN, MB_ENABLE_ICE are being used directly in makefile for turn, ice layers respectively. These should not be defined in these makefiles but must come from the application. For eg: in the makefile of sample applications for ice full and ice lite. The sample application stun_keepalive should not use MB_ENABLE_TURN since it does not use it.
 
 
 ICE Full?

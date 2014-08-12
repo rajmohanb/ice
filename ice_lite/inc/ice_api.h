@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -39,12 +40,6 @@ typedef enum
     ICE_NEW_NOM_PAIR,
     ICE_MISC_EVENT_MAX,
 } ice_misc_event_t;
-
-
-typedef enum {
-    ICE_TRANSPORT_UDP = 0,
-    ICE_TRANSPORT_TCP,
-} ice_transport_type_t;
 
 
 typedef enum
@@ -127,10 +122,19 @@ typedef struct {
 typedef struct
 {
     /** host candidate transport details */
-    stun_inet_addr_type_t type;
-    u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
-    uint32_t port;
-    ice_transport_type_t protocol;
+    stun_inet_addr_t addr;
+    stun_transport_protocol_type_t protocol;
+
+    /** 
+     * local preference for this candidate as defined in ICE RFC 4.1.2.1. 
+     * It must be an integer from 0 to 65535 inclusive. If the device is 
+     * multi-homed only, then set the value as per preference. Otherwise, 
+     * if a single IP address, then set it to 65535.
+     */
+    uint32_t local_pref;
+
+    /** whether default candidate for the component */
+    bool_t default_cand;
 
     /** component id */
     uint32_t comp_id;
@@ -138,15 +142,17 @@ typedef struct
     /** application transport handle */
     handle transport_param;
 
-} ice_media_host_comp_t;
+} ice_media_host_cand_t;
 
 
 typedef struct
 {
+    uint32_t num_comps;
+
     /** 
-     * number of media components associated with this media stream
+     * number of host candidates associated with this media stream
      */
-    uint32_t num_comp;
+    uint32_t num_cands;
 
     /**
      * ice user name fragment and password
@@ -157,7 +163,7 @@ typedef struct
     /**
      * component details for this media stream
      */
-    ice_media_host_comp_t host_cands[ICE_MAX_COMPONENTS];
+    ice_media_host_cand_t host_cands[ICE_MEDIA_MAX_HOST_CANDS];
 
 } ice_api_media_stream_t;
 
@@ -166,7 +172,7 @@ typedef struct
 {
     u_char foundation[ICE_FOUNDATION_MAX_LEN];
     uint32_t component_id;
-    ice_transport_type_t protocol;
+    stun_transport_protocol_type_t protocol;
     uint64_t priority;
     stun_inet_addr_type_t ip_addr_type;
     u_char ip_addr[ICE_IP_ADDR_MAX_LEN];

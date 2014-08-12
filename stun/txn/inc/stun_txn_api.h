@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -80,6 +81,9 @@ int32_t stun_txn_timer_set_handle(handle h_timer, handle timer_handle);
 
 
 int32_t stun_txn_timer_get_handle(handle h_timer, handle *timer_handle);
+
+
+int32_t stun_cancel_txn(handle h_inst, handle h_txn);
 
 
 int32_t stun_destroy_txn(handle h_inst, 

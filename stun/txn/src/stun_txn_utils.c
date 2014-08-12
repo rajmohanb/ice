@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -21,8 +22,11 @@ extern "C" {
 #include "stun_base.h"
 #include "msg_layer_api.h"
 #include "stun_msg.h"
+#include "stun_txn_api.h"
+#include "stun_txn_int.h"
 
-int32_t stun_txn_utils_generate_txn_id(u_char *txn_id, uint32_t bytes)
+
+int32_t stun_txn_utils_generate_txn_id (u_char *txn_id, uint32_t bytes)
 {
     if (platform_get_random_data(txn_id, bytes) == true)
         return STUN_OK;
@@ -31,6 +35,51 @@ int32_t stun_txn_utils_generate_txn_id(u_char *txn_id, uint32_t bytes)
     ICE_LOG(LOG_SEV_ERROR, "platform_get_random_data()");
 
     return STUN_INT_ERROR;
+}
+
+
+
+int32_t stun_txn_utils_killall_timers (stun_txn_context_t *txn_ctxt)
+{
+    int32_t status;
+
+    if (txn_ctxt->h_rto_timer)
+    {
+        status = txn_ctxt->instance->stop_timer_cb(txn_ctxt->h_rto_timer);
+        if (status == STUN_OK)
+        {
+            txn_ctxt->h_rto_timer = NULL;
+            stun_free(txn_ctxt->rto_params);
+        }
+        
+        txn_ctxt->rto_params = NULL;
+    }
+
+    if (txn_ctxt->h_rm_timer)
+    {
+        status = txn_ctxt->instance->stop_timer_cb(txn_ctxt->h_rm_timer);
+        if (status == STUN_OK)
+        {
+            txn_ctxt->h_rm_timer = NULL;
+            stun_free(txn_ctxt->rm_params);
+        }
+
+        txn_ctxt->rm_params = NULL;
+    }
+
+    if (txn_ctxt->h_overall_timer)
+    {
+        status = txn_ctxt->instance->stop_timer_cb(txn_ctxt->h_overall_timer);
+        if (status == STUN_OK)
+        {
+            txn_ctxt->h_overall_timer = NULL;
+            stun_free(txn_ctxt->oall_params);
+        }
+
+        txn_ctxt->oall_params = NULL;
+    }
+
+    return STUN_OK;
 }
 
 

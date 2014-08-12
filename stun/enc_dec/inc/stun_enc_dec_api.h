@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -27,22 +28,24 @@ extern "C" {
 
 #define STUN_MSG_AUTH_PASSWORD_LEN  128
 
+
 typedef struct 
 {
-    uint32_t len;
-    u_char password[STUN_MSG_AUTH_PASSWORD_LEN];
+    uint32_t key_len;
+    u_char key[STUN_MSG_AUTH_PASSWORD_LEN];
 } stun_auth_params_t;
 
 /**
- * Parse api. Parses the given TLV message into message structure and returns
- * the same. Further operations like set and get can be done on this returned
- * h_msg
+ * Decode api. Decodes the given TLV message buffer into message structure and
+ * returns a handle to the message. Further operations like set and get can 
+ * be done on this returned h_msg.
  */
-int32_t stun_msg_decode(u_char *buf, uint32_t len, handle *tlv);
+int32_t stun_msg_decode(u_char *buf, uint32_t len, 
+                                    bool_t validate_fp, handle *tlv);
 
 /**
- * Format api. Converts the given message to TLV format and returns the TLV
- * message that can be sent on the network
+ * Encode api. Converts the given message to TLV format and returns the TLV
+ * message buffer that can be sent on the network to the peer.
  */
 int32_t stun_msg_encode(handle tlv, 
             stun_auth_params_t *auth, u_char *buf, uint32_t *size);

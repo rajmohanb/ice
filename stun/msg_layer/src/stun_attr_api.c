@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -55,7 +56,7 @@ int32_t stun_attr_destroy(handle h_attr)
 }
 
 
-int32_t stun_attr_software_set_value(handle h_attr, s_char *value, uint16_t len)
+int32_t stun_attr_software_set_value(handle h_attr, u_char *value, uint16_t len)
 {
     stun_software_attr_t *attr;
 
@@ -80,8 +81,27 @@ int32_t stun_attr_software_set_value(handle h_attr, s_char *value, uint16_t len)
 }
 
 
+int32_t stun_attr_software_get_value_length(handle h_attr, uint32_t *len)
+{
+    stun_software_attr_t *vendor;
+
+    if ((h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    vendor = (stun_software_attr_t *) h_attr;
+
+    if (vendor->hdr.type != STUN_ATTR_SOFTWARE)
+        return STUN_INVALID_PARAMS;
+
+    *len = vendor->hdr.length;
+
+    return STUN_OK;
+}
+
+
+
 int32_t stun_attr_software_get_value(handle h_attr, 
-                                        s_char *value, uint16_t *len)
+                                        u_char *value, uint16_t *len)
 {
     stun_software_attr_t *attr;
 
@@ -93,7 +113,11 @@ int32_t stun_attr_software_get_value(handle h_attr,
     if (attr->hdr.type != STUN_ATTR_SOFTWARE)
         return STUN_INVALID_PARAMS;
 
-    if (*len < attr->hdr.length) return STUN_MEM_INSUF;
+    if (*len < attr->hdr.length)
+    { 
+        *len = attr->hdr.length;
+        return STUN_MEM_INSUF;
+    }
 
     stun_memcpy(value, attr->software, attr->hdr.length);
     *len = attr->hdr.length;
@@ -104,7 +128,7 @@ int32_t stun_attr_software_get_value(handle h_attr,
 
 
 int32_t stun_attr_mapped_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len)
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
     stun_mapped_addr_attr_t *attr;
     uint32_t size;
@@ -116,6 +140,8 @@ int32_t stun_attr_mapped_addr_get_address(handle h_attr,
 
     if (attr->hdr.type != STUN_ATTR_MAPPED_ADDR)
         return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
 
     if (attr->family == STUN_ADDR_FAMILY_IPV4)
     {
@@ -131,6 +157,7 @@ int32_t stun_attr_mapped_addr_get_address(handle h_attr,
 
     return STUN_OK;
 }
+
 
 int32_t stun_attr_mapped_addr_get_port(handle h_attr, uint32_t *port)
 {
@@ -151,7 +178,7 @@ int32_t stun_attr_mapped_addr_get_port(handle h_attr, uint32_t *port)
 
 
 int32_t stun_attr_xor_mapped_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len)
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
     stun_xor_mapped_addr_attr_t *attr;
     uint32_t size;
@@ -163,6 +190,8 @@ int32_t stun_attr_xor_mapped_addr_get_address(handle h_attr,
 
     if (attr->hdr.type != STUN_ATTR_XOR_MAPPED_ADDR)
         return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
 
     if (attr->family == STUN_ADDR_FAMILY_IPV4)
     {
@@ -187,6 +216,9 @@ int32_t stun_attr_xor_mapped_addr_set_address(handle h_attr,
     stun_xor_mapped_addr_attr_t *attr;
 
     if ((address == NULL) || (h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    if ((family != STUN_ADDR_FAMILY_IPV4) && (family != STUN_ADDR_FAMILY_IPV6))
         return STUN_INVALID_PARAMS;
 
     attr = (stun_xor_mapped_addr_attr_t *) h_attr;
@@ -248,7 +280,7 @@ int32_t stun_attr_xor_mapped_addr_set_port(handle h_attr, uint32_t port)
 
 #ifdef MB_ENABLE_TURN
 int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr, 
-                                    u_char *address, uint32_t *len)
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
 {
     stun_mapped_addr_attr_t *attr;
     uint32_t size;
@@ -260,6 +292,8 @@ int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr,
 
     if (attr->hdr.type != STUN_ATTR_XOR_RELAYED_ADDR)
         return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
 
     if (attr->family == STUN_ADDR_FAMILY_IPV4)
     {
@@ -276,6 +310,31 @@ int32_t stun_attr_xor_relayed_addr_get_address(handle h_attr,
     return STUN_OK;
 }
 
+
+int32_t stun_attr_xor_relayed_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family)
+{
+    stun_xor_relayed_addr_attr_t *attr;
+
+    if ((address == NULL) || (h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    if ((family != STUN_ADDR_FAMILY_IPV4) && (family != STUN_ADDR_FAMILY_IPV6))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_relayed_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_RELAYED_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->family = family;
+    stun_strncpy((char *)attr->address, (char *)address, len);
+
+    return STUN_OK;
+}
+
+
+
 int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port)
 {
     stun_xor_relayed_addr_attr_t *attr;
@@ -289,6 +348,123 @@ int32_t stun_attr_xor_relayed_addr_get_port(handle h_attr, uint32_t *port)
         return STUN_INVALID_PARAMS;
 
     *port = attr->port;
+
+    return STUN_OK;
+}
+
+
+
+int32_t stun_attr_xor_relayed_addr_set_port(handle h_attr, uint32_t port)
+{
+    stun_xor_relayed_addr_attr_t *attr;
+
+    if ((h_attr == NULL) || (port == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_relayed_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_RELAYED_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->port = port;
+
+    return STUN_OK;
+}
+
+
+
+int32_t stun_attr_xor_peer_addr_get_address(handle h_attr, 
+        stun_addr_family_type_t *addr_family, u_char *address, uint32_t *len)
+{
+    stun_xor_peer_addr_attr_t *attr;
+    uint32_t size;
+
+    if ((address == NULL) || (h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    *addr_family = attr->family;
+
+    if (attr->family == STUN_ADDR_FAMILY_IPV4)
+    {
+        size = *len - 1;
+        stun_strncpy((char *)address, (char *)attr->address, size);
+        *len = size;
+    }
+    else
+    {
+        stun_strncpy((char *)address, 
+                (char *)attr->address, MAX_MAPPED_ADDRESS_LEN - 1);
+        *len = MAX_MAPPED_ADDRESS_LEN;
+    }
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_xor_peer_addr_set_address(handle h_attr, 
+            u_char *address, uint32_t len, stun_addr_family_type_t family)
+{
+    stun_xor_peer_addr_attr_t *attr;
+
+    if ((address == NULL) || (h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->family = family;
+
+    if (family == STUN_ADDR_FAMILY_IPV4)
+    {
+        stun_strncpy((char *)attr->address, (char *)address, len);
+    }
+    else
+    {
+        stun_strncpy((char *)attr->address, (char *)address, len);
+    }
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_xor_peer_addr_get_port(handle h_attr, uint32_t *port)
+{
+    stun_xor_peer_addr_attr_t *attr;
+
+    if ((h_attr == NULL) || (port == NULL))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    *port = attr->port;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_xor_peer_addr_set_port(handle h_attr, uint32_t port)
+{
+    stun_xor_peer_addr_attr_t *attr;
+
+    if ((h_attr == NULL) || (port == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_xor_peer_addr_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_XOR_PEER_ADDR)
+        return STUN_INVALID_PARAMS;
+
+    attr->port = port;
 
     return STUN_OK;
 }
@@ -310,6 +486,86 @@ int32_t stun_attr_lifetime_get_duration(handle h_attr, uint32_t *duration)
 
     return STUN_OK;
 }
+
+
+int32_t stun_attr_lifetime_set_duration(handle h_attr, uint32_t duration)
+{
+    stun_lifetime_attr_t *attr;
+
+    if (h_attr == NULL) return STUN_INVALID_PARAMS;
+
+    attr = (stun_lifetime_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_LIFETIME)
+        return STUN_INVALID_PARAMS;
+
+    attr->lifetime = duration;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_data_get_data_length(handle h_attr, uint32_t *len)
+{
+    stun_data_attr_t *attr;
+
+    if ((h_attr == NULL) || (len == 0))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_data_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_DATA)
+        return STUN_INVALID_PARAMS;
+
+    *len = attr->length;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_data_get_data(handle h_attr, u_char *data, uint32_t len)
+{
+    stun_data_attr_t *attr;
+
+    if ((h_attr == NULL) || (data == NULL))
+        return STUN_INVALID_PARAMS;
+
+    attr = (stun_data_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_DATA)
+        return STUN_INVALID_PARAMS;
+
+    if(attr->length > len) return STUN_MEM_INSUF;
+
+    stun_memcpy(data, attr->data, attr->length);
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_data_set_data(handle h_attr, u_char *data, uint32_t len)
+{
+    stun_data_attr_t *attr;
+
+    if (h_attr == NULL) return STUN_INVALID_PARAMS;
+    /** data of length zero is perfectly legal! */
+
+    attr = (stun_data_attr_t *) h_attr;
+
+    if (attr->hdr.type != STUN_ATTR_DATA)
+        return STUN_INVALID_PARAMS;
+
+    attr->data = (u_char *) stun_calloc (1, len);
+    if (attr->data == NULL) return STUN_MEM_ERROR;
+
+    stun_memcpy(attr->data, data, len);
+    attr->length = len;
+
+    return STUN_OK;
+}
+
+
+
 #endif
 
 
@@ -374,12 +630,12 @@ int32_t stun_attr_error_code_set_error_reason(
 }
 
 
-int32_t stun_attr_username_get_user_name(
-                    handle h_attr, u_char *user_name, uint32_t *len)
+
+int32_t stun_attr_username_get_username_length(handle h_attr, uint32_t *len)
 {
     stun_username_attr_t *name;
 
-    if ((h_attr == NULL) || (user_name == NULL) || (len == NULL))
+    if ((h_attr == NULL) || (len == NULL))
         return STUN_INVALID_PARAMS;
 
     name = (stun_username_attr_t *) h_attr;
@@ -387,16 +643,40 @@ int32_t stun_attr_username_get_user_name(
     if (name->hdr.type != STUN_ATTR_USERNAME)
         return STUN_INVALID_PARAMS;
 
-    if (*len < name->hdr.length) return STUN_MEM_INSUF;
-
-    stun_memcpy(user_name, name->username, name->hdr.length);
     *len = name->hdr.length;
 
     return STUN_OK;
 }
 
 
-int32_t stun_attr_username_set_user_name(handle h_attr, 
+
+int32_t stun_attr_username_get_username(
+                    handle h_attr, u_char *username, uint32_t *len)
+{
+    stun_username_attr_t *name;
+
+    if ((h_attr == NULL) || (username == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    name = (stun_username_attr_t *) h_attr;
+
+    if (name->hdr.type != STUN_ATTR_USERNAME)
+        return STUN_INVALID_PARAMS;
+
+    if (*len < name->hdr.length)
+    {
+        *len = name->hdr.length;
+        return STUN_MEM_INSUF;
+    }
+
+    stun_memcpy(username, name->username, name->hdr.length);
+    *len = name->hdr.length;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_username_set_username(handle h_attr, 
                                                 u_char *name, uint32_t len)
 {
     stun_username_attr_t *username;
@@ -421,6 +701,25 @@ int32_t stun_attr_username_set_user_name(handle h_attr,
 
 }
 
+
+int32_t stun_attr_nonce_get_nonce_length(handle h_attr, uint32_t *len)
+{
+    stun_nonce_attr_t *nonce;
+
+    if ((h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    nonce = (stun_nonce_attr_t *) h_attr;
+
+    if (nonce->hdr.type != STUN_ATTR_NONCE)
+        return STUN_INVALID_PARAMS;
+
+    *len = nonce->hdr.length;
+
+    return STUN_OK;
+}
+
+
 int32_t stun_attr_nonce_get_nonce(handle h_attr, 
                                         u_char *nonce_val, uint32_t *len)
 {
@@ -434,7 +733,11 @@ int32_t stun_attr_nonce_get_nonce(handle h_attr,
     if (nonce->hdr.type != STUN_ATTR_NONCE)
         return STUN_INVALID_PARAMS;
 
-    if (*len < nonce->hdr.length) return STUN_MEM_INSUF;
+    if (*len < nonce->hdr.length)
+    {
+        *len = nonce->hdr.length;
+        return STUN_MEM_INSUF;
+    }
 
     stun_memcpy(nonce_val, nonce->nonce, nonce->hdr.length);
     *len = nonce->hdr.length;
@@ -469,6 +772,25 @@ int32_t stun_attr_nonce_set_nonce(handle h_attr,
 
 
 
+int32_t stun_attr_realm_get_realm_length(handle h_attr, uint32_t *len)
+{
+    stun_realm_attr_t *realm;
+
+    if ((h_attr == NULL) || (len == NULL))
+        return STUN_INVALID_PARAMS;
+
+    realm = (stun_realm_attr_t *) h_attr;
+
+    if (realm->hdr.type != STUN_ATTR_REALM)
+        return STUN_INVALID_PARAMS;
+
+    *len = realm->hdr.length;
+
+    return STUN_OK;
+}
+
+
+
 int32_t stun_attr_realm_get_realm(handle h_attr, 
                                         u_char *realm_val, uint32_t *len)
 {
@@ -482,7 +804,11 @@ int32_t stun_attr_realm_get_realm(handle h_attr,
     if (realm->hdr.type != STUN_ATTR_REALM)
         return STUN_INVALID_PARAMS;
 
-    if (*len < realm->hdr.length) return STUN_MEM_INSUF;
+    if (*len < realm->hdr.length)
+    {
+        *len = realm->hdr.length;
+        return STUN_MEM_INSUF;
+    }
 
     stun_memcpy(realm_val, realm->realm, realm->hdr.length);
     *len = realm->hdr.length;
@@ -566,7 +892,7 @@ int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type)
 
 #ifdef MB_ENABLE_TURN
 int32_t stun_attr_requested_transport_set_protocol(
-                        handle h_attr, stun_transport_protocol_type_t proto)
+                                    handle h_attr, uint32_t proto)
 {
     stun_req_transport_attr_t *tport;
 
@@ -581,11 +907,187 @@ int32_t stun_attr_requested_transport_set_protocol(
             (proto != STUN_TRANSPORT_UDP) && (proto != STUN_TRANSPORT_SCTP))
         return STUN_INVALID_PARAMS;
 
-    tport->protocol = proto;
+    tport->protocol = (u_char)proto;
     tport->hdr.length = 4;
 
     return STUN_OK;
 }
+
+
+
+int32_t stun_attr_requested_transport_get_protocol(
+                                    handle h_attr, uint32_t *proto)
+{
+    stun_req_transport_attr_t *tport;
+
+    if ((h_attr == NULL) || (proto == NULL))
+        return STUN_INVALID_PARAMS;
+
+    tport = (stun_req_transport_attr_t *) h_attr;
+
+    if (tport->hdr.type != STUN_ATTR_REQUESTED_TRANSPORT)
+        return STUN_INVALID_PARAMS;
+
+    *proto = (uint32_t) tport->protocol;
+
+    return STUN_OK;
+}
+
+
+
+int32_t stun_attr_channel_number_set_channel(handle h_attr, uint16_t num)
+{
+    stun_channel_number_attr_t *chnl = (stun_channel_number_attr_t *) h_attr;
+
+    if (h_attr == NULL) return STUN_INVALID_PARAMS;
+
+    if (chnl->hdr.type != STUN_ATTR_CHANNEL_NUMBER)
+        return STUN_INVALID_PARAMS;
+
+    chnl->channel_number = num;
+    chnl->hdr.length = 2;
+
+    return STUN_OK;
+}
+
+
+
+int32_t stun_attr_channel_number_get_channel(handle h_attr, uint16_t *num)
+{
+    stun_channel_number_attr_t *chnl = (stun_channel_number_attr_t *) h_attr;
+
+    if ((h_attr == NULL) || (num == NULL))
+        return STUN_INVALID_PARAMS;
+
+    if (chnl->hdr.type != STUN_ATTR_CHANNEL_NUMBER)
+        return STUN_INVALID_PARAMS;
+
+    *num = chnl->channel_number;
+
+    return STUN_OK;
+}
+
+
+#endif /** MB_ENABLE_TURN */
+
+
+#ifdef MB_ENABLE_ICE
+
+int32_t stun_attr_priority_get_priority(handle h_attr, uint32_t *priority)
+{
+    stun_priority_attr_t *prio;
+
+    if ((h_attr == NULL) || (priority == NULL))
+        return STUN_INVALID_PARAMS;
+
+    prio = (stun_priority_attr_t *) h_attr;
+
+    if (prio->hdr.type != STUN_ATTR_PRIORITY)
+        return STUN_INVALID_PARAMS;
+
+    *priority = prio->priority;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_priority_set_priority(handle h_attr, uint32_t priority)
+{
+    stun_priority_attr_t *prio;
+
+    if ((h_attr == NULL) || (priority == 0))
+        return STUN_INVALID_PARAMS;
+
+    prio = (stun_priority_attr_t *) h_attr;
+
+    if (prio->hdr.type != STUN_ATTR_PRIORITY)
+        return STUN_INVALID_PARAMS;
+
+    prio->priority = priority;
+    prio->hdr.length = 4;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlling_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak)
+{
+    stun_ice_controlling_attr_t *controlling;
+
+    if ((h_attr == NULL) || (tiebreak == NULL))
+        return STUN_INVALID_PARAMS;
+
+    controlling = (stun_ice_controlling_attr_t *) h_attr;
+
+    if (controlling->hdr.type != STUN_ATTR_ICE_CONTROLLING)
+        return STUN_INVALID_PARAMS;
+
+    *tiebreak = controlling->random_num;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlling_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak)
+{
+    stun_ice_controlling_attr_t *controlling;
+
+    if ((h_attr == NULL) || (tiebreak == 0))
+        return STUN_INVALID_PARAMS;
+
+    controlling = (stun_ice_controlling_attr_t *) h_attr;
+
+    if (controlling->hdr.type != STUN_ATTR_ICE_CONTROLLING)
+        return STUN_INVALID_PARAMS;
+
+    controlling->random_num = tiebreak;
+    controlling->hdr.length = 8;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlled_get_tiebreaker_value(
+                                            handle h_attr, uint64_t *tiebreak)
+{
+    stun_ice_controlled_attr_t *controlled;
+
+    if ((h_attr == NULL) || (tiebreak == NULL))
+        return STUN_INVALID_PARAMS;
+
+    controlled = (stun_ice_controlled_attr_t *) h_attr;
+
+    if (controlled->hdr.type != STUN_ATTR_ICE_CONTROLLED)
+        return STUN_INVALID_PARAMS;
+
+    *tiebreak = controlled->random_num;
+
+    return STUN_OK;
+}
+
+
+int32_t stun_attr_ice_controlled_set_tiebreaker_value(
+                                            handle h_attr, uint64_t tiebreak)
+{
+    stun_ice_controlled_attr_t *controlled;
+
+    if ((h_attr == NULL) || (tiebreak == 0))
+        return STUN_INVALID_PARAMS;
+
+    controlled = (stun_ice_controlled_attr_t *) h_attr;
+
+    if (controlled->hdr.type != STUN_ATTR_ICE_CONTROLLED)
+        return STUN_INVALID_PARAMS;
+
+    controlled->random_num = tiebreak;
+    controlled->hdr.length = 8;
+
+    return STUN_OK;
+}
+
+
 #endif
 
 

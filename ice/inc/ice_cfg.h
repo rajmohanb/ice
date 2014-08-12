@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -21,7 +22,7 @@ extern "C" {
 
 /******************************************************************************/
 
-#define ICE_FOUNDATION_MAX_LEN  128
+#define ICE_FOUNDATION_MAX_LEN  32
 
 
 #define ICE_CHECK_LIST_MAX_SIZE     100
@@ -62,7 +63,7 @@ extern "C" {
 #define ICE_MAX_COMPONENTS      2
 
 /** max number of valid pairs */
-#define ICE_MAX_VALID_LIST_PAIRS    2
+#define ICE_MAX_VALID_LIST_PAIRS    8
 
 /** 
  * maximum number of gathered candidates per component of per media stream
@@ -77,6 +78,10 @@ extern "C" {
 #define TA_VAL_FOR_GATHERING    20 /* ms */
 #define RTO_VAL_FOR_GATHERING   100
 
+#define ICE_CC_NOMINATION_TIMER_VALUE  4000
+#define ICE_KEEP_ALIVE_TIMER_VALUE    15000   /** milli-seconds */
+#define ICE_BINDING_KEEP_ALIVE_TIMER_VALUE  10000 /** milli-seconds */
+
 /** Ta and RTO values for connectivity checks */
 #define TA_VAL_FOR_CHECKS       20
 #define RTO_VAL_FOR_CHECKS      100
@@ -86,6 +91,9 @@ extern "C" {
 #define ICE_MAX_PWD_LEN         256
 
 #define TRANSPORT_MTU_SIZE      1500
+
+#define ICE_DEFAULT_NOMINATION_TYPE ICE_NOMINATION_TYPE_REGULAR
+
 
 /******************************************************************************/
 

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -77,11 +78,27 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
 
 #ifdef MB_ENABLE_TURN
         case STUN_ATTR_CHANNEL_NUMBER:
+            size = sizeof(stun_channel_number_attr_t);
+            break;
+
         case STUN_ATTR_LIFETIME:
+            size = sizeof(stun_lifetime_attr_t);
+            break;
+
         case STUN_ATTR_XOR_PEER_ADDR:
+            size = sizeof(stun_xor_peer_addr_attr_t);
+            break;
+
         case STUN_ATTR_DATA:
+            size = sizeof(stun_data_attr_t);
+            break;
+
         case STUN_ATTR_XOR_RELAYED_ADDR:
+            size = sizeof(stun_xor_relayed_addr_attr_t);
+            break;
+
         case STUN_ATTR_EVEN_PORT:
+            size = sizeof(stun_even_port_attr_t);
             break;
 
         case STUN_ATTR_REQUESTED_TRANSPORT:
@@ -89,13 +106,18 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
             break;
 
         case STUN_ATTR_DONT_FRAGMENT:
+            size = sizeof(stun_dont_fragment_attr_t);
+            break;
+
         case STUN_ATTR_RESERVATION_TOKEN:
+            size = sizeof(stun_reservation_token_attr_t);
             break;
 
 #endif
 #ifdef MB_ENABLE_ICE
 
         case STUN_ATTR_PRIORITY:
+            size = sizeof(stun_priority_attr_t);
             break;
 
         case STUN_ATTR_USE_CANDIDATE:
@@ -104,6 +126,7 @@ handle stun_utils_create_attr(stun_attribute_type_t attr_type)
 
         case STUN_ATTR_ICE_CONTROLLED:
         case STUN_ATTR_ICE_CONTROLLING:
+            size = sizeof(stun_ice_controlled_attr_t);
             break;
 
 #endif
@@ -177,12 +200,21 @@ int32_t stun_utils_destroy_attr(handle stun_attr)
         case STUN_ATTR_XOR_MAPPED_ADDR:
         case STUN_ATTR_ALTERNATE_SERVER:
         case STUN_ATTR_FINGERPRINT:
+            stun_free(attr);
+            break;
 
 #ifdef MB_ENABLE_TURN
+        case STUN_ATTR_DATA:
+        {
+            stun_data_attr_t *data = (stun_data_attr_t *) stun_attr;
+            stun_free(data->data);
+            stun_free(data);
+        }
+        break;
+
         case STUN_ATTR_CHANNEL_NUMBER:
         case STUN_ATTR_LIFETIME:
         case STUN_ATTR_XOR_PEER_ADDR:
-        case STUN_ATTR_DATA:
         case STUN_ATTR_XOR_RELAYED_ADDR:
         case STUN_ATTR_EVEN_PORT:
         case STUN_ATTR_REQUESTED_TRANSPORT:
@@ -245,6 +277,8 @@ int32_t stun_msg_utils_add_unknown_attributes(
                 "Unable to add unknown attribute type to unknown-attributes");
             goto ERROR_EXIT;
         }
+
+        pah_attr++;
     }
 
     /** now add the attribute to the message */

@@ -1,4 +1,4 @@
-valgrind --leak-check=yes --run-libc-freeres=yes --log-file=valgrind --leak-check=full --show-reachable=yes  --trace-children=yes ./ice_lite_agent
+valgrind --leak-check=yes --run-libc-freeres=yes --log-file=valgrind --leak-check=full --show-reachable=yes  --trace-children=yes ./ice_agent_demo
 echo "*************   VALGRIND REPORT ****************"
 echo
 grep Invalid valgrind*

@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -28,11 +29,17 @@ int32_t gather_candidates(ice_session_t *session,
 int32_t handle_gather_result(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 
-int32_t process_relay_server_msg (ice_session_t *session, 
+int32_t ice_gather_failed(ice_session_t *session, 
+                                            handle h_msg, handle *h_param);
+
+int32_t process_gather_resp(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 
 int32_t ice_form_checklist(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
+
+int32_t ice_nomination_timer_expired(
+            ice_session_t *session, handle arg, handle *h_param);
 
 int32_t initiate_checks(ice_session_t *session, 
                                             handle h_msg, handle *h_param);
@@ -57,10 +64,19 @@ int32_t ice_add_media_stream (ice_session_t *session,
 int32_t ice_remove_media_stream (ice_session_t *session, 
                                             handle h_msg, handle *h_param);
 
+int32_t ice_conn_check_timer_event (ice_session_t *session, 
+                                            handle h_msg, handle *h_param);
+
 int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param);
 
 int32_t ice_session_fsm_inject_msg(ice_session_t *session, 
                 ice_session_event_t event, handle h_msg, handle *h_param);
+
+int32_t ice_keep_alive_timer_expired(
+            ice_session_t *session, handle arg, handle *h_param);
+
+int32_t ice_send_media_data (ice_session_t *session, 
+                                            handle arg, handle *h_param);
 
 
 /******************************************************************************/

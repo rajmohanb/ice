@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -109,8 +110,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             return STUN_INT_ERROR;
         }
 
-        status = conn_check_session_inject_received_msg(
-                        h_cc_inst, media->h_cc_svr_session, stun_pkt->h_msg);
+        status = conn_check_session_inject_received_msg(h_cc_inst, 
+                    media->h_cc_svr_session, (conn_check_rx_pkt_t *)stun_pkt);
         if (status == STUN_TERMINATED)
         {
             conn_check_result_t check_result = {0};
@@ -150,9 +151,12 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
     } else if (status == STUN_OK)
     {
+        ICE_LOG (LOG_SEV_WARNING, "Discarding stray STUN message\n");
     }
     else
     {
+        ICE_LOG (LOG_SEV_WARNING, 
+                "Injecting received msg returned error %d\n", status);
     }
 
     return STUN_OK;

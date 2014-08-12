@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -116,7 +117,7 @@ int32_t ice_utils_get_media_params_in_running_state(
 {
     int32_t j, k, x;
 
-    for (j = 0; j < media->num_comp; j++)
+    for (j = 0; j < media->num_comps; j++)
     {
         ice_media_comp_t *media_comp = &media_params->comps[j];
         k = 0;
@@ -184,7 +185,7 @@ int32_t ice_utils_get_media_params_in_completed_state(
     ice_cand_pair_t *prio_pair;
     ice_cand_params_t *cand_param;
 
-    for (i = 0; i < media->num_comp; i++)
+    for (i = 0; i < media->num_comps; i++)
     {
         media_comp = &media_params->comps[i];
 
@@ -302,7 +303,7 @@ int32_t ice_utils_get_local_media_params(
         ICE_LOG(LOG_SEV_ERROR, "TBD????????????????????");
     }
 
-    media_params->num_comps = media->num_comp;
+    media_params->num_comps = media->num_comps;
 
     /** copy media credentials */
     stun_strncpy(media_params->ice_ufrag, 
@@ -453,7 +454,7 @@ uint64_t ice_utils_compute_priority(ice_candidate_t *cand)
         return STUN_INVALID_PARAMS;
 
     prio = (pow(2, 24) * type_pref) + 
-           (pow(2, 8) * LOCAL_IP_PRECEDENCE) + 
+           (pow(2, 8) * cand->local_pref) + 
            (256 - cand->comp_id);
 
     return prio;
@@ -754,33 +755,34 @@ int32_t ice_utils_copy_media_host_candidates(
                 ice_api_media_stream_t *src, ice_media_stream_t *dest)
 {
     ice_candidate_t *cand;
-    ice_media_host_comp_t *host_comp;
+    ice_media_host_cand_t *host_cand;
     uint32_t i;
 
-    for ( i = 0; i < src->num_comp; i++)
+    for ( i = 0; i < src->num_cands; i++)
     {
         cand = &dest->as_local_cands[i];
-        host_comp = &src->host_cands[i];
+        host_cand = &src->host_cands[i];
 
         /** transport params */
-        cand->transport.type = host_comp->type;
+        cand->transport.type = host_cand->addr.host_type;
         memcpy(cand->transport.ip_addr, 
-                            host_comp->ip_addr, ICE_IP_ADDR_MAX_LEN);
-        cand->transport.port = host_comp->port;
-        cand->transport.protocol = host_comp->protocol;
+                            host_cand->addr.ip_addr, ICE_IP_ADDR_MAX_LEN);
+        cand->transport.port = host_cand->addr.port;
+        cand->transport.protocol = host_cand->protocol;
 
         /** component id */
-        cand->comp_id = host_comp->comp_id;
+        cand->comp_id = host_cand->comp_id;
 
         /** 
          * copy the application transport handle. This handle is 
          * valid only to host candidate types.
          * revisit -- should this be moved to media component level?
          */
-        cand->transport_param = host_comp->transport_param;
+        cand->transport_param = host_cand->transport_param;
 
         /** initialize the rest */
         cand->type = ICE_CAND_TYPE_HOST;
+        cand->local_pref = host_cand->local_pref;
         cand->priority = ice_utils_compute_priority(cand);
 
         /**
@@ -790,14 +792,14 @@ int32_t ice_utils_copy_media_host_candidates(
          * the candidates are gathered, then the default candidate
          * is moved based on the configuration.
          */
-        cand->default_cand = true;
+        cand->default_cand = host_cand->default_cand;
         cand->base = cand;
     }
 
     /** compute the foundation ids */
     ice_utils_compute_foundation_ids(dest);
 
-    dest->num_comp = src->num_comp;
+    dest->num_comps = src->num_comps;
 
     /** 
      * copy ice user fragment and password, used for 
@@ -1538,8 +1540,8 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
 
         /** add a new remote peer reflexive candidate */
         status = ice_utils_add_remote_peer_reflexive_candidate(media, 
-                                &(check_result->prflx_addr), local->comp_id, 
-                                check_result->prflx_priority, &new_prflx_cand);
+                                &(rx_pkt->src), local->comp_id, 
+                                check_result->priority, &new_prflx_cand);
 
         if (status != STUN_OK)
         {
@@ -1549,7 +1551,7 @@ int32_t ice_utils_add_to_valid_pair_list(ice_media_stream_t *media,
         }
 
         remote = new_prflx_cand;
-        remote->priority = check_result->prflx_priority;
+        remote->priority = check_result->priority;
     }
     
     /**

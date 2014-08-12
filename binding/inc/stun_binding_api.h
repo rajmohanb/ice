@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -81,13 +82,25 @@ int32_t stun_binding_session_inject_received_msg(
 int32_t stun_binding_session_send_message(handle h_inst, 
                             handle h_session, stun_msg_type_t msg_type);
 
-int32_t stun_binding_session_inject_timer_event(handle timer_id, handle arg);
+int32_t stun_binding_session_inject_timer_event(
+                        handle timer_id, handle arg, handle *bind_session);
 
 int32_t stun_binding_instance_find_session_for_received_msg(
                             handle h_inst, handle h_msg, handle *h_session);
 
+int32_t stun_binding_session_get_xor_mapped_address(handle h_inst, 
+                        handle h_session, stun_inet_addr_t *mapped_addr);
+
 int32_t stun_binding_session_get_mapped_address(handle h_inst, 
-        handle h_session, u_char *mapped_addr, uint32_t *len, uint32_t *port);
+                        handle h_session, stun_inet_addr_t *mapped_addr);
+
+int32_t stun_binding_session_timer_get_session_handle (
+                    handle arg, handle *h_session, handle *h_instance);
+
+int32_t stun_binding_session_enable_session_refresh(
+                handle h_inst, handle h_session, uint32_t duration);
+
+
 
 /******************************************************************************/
 

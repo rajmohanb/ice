@@ -1,8 +1,9 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2011, MindBricks Technologies               *
-*                   MindBricks Confidential Proprietary.                       *
-*                         All Rights Reserved.                                 *
+*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
+*                     MindBricks Confidential Proprietary.                     *
+*                            All Rights Reserved.                              *
 *                                                                              *
 ********************************************************************************
 *                                                                              *
@@ -30,6 +31,7 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <ctype.h>
+#include <sys/time.h>
 #include <msg_layer_api.h>
 #include <stun_enc_dec_api.h>
 #include <stun_txn_api.h>
@@ -38,9 +40,6 @@
 //#define ICE_IPV6
 
 
-//#define STUN_SRV_IP "198.65.166.165"
-//#define STUN_SRV_IP "75.101.138.128"
-//#define STUN_SRV_IP "216.146.46.55"
 #ifdef ICE_IPV6
 #define STUN_SRV_IP "2001:db8:0:242::67"
 #define TURN_SRV_IP "2001:db8:0:242::67"
@@ -67,14 +66,23 @@
 #define LOCAL_ICE_RTP_HOST_PORT 44444
 #define LOCAL_ICE_RTCP_HOST_PORT 44445
 
+#define ICE_VENDOR_NAME "MindBricks ICE agent v1.0"
+#define ICE_VENDOR_NAME_LEN 25
+
+#define APP_LOG(level, ...) app_log(level, __FILE__, __LINE__, ##__VA_ARGS__)
+
+
 handle h_inst, h_session;
 static int sockfd_sip = 0;
 bool g_gather_done = false;
+bool g_session_destroyed = false;
 bool g_cc_done = false;
 int sockfd_ice[2];
 u_char *my_buf;
 
+
 stun_log_level_t g_log_sev = LOG_SEV_DEBUG;
+
 
 char *states[] =
 {
@@ -84,16 +92,41 @@ char *states[] =
     "ICE_CC_FAILED",
 };
 
-void app_log(/** char *file_name, uint32_t line_num, */
-                stun_log_level_t level, char *format, ...)
+char *log_levels[] =
 {
-    char buff[150];
+    "LOG_SEV_CRITICAL",
+    "LOG_SEV_ERROR",
+    "LOG_SEV_WARNING",
+    "LOG_SEV_INFO",
+    "LOG_SEV_DEBUG",
+};
+
+
+void app_log(stun_log_level_t level,
+        char *file_name, uint32_t line_num, char *format, ...)
+{
+    char buff[500];
     va_list args;
+    int relative_time;
+    static struct timeval init = { 0, 0 };
+    struct timeval now;
 
     if (level > g_log_sev) return;
 
+    if(init.tv_sec == 0 && init.tv_usec == 0)
+        gettimeofday(&init, NULL);
+
+    gettimeofday(&now, NULL);
+
+    relative_time = 1000 * (now.tv_sec - init.tv_sec);
+    if (now.tv_usec - init.tv_usec > 0)
+        relative_time = relative_time + ((now.tv_usec - init.tv_usec) / 1000);
+    else
+        relative_time = relative_time - 1 + ((now.tv_usec - init.tv_usec) / 1000);
+
     va_start(args, format );
-    sprintf(buff, "%s\n", format);
+    sprintf(buff, "| %s | %i msec <%s: %i> %s\n", 
+            log_levels[level], relative_time, file_name, line_num, format);
     vprintf(buff, args );
     va_end(args );
 }
@@ -102,14 +135,18 @@ void app_log(/** char *file_name, uint32_t line_num, */
 void app_timer_expiry_cb (void *timer_id, void *arg)
 {
     int32_t status;
+    handle ice_session;
 
-    app_log (LOG_SEV_DEBUG, "in sample application timer callback");
+    APP_LOG (LOG_SEV_DEBUG, "in sample application timer callback");
 
     /** inject timer message */
-    status = ice_session_inject_timer_event(timer_id, arg);
+    status = ice_session_inject_timer_event(timer_id, arg, &ice_session);
     if (status == STUN_TERMINATED)
     {
-        app_log (LOG_SEV_INFO, "ice_session_inject_timer_event() returned failure");
+        APP_LOG (LOG_SEV_INFO, 
+                "ice_session_inject_timer_event() returned failure. The ICE"\
+                " session has terminated due to timeout");
+        g_cc_done = true;
     }
 
     return;
@@ -135,7 +172,7 @@ int32_t app_nwk_send_msg (u_char *buf, uint32_t buf_len,
     }
     else
     {
-        app_log (LOG_SEV_INFO, 
+        APP_LOG (LOG_SEV_INFO, 
                 "Invalid IP address family type. Sending of STUN message failed");
     }
 
@@ -184,10 +221,6 @@ static void encode_session(handle h_inst, handle h_session)
     {
         media_desc = &session_desc.media[media_count];
 
-        //printf ("------------------------------------------------------------------\n");
-        //printf ("Media handle %p\n", media_desc->h_media);
-        //printf ("Media state: %s\n\n", states[media_desc->media_state]);
-
         /* Write the a=ice-ufrag and a=ice-pwd attributes */
         printf("a=ice-ufrag:%.*s\na=ice-pwd:%.*s\n",
            strlen(media_desc->ice_ufrag),
@@ -199,7 +232,6 @@ static void encode_session(handle h_inst, handle h_session)
         {
             media_comp = &media_desc->comps[comp_count];
 
-            //printf ("Media component ID: %d\n", media_comp->comp_id);
             /** log the default candidate for each component */
             if (media_comp->comp_id == RTP_COMPONENT_ID)
             {
@@ -359,7 +391,7 @@ static void ice_input_remote_sdp(handle h_inst, handle h_session, handle h_media
 
             cnt = sscanf(line+2, "%s %s RTP/", media, portstr);
             if (cnt != 2) {
-                app_log(LOG_SEV_ERROR, "Error parsing media line");
+                APP_LOG(LOG_SEV_ERROR, "Error parsing media line");
                 goto on_error;
             }
 
@@ -374,7 +406,7 @@ static void ice_input_remote_sdp(handle h_inst, handle h_session, handle h_media
             
             cnt = sscanf(line+2, "%s %s %s", c, net, ip);
             if (cnt != 3) {
-                app_log(LOG_SEV_ERROR, "Error parsing connection line");
+                APP_LOG(LOG_SEV_ERROR, "Error parsing connection line");
                 goto on_error;
             }
 
@@ -394,7 +426,7 @@ static void ice_input_remote_sdp(handle h_inst, handle h_session, handle h_media
 
                 cnt = sscanf(val, "%d IN %s %s", &port, net, ip);
                 if (cnt != 3) {
-                    app_log(LOG_SEV_ERROR, "Error parsing rtcp attribute");
+                    APP_LOG(LOG_SEV_ERROR, "Error parsing rtcp attribute");
                     goto on_error;
                 }
             } else if (strcmp(attr, "candidate")==0) {
@@ -458,7 +490,7 @@ static void ice_input_remote_sdp(handle h_inst, handle h_session, handle h_media
                                     h_inst, h_session, &peer_session_desc);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "ice_session_set_peer_session_params() returned error %d\n", 
                 status);
     }
@@ -480,24 +512,24 @@ void ice_lite_sample_print_valid_list(handle h_inst, handle h_session)
     status = ice_session_get_session_valid_pairs(h_inst, h_session, &valid_list);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "Unable to get the valid list for media\n");
         return;
     }
 
-    app_log (LOG_SEV_INFO, "Number of media %d\n", valid_list.num_media);
+    APP_LOG (LOG_SEV_INFO, "Number of media %d\n", valid_list.num_media);
     for (i = 0; i < valid_list.num_media; i++)
     {
         valid_media = &valid_list.media_list[i];
 
-        app_log (LOG_SEV_INFO, 
+        APP_LOG (LOG_SEV_INFO, 
                 "Number of valid pairs %d\n", valid_media->num_valid);
-        app_log (LOG_SEV_INFO, "VALID LIST\n");
+        APP_LOG (LOG_SEV_INFO, "VALID LIST\n");
 
         for (j = 0; j < valid_media->num_valid; j++)
         {
             pair = &valid_media->pairs[j];
-            app_log (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d\n", 
+            APP_LOG (LOG_SEV_INFO, "\ncomp id: %d local: %s:%d peer: %s:%d\n", 
                     pair->comp_id, pair->local.ip_addr, pair->local.port,
                     pair->peer.ip_addr, pair->peer.port);
         }
@@ -517,12 +549,12 @@ void app_media_state_change_handler(handle h_inst,
         case ICE_CC_FAILED:
         case ICE_CC_COMPLETED:
         {
-            app_log (LOG_SEV_INFO, 
+            APP_LOG (LOG_SEV_INFO, 
                     "************************************************************\n");
-            app_log (LOG_SEV_INFO, 
+            APP_LOG (LOG_SEV_INFO, 
                     "--- ICE session %p Media handle %p state changed to %s\n", 
                     h_session, h_media, states[state]);
-            app_log (LOG_SEV_INFO, 
+            APP_LOG (LOG_SEV_INFO, 
                     "************************************************************\n");
         }
         break;
@@ -537,13 +569,15 @@ void app_media_state_change_handler(handle h_inst,
 void app_session_state_change_handler(handle h_inst, 
                                     handle h_session, ice_state_t state)
 {
+    uint32_t status;
+
     if ((state >= ICE_GATHERED) && (state <= ICE_CC_FAILED))
     {
-        app_log (LOG_SEV_INFO, 
+        APP_LOG (LOG_SEV_INFO, 
                 "************************************************************\n");
-        app_log (LOG_SEV_INFO, 
+        APP_LOG (LOG_SEV_INFO, 
                 "--- ICE session %p state changed to %s\n", h_session, states[state]);
-        app_log (LOG_SEV_INFO, 
+        APP_LOG (LOG_SEV_INFO, 
                 "************************************************************\n");
     }
 
@@ -554,13 +588,15 @@ void app_session_state_change_handler(handle h_inst,
             encode_session(h_inst, h_session);
             break;
 
-        case ICE_CC_FAILED: break;
+        case ICE_CC_RUNNING:
+            break;
+
         case ICE_CC_COMPLETED:
         {
             static int val = 1;
             if (val) {
-                app_log (LOG_SEV_INFO, "\n\n\nICE negotiation completed, alert the local user\n");
-                app_log (LOG_SEV_CRITICAL, " ----------------------------- SIP 180 RINGING -------------------------->\n");
+                APP_LOG (LOG_SEV_INFO, "\n\n\nICE negotiation completed, alert the local user\n");
+                APP_LOG (LOG_SEV_CRITICAL, " ----------------------------- SIP 180 RINGING -------------------------->\n");
 
                 ice_lite_sample_print_valid_list(h_inst, h_session);
 
@@ -568,6 +604,18 @@ void app_session_state_change_handler(handle h_inst,
             }
             val=0;
             g_cc_done = true;
+        }
+        break;
+
+        case ICE_CC_FAILED:
+        {
+            APP_LOG (LOG_SEV_INFO, "ICE session failed, destroying session");
+
+            status = ice_destroy_session(h_inst, h_session);
+            if(status != STUN_OK)
+            {
+                APP_LOG (LOG_SEV_ERROR, "Destroying of ICE session failed %d", status);
+            }
         }
         break;
 
@@ -617,7 +665,7 @@ void app_initialize_ice(void)
     status = ice_create_instance(&h_inst);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, "ice_create_instance() returned error %d\n", status);
+        APP_LOG (LOG_SEV_ERROR, "ice_create_instance() returned error %d\n", status);
         return;
     }
 
@@ -628,7 +676,7 @@ void app_initialize_ice(void)
     status = ice_instance_set_callbacks(h_inst, &app_cbs);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, "ice_instance_set_callbacks() returned error %d\n", status);
+        APP_LOG (LOG_SEV_ERROR, "ice_instance_set_callbacks() returned error %d\n", status);
         return;
     }
 
@@ -638,7 +686,15 @@ void app_initialize_ice(void)
     status = ice_instance_register_event_handlers(h_inst, &event_hdlrs);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, "ice_instance_register_event_handlers() returned error %d\n", status);
+        APP_LOG (LOG_SEV_ERROR, "ice_instance_register_event_handlers() returned error %d\n", status);
+        return;
+    }
+
+    status = ice_instance_set_client_software_name(h_inst, 
+                            (u_char *)ICE_VENDOR_NAME, ICE_VENDOR_NAME_LEN);
+    if (status != STUN_OK)
+    {
+        APP_LOG (LOG_SEV_ERROR, "Setting of ICE agent vendor name failed, returned error %d\n", status);
         return;
     }
 
@@ -673,7 +729,7 @@ int ice_lite_sample_create_host_candidate(int port)
 
     if ((code = getaddrinfo(NULL, service, &req, &ans)) != 0)
     {
-        app_log(LOG_SEV_ERROR, "getaddrinfo failed code %d\n", code); 
+        APP_LOG(LOG_SEV_ERROR, "getaddrinfo failed code %d\n", code); 
         return 0;
     } 
 
@@ -681,20 +737,20 @@ int ice_lite_sample_create_host_candidate(int port)
     f = socket(ans->ai_family, ans->ai_socktype, ans->ai_protocol);
     if (f < 0)
     {
-        app_log (LOG_SEV_ERROR, "socket() failed\n");
+        APP_LOG (LOG_SEV_ERROR, "socket() failed\n");
         return 0;
     }
 
     if (bind(f, ans->ai_addr, ans->ai_addrlen) < 0)
     {
-        app_log (LOG_SEV_ERROR, "bind() failed\n");
+        APP_LOG (LOG_SEV_ERROR, "bind() failed\n");
         return 0;
     }
 
     if (ans->ai_family == 10)
-        app_log(LOG_SEV_DEBUG, "IP address mode: IPv6\n");
+        APP_LOG(LOG_SEV_DEBUG, "IP address mode: IPv6\n");
     else
-        app_log(LOG_SEV_DEBUG, "IP address mode: IPv4\n");
+        APP_LOG(LOG_SEV_DEBUG, "IP address mode: IPv4\n");
 
     return f;
 }
@@ -719,27 +775,10 @@ int main (int argc, char *argv[])
     status = ice_create_session(h_inst, ICE_SESSION_OUTGOING, ICE_MODE_FULL, &h_session);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, "ice_create_session() returned error %d\n", status);
+        APP_LOG (LOG_SEV_ERROR, "ice_create_session() returned error %d\n", status);
         return -1;
     }
 
-#if 0
-    sockfd_ice[0] = ice_lite_sample_create_host_candidate(LOCAL_ICE_RTP_HOST_PORT);
-    if (sockfd_ice[0] == 0)
-    {
-        app_log (LOG_SEV_ERROR, "Creation of local host candidate failed\n");
-        return -1;
-    }
-
-    sockfd_ice[1] = ice_lite_sample_create_host_candidate(LOCAL_ICE_RTCP_HOST_PORT);
-    if (sockfd_ice[1] == 0)
-    {
-        app_log (LOG_SEV_ERROR, "Creation of local host candidate failed\n");
-        return -1;
-    }
-#endif
-
-    //-------------------------------------
     sockfd_ice[0] = platform_create_socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd_ice[0] == -1) return STUN_INT_ERROR;
 
@@ -751,7 +790,7 @@ int main (int argc, char *argv[])
             (struct sockaddr *)&local_addr, sizeof(local_addr));
     if (status == -1)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "binding to port failed... perhaps port already being used?\n");
         return 0;
     }
@@ -767,39 +806,37 @@ int main (int argc, char *argv[])
                 (struct sockaddr *) &local_addr, sizeof(local_addr));
     if (status == -1)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "binding to port failed... perhaps port already being used?\n");
         return 0;
     }
-
-    //-------------------------------------
 
     num_fds = 2;
 
     media.num_comp = 2;
 
 #ifdef ICE_IPV6
-    media.host_cands[0].type = STUN_INET_ADDR_IPV6;
+    media.host_cands[0].addr.host_type = STUN_INET_ADDR_IPV6;
 #else
-    media.host_cands[0].type = STUN_INET_ADDR_IPV4;
+    media.host_cands[0].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
-    strcpy((char *)media.host_cands[0].ip_addr, LOCAL_IP);
-    media.host_cands[0].port = LOCAL_ICE_RTP_HOST_PORT;
+    strcpy((char *)media.host_cands[0].addr.ip_addr, LOCAL_IP);
+    media.host_cands[0].addr.port = LOCAL_ICE_RTP_HOST_PORT;
     media.host_cands[0].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[0].comp_id = RTP_COMPONENT_ID;
     media.host_cands[0].transport_param = (handle)sockfd_ice[0];
 
-    app_log(LOG_SEV_DEBUG, 
+    APP_LOG(LOG_SEV_DEBUG, 
             "Transport param for component ID %d :-> %d", 
             media.host_cands[0].comp_id, sockfd_ice[0]);
 
 #ifdef ICE_IPV6
-    media.host_cands[1].type = STUN_INET_ADDR_IPV6;
+    media.host_cands[1].addr.host_type = STUN_INET_ADDR_IPV6;
 #else
-    media.host_cands[1].type = STUN_INET_ADDR_IPV4;
+    media.host_cands[1].addr.host_type = STUN_INET_ADDR_IPV4;
 #endif
-    strcpy((char *)media.host_cands[1].ip_addr, LOCAL_IP);
-    media.host_cands[1].port = LOCAL_ICE_RTCP_HOST_PORT;
+    strcpy((char *)media.host_cands[1].addr.ip_addr, LOCAL_IP);
+    media.host_cands[1].addr.port = LOCAL_ICE_RTCP_HOST_PORT;
     media.host_cands[1].protocol = ICE_TRANSPORT_UDP;
     media.host_cands[1].comp_id = RTCP_COMPONENT_ID;
     media.host_cands[1].transport_param = (handle)sockfd_ice[1];
@@ -808,14 +845,14 @@ int main (int argc, char *argv[])
     strcpy(media.ice_ufrag, "ufrag");
     strcpy(media.ice_pwd, "pwd");
 
-    app_log(LOG_SEV_DEBUG, 
+    APP_LOG(LOG_SEV_DEBUG, 
             "Transport param for component ID %d :-> %d", 
             media.host_cands[1].comp_id, sockfd_ice[1]);
 
     status = ice_session_add_media_stream(h_inst, h_session, &media, &h_audio);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, "ice_session_add_media_stream() returned error %d\n", status);
+        APP_LOG (LOG_SEV_ERROR, "ice_session_add_media_stream() returned error %d\n", status);
         return -1;
     }
 
@@ -830,7 +867,7 @@ int main (int argc, char *argv[])
     status = ice_session_set_relay_server_cfg(h_inst, h_session, &turn_cfg);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "ice_session_set_relay_server_cfg() returned error %d\n", status);
         return -1;
     }
@@ -839,21 +876,21 @@ int main (int argc, char *argv[])
      * kick off the session. An ice full session will 
      * start off with gathering of local candidates. 
      */
-    ice_session_gather_candidates(h_inst, h_session);
+    ice_session_gather_candidates(h_inst, h_session, true);
 
-    app_log (LOG_SEV_ERROR, "**************************************************************\n");
+    APP_LOG (LOG_SEV_ERROR, "**************************************************************\n");
 
     my_buf = (unsigned char *) platform_calloc (1, TRANSPORT_MTU_SIZE);
 
-    //ice_lite_input_remote_sdp(h_inst, h_session, h_audio);
     ic_msg_count = 0;
 
+start_listen:
     while (g_gather_done == false) {
 
         int i, act_fd, fd_list[20];
         act_fd  = platform_socket_listen(sockfd_ice, num_fds, fd_list);
 
-        app_log(LOG_SEV_DEBUG, "Select returned that there is activity on %d sockets", act_fd);
+        APP_LOG(LOG_SEV_DEBUG, "Select returned that there is activity on %d sockets", act_fd);
 
         for (i = 0; i < act_fd; i++)
         {
@@ -867,10 +904,10 @@ int main (int argc, char *argv[])
             else
             {
                 printf ("COUNT: %d\n", ++ic_msg_count);
-                status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
+                status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
-                    app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
+                    APP_LOG (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
                     continue;
                 }
 
@@ -878,10 +915,11 @@ int main (int argc, char *argv[])
                             h_inst, h_rcvdmsg, (handle) fd_list[i], &h_target);
                 if (status == STUN_NOT_FOUND)
                 {
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                             "No ICE session found for received message on transport fd %d", fd_list[i]);
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                             "Dropping the received message on transport fd %d", fd_list[i]);
+                    stun_msg_destroy(h_rcvdmsg);
                 }
                 else if (status == STUN_OK)
                 {
@@ -894,28 +932,31 @@ int main (int argc, char *argv[])
                     status = ice_session_inject_received_msg(h_inst, h_target, &pkt);
                     if (status != STUN_OK)
                     {
-                        app_log (LOG_SEV_ERROR, "ice_session_inject_received_msg() returned error %d\n", status);
-                        stun_msg_destroy(h_rcvdmsg);
+                        APP_LOG (LOG_SEV_ERROR, "ice_session_inject_received_msg() returned error %d\n", status);
+                        if (status == STUN_INVALID_PARAMS) stun_msg_destroy(h_rcvdmsg);
                     }
                 }
             }
         }
     }
 
-    ice_input_remote_sdp(h_inst, h_session, h_audio);
 
+    ice_input_remote_sdp(h_inst, h_session, h_audio);
+ 
+    APP_LOG (LOG_SEV_ERROR, "Forming connectivity check lists ...\n");
     status = ice_session_form_check_lists(h_inst, h_session);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "ice_session_form_check_lists() returned error %d\n", status);
         return -1;
     }
 
+    APP_LOG (LOG_SEV_ERROR, "Starting ICE connectivity checks ...\n");
     status = ice_session_start_connectivity_checks(h_inst, h_session);
     if (status != STUN_OK)
     {
-        app_log (LOG_SEV_ERROR, 
+        APP_LOG (LOG_SEV_ERROR, 
                 "ice_session_start_connectivity_checks() returned error %d\n", 
                 status);
         return -1;
@@ -926,7 +967,7 @@ int main (int argc, char *argv[])
         int i, act_fd, fd_list[20];
         act_fd  = platform_socket_listen(sockfd_ice, num_fds, fd_list);
 
-        app_log(LOG_SEV_DEBUG, "Select returned that there is activity on %d sockets", act_fd);
+        APP_LOG(LOG_SEV_DEBUG, "Select returned that there is activity on %d sockets", act_fd);
 
         for (i = 0; i < act_fd; i++)
         {
@@ -940,10 +981,10 @@ int main (int argc, char *argv[])
             else
             {
                 printf ("COUNT: %d\n", ++ic_msg_count);
-                status = stun_msg_decode(my_buf, bytes, &h_rcvdmsg);
+                status = stun_msg_decode(my_buf, bytes, true, &h_rcvdmsg);
                 if (status != STUN_OK)
                 {
-                    app_log (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
+                    APP_LOG (LOG_SEV_ERROR, "stun_msg_decode() returned error %d\n", status);
                     continue;
                 }
 
@@ -951,10 +992,11 @@ int main (int argc, char *argv[])
                             h_inst, h_rcvdmsg, (handle) fd_list[i], &h_target);
                 if (status == STUN_NOT_FOUND)
                 {
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                             "No ICE session found for received message on transport fd %d", fd_list[i]);
-                    app_log(LOG_SEV_ERROR, 
+                    APP_LOG(LOG_SEV_ERROR, 
                             "Dropping the received message on transport fd %d", fd_list[i]);
+                    stun_msg_destroy(h_rcvdmsg);
                 }
                 else if (status == STUN_OK)
                 {
@@ -967,7 +1009,7 @@ int main (int argc, char *argv[])
                     status = ice_session_inject_received_msg(h_inst, h_target, &pkt);
                     if (status != STUN_OK)
                     {
-                        app_log (LOG_SEV_ERROR, "ice_session_inject_received_msg() returned error %d\n", status);
+                        APP_LOG (LOG_SEV_ERROR, "ice_session_inject_received_msg() returned error %d\n", status);
                         stun_msg_destroy(h_rcvdmsg);
                     }
                 }
