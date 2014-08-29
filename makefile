@@ -54,6 +54,7 @@ full:
 	make -C ice_lite/src/
 	make -C turns/src/
 	make -C stuns/src/
+	make -C trickle_ice/src/
 
 lite:
 	make -C stun/enc_dec/src/
@@ -77,4 +78,5 @@ clean:
 	make -C platform/src/ clean
 	make -C turns/src/ clean
 	make -C stuns/src/ clean
+	make -C trickle_ice/src/ clean
 

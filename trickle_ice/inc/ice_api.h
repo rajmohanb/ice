@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*                 Copyright (C) 2014, MindBricks Technologies                  *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -106,10 +106,10 @@ typedef struct {
 } ice_instance_callbacks_t;
 
 
-typedef void (*ice_session_state_change_event_cb) (handle h_inst, 
-                                        handle h_session, ice_state_t state);
+typedef void (*ice_session_state_change_event_cb) (
+        handle h_inst, handle h_session, ice_state_t state, handle app_handle);
 typedef void (*ice_media_state_change_event_cb) (handle h_inst, 
-                        handle h_session, handle h_media, ice_state_t state);
+        handle h_session, handle h_media, ice_state_t state, handle app_handle);
 
 typedef struct {
     ice_session_state_change_event_cb session_state_cb;
@@ -273,11 +273,19 @@ typedef struct
     ice_valid_pair_t pairs[ICE_MAX_VALID_LIST_PAIRS];
 } ice_media_valid_pairs_t;
 
+
 typedef struct
 {
     uint32_t num_media;
     ice_media_valid_pairs_t media_list[ICE_MAX_MEDIA_STREAMS];
 } ice_session_valid_pairs_t;
+
+
+typedef struct
+{
+    bool eoc;
+    ice_cand_params_t cand;
+} ice_cand_t;
 
 
 /******************************************************************************/
@@ -303,10 +311,9 @@ int32_t ice_destroy_instance(handle h_inst);
 int32_t ice_instance_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len);
 
 
-int32_t ice_create_session(handle h_inst,
-                           ice_session_type_t session_type, 
-                           ice_mode_type_t mode, 
-                           handle *h_session);
+int32_t ice_create_session(
+            handle h_inst, ice_session_type_t ice_sess_type, 
+            ice_mode_type_t mode, handle app_handle, handle *h_session);
 
 int32_t ice_session_set_relay_server_cfg(handle h_inst, 
                             handle h_session, ice_relay_server_cfg_t *relay);
@@ -337,6 +344,10 @@ int32_t ice_session_set_peer_session_params(handle h_inst,
 
 int32_t ice_session_set_peer_media_params(handle h_inst, 
         handle h_session, handle h_media, ice_media_params_t *media_params);
+
+/* trickle ice candidate */
+int32_t ice_session_set_peer_trickle_candidate(handle h_inst, 
+                handle h_session, handle h_media, ice_cand_t *peer_cand);
 
 int32_t ice_destroy_session(handle h_inst, handle h_session);
 
