@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -191,8 +191,8 @@ typedef enum
 typedef enum
 {
     ICE_SES_IDLE = 0,
-    ICE_SES_GATHERING,
-    ICE_SES_GATHERED,
+    //ICE_SES_GATHERING,
+    //ICE_SES_GATHERED,
     ICE_SES_CC_RUNNING,
     ICE_SES_CC_COMPLETED,
     ICE_SES_CC_FAILED,
@@ -219,14 +219,15 @@ typedef enum
     ICE_MEDIA_NOMINATION_TIMER,
     ICE_MEDIA_KEEP_ALIVE_TIMER,
     ICE_MEDIA_SEND_DATA,
+    ICE_MEDIA_TRICKLE_CAND,
     ICE_MEDIA_EVENT_MAX,
 } ice_media_stream_event_t;
 
 typedef enum
 {
     ICE_MEDIA_IDLE = 0,
-    ICE_MEDIA_GATHERING,
-    ICE_MEDIA_GATHERED,
+    //ICE_MEDIA_GATHERING,
+    //ICE_MEDIA_GATHERED,
     ICE_MEDIA_FROZEN,
     ICE_MEDIA_CC_RUNNING,
     ICE_MEDIA_NOMINATING,
@@ -349,6 +350,7 @@ typedef struct
      */
     ice_session_state_change_event_cb session_state_event_cb;
     ice_media_state_change_event_cb media_state_event_cb;
+    ice_trickle_candidates_event_cb trickle_cand_cb;
 
     handle *aps_sessions[ICE_MAX_CONCURRENT_SESSIONS];
 
@@ -387,11 +389,14 @@ struct struct_ice_session
 
     /* opaque application handle */
     handle app_handle;
+
+    /* blob used for calculating unique foundation across the session */
+    uint8_t foundation_id;
 };
 
 
 typedef int32_t (*ice_session_fsm_handler) 
-                    (ice_session_t *session, handle h_msg, handle *h_param);
+                    (ice_session_t *session, handle h_msg, handle h_param);
 typedef int32_t (*ice_media_stream_fsm_handler)
                     (ice_media_stream_t *media, handle h_msg);
 typedef int32_t (*ice_cand_pair_fsm_handler)

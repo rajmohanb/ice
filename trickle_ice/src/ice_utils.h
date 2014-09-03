@@ -156,10 +156,10 @@ int32_t ice_utils_validate_bind_session_handle(
 int32_t ice_utils_get_free_local_candidate(
                         ice_media_stream_t *media, ice_candidate_t **cand);
 
-int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand, 
-                                stun_inet_addr_t *alloc_addr, 
-                                ice_cand_type_t cand_type, uint32_t comp_id,
-                                ice_candidate_t *base_cand, bool_t def_cand);
+int32_t ice_utils_copy_gathered_candidate_info(ice_media_stream_t *m, 
+        ice_candidate_t *c, stun_inet_addr_t *alloc_addr, 
+        ice_cand_type_t cand_type, uint32_t comp_id, 
+        ice_candidate_t *base_cand, bool_t def_cand);
 
 int32_t ice_utils_copy_turn_gathered_candidates(
         ice_media_stream_t *media, ice_int_params_t *param, uint32_t comp_id);
@@ -317,6 +317,29 @@ int32_t ice_media_utils_ignore_server_reflexive_conn_checks(
 
 int32_t ice_utils_compute_turn_hmac_key(
             ice_session_t *session, u_char *key, uint32_t *key_len);
+
+int32_t ice_utils_add_new_media_stream (ice_session_t *session, 
+        ice_api_media_stream_t *media_params, ice_media_stream_t **h_media);
+
+void ice_utils_set_state_for_new_cand_pair(ice_cand_pair_t *cp);
+
+int32_t ice_media_utils_compute_candidate_pair_priority(
+            ice_media_stream_t *media, ice_cand_pair_t *cand_pair);
+
+int32_t ice_session_utils_notify_ice_candidate_event(
+            ice_media_stream_t *media, ice_cand_type_t type, uint32_t comp_id);
+
+void ice_utils_compute_foundation_id_for_given_candidate(
+                            ice_media_stream_t *media, ice_candidate_t *c);
+
+int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
+                                    ice_media_stream_t *m, ice_candidate_t *l);
+
+int32_t ice_utils_get_free_candidate_pair_index(
+                            ice_media_stream_t *m, uint16_t *index);
+
+int32_t ice_utils_get_free_remote_candidate(
+                        ice_media_stream_t *media, ice_candidate_t **cand);
 
 
 

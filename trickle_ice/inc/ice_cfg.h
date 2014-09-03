@@ -26,7 +26,7 @@ extern "C" {
 
 
 #define ICE_CHECK_LIST_MAX_SIZE     100
-#define ICE_CANDIDATES_MAX_SIZE     10
+#define ICE_CANDIDATES_MAX_SIZE     18
 
 #define TURN_SVR_IP_ADDR_MAX_LEN    16
 #define STUN_SVR_IP_ADDR_MAX_LEN    16

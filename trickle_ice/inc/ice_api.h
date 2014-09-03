@@ -89,6 +89,22 @@ typedef struct
 } ice_rx_stun_pkt_t;
 
 
+typedef struct
+{
+    u_char foundation[ICE_FOUNDATION_MAX_LEN];
+    uint32_t component_id;
+    stun_transport_protocol_type_t protocol;
+    uint64_t priority;
+    stun_inet_addr_type_t ip_addr_type;
+    u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
+    uint32_t port;
+    ice_cand_type_t cand_type;
+    u_char rel_addr[ICE_IP_ADDR_MAX_LEN];
+    uint32_t rel_port;
+} ice_cand_params_t;
+
+
+
 typedef int32_t (*ice_session_nwk_send_cb) (u_char *buf, 
                         uint32_t buf_len, stun_inet_addr_type_t ip_addr_type, 
                         u_char *ip_addr, uint32_t port, handle param);
@@ -110,10 +126,15 @@ typedef void (*ice_session_state_change_event_cb) (
         handle h_inst, handle h_session, ice_state_t state, handle app_handle);
 typedef void (*ice_media_state_change_event_cb) (handle h_inst, 
         handle h_session, handle h_media, ice_state_t state, handle app_handle);
+typedef void (*ice_trickle_candidates_event_cb) (
+                handle h_inst, handle h_session, handle h_media, 
+                handle app_handle, ice_cand_params_t *cand);
+
 
 typedef struct {
     ice_session_state_change_event_cb session_state_cb;
     ice_media_state_change_event_cb media_state_cb;
+    ice_trickle_candidates_event_cb trickle_cand_cb;
 } ice_state_event_handlers_t;
 
 
@@ -201,20 +222,6 @@ typedef struct
 
 } ice_api_media_stream_t;
 
-
-typedef struct
-{
-    u_char foundation[ICE_FOUNDATION_MAX_LEN];
-    uint32_t component_id;
-    stun_transport_protocol_type_t protocol;
-    uint64_t priority;
-    stun_inet_addr_type_t ip_addr_type;
-    u_char ip_addr[ICE_IP_ADDR_MAX_LEN];
-    uint32_t port;
-    ice_cand_type_t cand_type;
-    u_char rel_addr[ICE_IP_ADDR_MAX_LEN];
-    uint32_t rel_port;
-} ice_cand_params_t;
 
 
 typedef struct

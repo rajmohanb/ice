@@ -79,6 +79,9 @@ int32_t ice_media_stream_keep_alive_timer_expiry(
 int32_t ice_media_stream_send_data(ice_media_stream_t *media, handle arg);
 
 
+int32_t ice_media_trickled_cand(ice_media_stream_t *media, handle h_msg);
+
+
 int32_t ice_media_stream_ignore_msg(
                                 ice_media_stream_t *media, handle h_msg);
 

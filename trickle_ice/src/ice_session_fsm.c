@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -66,6 +66,7 @@ static ice_session_fsm_handler
         ice_send_media_data,
         ice_ignore_msg,
     },
+#if 0
     /** ICE_SES_GATHERING */
     {
         ice_ignore_msg,
@@ -85,7 +86,7 @@ static ice_session_fsm_handler
         ice_ignore_msg,
         ice_send_media_data,
         process_trickle_candidate,
-    },
+    },process_trickle_candidate
     /** ICE_SES_GATHERED */
     {
         ice_ignore_msg,
@@ -106,11 +107,12 @@ static ice_session_fsm_handler
         ice_send_media_data,
         ice_ignore_msg,
     },
+#endif
     /** ICE_SES_CC_RUNNING */
     {
         ice_ignore_msg,
-        ice_ignore_msg,
-        ice_ignore_msg,
+        handle_gather_result,
+        ice_gather_failed,
         ice_ignore_msg,
         ice_ignore_msg,
         ice_nominate,
@@ -124,7 +126,7 @@ static ice_session_fsm_handler
         ice_nomination_timer_expired,
         ice_keep_alive_timer_expired,
         ice_send_media_data,
-        ice_ignore_msg,
+        ice_trickle_cand,
     },
     /** ICE_SES_CC_COMPLETED */
     {
@@ -210,7 +212,7 @@ static ice_session_fsm_handler
 
 
 
-int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
+int32_t gather_candidates(ice_session_t *session, handle h_msg, handle h_param)
 {
     int32_t i, status;
     ice_media_stream_t *media;
@@ -231,12 +233,16 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
         }
     }
 
+#if 0
     status = ice_utils_determine_session_state(session);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, 
                 "[ICE SESSION] Unable to determine ICE session state.");
     }
+#endif
+
+    session->state = ICE_SES_CC_RUNNING;
 
     return status;
 }
@@ -244,7 +250,7 @@ int32_t gather_candidates(ice_session_t *session, handle h_msg, handle *h_param)
 
 
 int32_t handle_gather_result(ice_session_t *session, 
-                                            handle h_msg, handle *h_param)
+                                            handle h_msg, handle h_param)
 {
     int32_t status;
     ice_int_params_t *param = (ice_int_params_t *)h_msg;
@@ -283,7 +289,7 @@ EXIT_PT:
 
 
 
-int32_t ice_gather_failed(ice_session_t *session, handle h_msg, handle *h_param)
+int32_t ice_gather_failed(ice_session_t *session, handle h_msg, handle h_param)
 {
     int32_t status;
     ice_int_params_t *param = (ice_int_params_t *)h_msg;
@@ -332,7 +338,7 @@ EXIT_PT:
 
 
 int32_t process_gather_resp (ice_session_t *session, 
-                                            handle h_msg, handle *h_param)
+                                            handle h_msg, handle h_param)
 {
     int32_t status, index;
     stun_msg_type_t msg_class;
@@ -398,7 +404,7 @@ int32_t process_gather_resp (ice_session_t *session,
 
 
 int32_t ice_form_checklist(ice_session_t *session, 
-                                            handle h_msg, handle *h_param)
+                                            handle h_msg, handle h_param)
 {
     int32_t i, status = STUN_INVALID_PARAMS;
     ice_media_stream_t *media;
@@ -431,7 +437,7 @@ int32_t ice_form_checklist(ice_session_t *session,
 
 
 
-int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
+int32_t initiate_checks(ice_session_t *session, handle h_msg, handle h_param)
 {
     int32_t status;
     ice_media_stream_t *media;
@@ -461,7 +467,7 @@ int32_t initiate_checks(ice_session_t *session, handle h_msg, handle *h_param)
 
 
 
-int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
+int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle h_param)
 {
     int32_t status, index, cmp_count, fail_count;
     stun_msg_type_t msg_class;
@@ -490,9 +496,19 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
     media = session->aps_media_streams[index];
 
     if (method == STUN_METHOD_BINDING)
-        event = ICE_MEDIA_CC_MSG;
+    {
+        /* check if this is a stun server response or conn check message */
+        if (ice_utils_host_compare(stun_pkt->src.ip_addr, 
+                                   session->stun_cfg.server.ip_addr, 
+                                   stun_pkt->src.host_type) == true)
+            event = ICE_MEDIA_RELAY_MSG;
+        else
+            event = ICE_MEDIA_CC_MSG;
+    }
     else
+    {
         event = ICE_MEDIA_RELAY_MSG;
+    }
 
     status = ice_media_stream_fsm_inject_msg(media, event, pkt);
     if(status != STUN_OK)
@@ -540,7 +556,7 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle *h_param)
 }
 
 
-int32_t ice_nominate(ice_session_t *session, handle h_msg, handle *h_param)
+int32_t ice_nominate(ice_session_t *session, handle h_msg, handle h_param)
 {
     int32_t status = STUN_OK;
 
@@ -559,7 +575,7 @@ int32_t ice_nominate(ice_session_t *session, handle h_msg, handle *h_param)
 }
 
 
-int32_t ice_completed(ice_session_t *session, handle h_msg, handle *h_param)
+int32_t ice_completed(ice_session_t *session, handle h_msg, handle h_param)
 {
     session->state = ICE_SES_ACTIVE;
 
@@ -568,7 +584,7 @@ int32_t ice_completed(ice_session_t *session, handle h_msg, handle *h_param)
 
 
 int32_t ice_handle_checklist_timer_expiry(ice_session_t *session, 
-                                                    handle arg, handle *h_param)
+                                                    handle arg, handle h_param)
 {
     int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
@@ -594,7 +610,7 @@ int32_t ice_handle_checklist_timer_expiry(ice_session_t *session,
 
 
 int32_t ice_nomination_timer_expired(
-            ice_session_t *session, handle arg, handle *h_param)
+            ice_session_t *session, handle arg, handle h_param)
 {
     int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
@@ -620,7 +636,7 @@ int32_t ice_nomination_timer_expired(
 
 
 int32_t ice_keep_alive_timer_expired(
-            ice_session_t *session, handle arg, handle *h_param)
+            ice_session_t *session, handle arg, handle h_param)
 {
     int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
@@ -645,7 +661,7 @@ int32_t ice_keep_alive_timer_expired(
 
 
 
-int32_t ice_restart (ice_session_t *session, handle arg, handle *h_param)
+int32_t ice_restart (ice_session_t *session, handle arg, handle h_param)
 {
     int32_t i, status = STUN_INVALID_PARAMS;
     ice_media_stream_t *media;
@@ -681,7 +697,7 @@ int32_t ice_restart (ice_session_t *session, handle arg, handle *h_param)
 }
 
 
-int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
+int32_t ice_remote_params (ice_session_t *session, handle arg, handle h_param)
 {
     int32_t i, j, status;
     ice_media_stream_t *media;
@@ -756,9 +772,11 @@ int32_t ice_remote_params (ice_session_t *session, handle arg, handle *h_param)
 }
 
 
-int32_t ice_add_media_stream (ice_session_t *session, 
-                                            handle h_msg, handle *h_param)
+int32_t ice_add_media_stream (
+        ice_session_t *session, handle h_msg, handle h_param)
 {
+    return STUN_OK;
+#if 0
     int32_t i, status;
     ice_media_stream_t *media_stream;
     ice_api_media_stream_t *add_media = (ice_api_media_stream_t *) h_msg;
@@ -821,12 +839,13 @@ int32_t ice_add_media_stream (ice_session_t *session,
 EXIT_PT:
     stun_free(media_stream);
     return status;
+#endif
 }
 
 
 
 int32_t ice_remove_media_stream (ice_session_t *session, 
-                                            handle h_msg, handle *h_param)
+                                            handle h_msg, handle h_param)
 {
     int32_t i, status;
     ice_media_stream_t *media = (ice_media_stream_t *) h_msg;
@@ -990,7 +1009,7 @@ int32_t ice_remove_media_stream (ice_session_t *session,
 
 
 int32_t ice_conn_check_timer_event (ice_session_t *session, 
-                                            handle arg, handle *h_param)
+                                            handle arg, handle h_param)
 {
     int32_t i, status;
     ice_timer_params_t *timer = (ice_timer_params_t *) arg;
@@ -1016,7 +1035,7 @@ int32_t ice_conn_check_timer_event (ice_session_t *session,
 
 
 int32_t ice_send_media_data (ice_session_t *session, 
-                                            handle arg, handle *h_param)
+                                            handle arg, handle h_param)
 {
     int32_t status;
     ice_media_data_t *data = (ice_media_data_t *) arg;
@@ -1036,28 +1055,44 @@ int32_t ice_send_media_data (ice_session_t *session,
 }
 
 
-int32_t process_trickle_candidate (ice_session_t *session, 
-                                            handle arg, handle *h_param)
+int32_t ice_trickle_cand (ice_session_t *session, handle h_msg, handle h_param)
 {
     int32_t status;
-    ice_media_data_t *data = (ice_media_data_t *) arg;
-    ice_media_stream_t *media = (ice_media_stream_t *) data->h_media;
+    ice_media_stream_t *media = (ice_media_stream_t *) h_param;
 
-    /** TODO - validate media handle? */
+    ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Handle ICE trickled candidate");
+
     status = ice_media_stream_fsm_inject_msg(
-                        media, ICE_MEDIA_SEND_DATA, arg);
-    if(status != STUN_OK)
+                        media, ICE_MEDIA_TRICKLE_CAND, h_msg);
+    if (status != STUN_OK)
     {
-        ICE_LOG(LOG_SEV_ERROR, 
-            "[ICE SESSION] Sending of media data failed %d.", status);
-        return STUN_INT_ERROR;
+        ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Handling of "\
+                "peer ICE trickled candidate returned error %d", status);
+    }
+
+    /**
+     * when the check lists are formed, initially all are in frozen
+     * state. Now when trickled peer candidates are received, the first
+     * media stream is made active (this is the fist m-line in the SDP
+     * offer and answer) and connectivity checks are started.
+     */
+    media = session->aps_media_streams[0];
+
+    if ((media->state == ICE_MEDIA_FROZEN) && (media->num_cand_pairs > 0))
+    {
+        if (ice_media_stream_fsm_inject_msg(
+                    media, ICE_MEDIA_UNFREEZE, NULL) != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] "\
+                "Unfreezing of the checklist for first media failed.");
+        }
     }
 
     return status;
 }
 
 
-int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param)
+int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle h_param)
 {
     ICE_LOG(LOG_SEV_ERROR, "[ICE SESSION] Event ignored");
     return STUN_OK;
@@ -1065,7 +1100,7 @@ int32_t ice_ignore_msg (ice_session_t *session, handle h_msg, handle *h_param)
 
 
 int32_t ice_session_fsm_inject_msg(ice_session_t *session, 
-                ice_session_event_t event, handle h_msg, handle *h_param)
+                ice_session_event_t event, handle h_msg, handle h_param)
 {
     int32_t status;
     ice_session_fsm_handler handler;
@@ -1074,8 +1109,7 @@ int32_t ice_session_fsm_inject_msg(ice_session_t *session,
     cur_state = session->state;
     handler = ice_session_fsm[cur_state][event];
 
-    if (!handler)
-        return STUN_INVALID_PARAMS;
+    if (!handler) return STUN_INVALID_PARAMS;
 
     status = handler(session, h_msg, h_param);
 

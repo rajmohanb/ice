@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2014, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -53,13 +53,16 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
+#if 0
     /** ICE_MEDIA_GATHERING */
     {
         ice_media_stream_ignore_msg,
         ice_media_process_relay_msg,
         ice_media_stream_check_gather_resp,
         ice_media_stream_gather_failed,
+        ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
@@ -89,31 +92,34 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_ignore_msg,
     },
+#endif
     /** ICE_MEDIA_FROZEN */
     {
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_process_relay_msg,
+        ice_media_stream_check_gather_resp,
+        ice_media_stream_gather_failed,
         ice_media_stream_ignore_msg,
         ice_media_unfreeze,
         ice_media_stream_ignore_msg,
         ice_media_process_rx_msg,
         ice_media_stream_ignore_msg,
+        ice_media_stream_remote_params,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_trickled_cand,
     },
     /** ICE_MEDIA_CC_RUNNING */
     {
         ice_media_stream_ignore_msg,
         ice_media_process_relay_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
+        ice_media_stream_check_gather_resp,
+        ice_media_stream_gather_failed,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_checklist_timer_expiry,
@@ -125,6 +131,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_evaluate_valid_pairs,
         ice_media_stream_keep_alive_timer_expiry,
         ice_media_stream_ignore_msg,
+        ice_media_trickled_cand,
     },
     /** ICE_MEDIA_NOMINATING */
     {
@@ -143,6 +150,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_keep_alive_timer_expiry,
         ice_media_stream_ignore_msg,
+        ice_media_trickled_cand,
     },
     /** ICE_MEDIA_CC_COMPLETED */
     {
@@ -161,6 +169,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_keep_alive_timer_expiry,
         ice_media_stream_send_data,
+        ice_media_trickled_cand,
     },
     /** ICE_CC_MEDIA_FAILED */
     {
@@ -179,6 +188,7 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
+        ice_media_trickled_cand,
     }
 };
 
@@ -211,7 +221,7 @@ int32_t ice_media_stream_gather_cands(ice_media_stream_t *media, handle h_msg)
         }
     }
 
-    media->state = ICE_MEDIA_GATHERING;
+    media->state = ICE_MEDIA_FROZEN;
 
     return status;
 
@@ -310,7 +320,10 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
 
                 if (media->num_comp_gathered >= media->num_comp)
                 {
-                    media->state = ICE_MEDIA_GATHERED;
+                    int i;
+
+                    //media->state = ICE_MEDIA_GATHERED;
+                    media->state = ICE_MEDIA_FROZEN; /* TODO; */
 
                     /** 
                      * 4.1.1.3 - Computing foundations
@@ -322,6 +335,18 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
                      *        across all media streams?
                      */
                     ice_utils_compute_foundation_ids(media);
+
+                    /* notify user about the newly discovered candidate */
+                    for (i = 0; i < media->num_comp; i++)
+                    {
+                        status = ice_session_utils_notify_ice_candidate_event(
+                                               media, ICE_CAND_TYPE_SRFLX, i+1);
+                        if (status != STUN_OK) {
+                            ICE_LOG(LOG_SEV_ERROR, "[ICE] Notifying user about"\
+                                   " the server reflexive cand failed for "\
+                                   "comp id %d.", i+1);
+                        }
+                    }
                 }
             }
         }
@@ -359,7 +384,10 @@ int32_t ice_media_stream_check_gather_resp(
 
     if (media->num_comp_gathered >= media->num_comp)
     {
-        media->state = ICE_MEDIA_GATHERED;
+        uint16_t i;
+
+        /* TODO; remain in current state which will be FROZEN or RUNNING */
+        //media->state = ICE_MEDIA_GATHERED;
 
         /** 
          * 4.1.1.3 - Computing foundations
@@ -368,7 +396,37 @@ int32_t ice_media_stream_check_gather_resp(
          * used for the frozen algorithm
          * Note - should the foundation id be computed across all media streams?
          */
-        ice_utils_compute_foundation_ids(media);
+        
+        //ice_utils_compute_foundation_ids(media);
+
+        /*
+         * because the foundation for each ice candidate is determined once
+         * all the candidates for each component of the media stream have been 
+         * gathered, we need to wait till the gathering is completed. Otherwise
+         * we could have notified the user about the discovered ice candidates
+         * as soon as we got to know about them so that trickling could be 
+         * more async.
+         */
+        /* notify ice user about the discovered ice candidates for trickling */
+        /* TODO; 
+         * we assume here that the component ids are 1 & 2 .i.e rtp and rtcp 
+         */
+        for (i = 0; i < media->num_comp; i++)
+        {
+            status = ice_session_utils_notify_ice_candidate_event(
+                                            media, ICE_CAND_TYPE_SRFLX, i+1);
+            if (status != STUN_OK) {
+                ICE_LOG(LOG_SEV_ERROR, "[ICE] Notifying user about the "\
+                        "server reflexive cand failed for comp id %d.", i+1);
+            }
+
+            status = ice_session_utils_notify_ice_candidate_event(
+                                            media, ICE_CAND_TYPE_RELAYED, i+1);
+            if (status != STUN_OK) {
+                ICE_LOG(LOG_SEV_ERROR, "[ICE] Notifying user about the "\
+                        "relayed candidate failed for comp id %d.", i+1);
+            }
+        }
     }
 
     return STUN_OK;
@@ -657,7 +715,8 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
              * to the triggered check queue. Once the answer is received 
              * from the peer, this pair will be handled. 
              */
-            if (media->state == ICE_MEDIA_GATHERED)
+            //if (media->state == ICE_MEDIA_GATHERED)
+            if (media->num_cand_pairs == 0)
             {
                 status = ice_utils_add_to_ic_check_queue_without_answer(
                                    media, local, &check_result, &stun_pkt->src);
@@ -667,7 +726,6 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 
                 return status;
             }
-
 
             /** if we are here, then answer has been received */
             status = ice_utils_process_incoming_check(
@@ -848,7 +906,8 @@ int32_t ice_media_stream_remote_params(ice_media_stream_t *media, handle h_msg)
      * attribute, then the state of ICE processing for that media
      * stream is set to COMPLETED.
      */
-    if (media_params->comps[0].num_remote_cands > 0)
+    if ((media_params->num_comps > 0) && 
+            (media_params->comps[0].num_remote_cands > 0))
     {
         media->state = ICE_MEDIA_CC_COMPLETED;
 
@@ -1086,13 +1145,138 @@ int32_t ice_media_stream_send_data(ice_media_stream_t *media, handle arg)
 }
 
 
+int32_t ice_media_trickled_cand(ice_media_stream_t *media, handle h_msg)
+{
+    int32_t status, i, j, k;
+    ice_cand_t *pc = (ice_cand_t *) h_msg;
+    ice_candidate_t *l, *r;
+
+    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] handle trickled candidate");
+
+    /* add it to the peer candidate list */
+    status = ice_utils_get_free_remote_candidate(media, &r);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE MEDIA] Unable to store trickled remote candidate. "\
+                "Ignoring the received peer trickled candidate");
+        return STUN_NO_RESOURCE;
+    }
+
+    /* store the remote candidate details */
+    r->transport.type = pc->cand.ip_addr_type;
+    r->transport.port = pc->cand.port;
+    strncpy((char *)r->transport.ip_addr, 
+                    (char *)pc->cand.ip_addr, ICE_IP_ADDR_MAX_LEN);
+    r->transport.protocol = pc->cand.protocol;
+
+    r->type = pc->cand.cand_type;
+    r->priority = pc->cand.priority;
+    strncpy((char *)r->foundation, 
+            (char *)pc->cand.foundation, ICE_FOUNDATION_MAX_LEN);
+    r->comp_id = pc->cand.component_id;
+
+
+    j = media->num_cand_pairs;
+    /* form candidate pairs for the newly received peer candidate */
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        if (media->as_local_cands[i].type == ICE_CAND_TYPE_INVALID)
+            continue;
+
+        l = &media->as_local_cands[i];
+
+        /** 
+         * a local candidate is paired with a remote candidate if
+         * and only if the two candidates have the same component ID
+         * and have the same IP address version
+         */
+        if ((l->comp_id == r->comp_id) &&
+            (l->transport.type == r->transport.type) &&
+            (l->transport.protocol == r->transport.protocol))
+        {
+            ice_cand_pair_t *pair = &media->ah_cand_pairs[j];
+            if (j >= ICE_MAX_CANDIDATE_PAIRS)
+            {
+                ICE_LOG(LOG_SEV_CRITICAL,
+                        "J value %d more than ICE_MAX_CANDIDATE_PAIRS", j);
+                break;
+            }
+
+            pair->local = l;
+            pair->remote = r;
+
+            if ((l->default_cand == true) &&
+                (r->default_cand == true))
+            {
+                pair->default_pair = true;
+            }
+            else
+            {
+                pair->default_pair = false;
+            }
+
+            /** initialize the pair */
+            pair->valid_pair = false;
+            pair->nominated = false;
+            pair->check_nom_status = false;
+
+            pair->state = ICE_CP_FROZEN;
+            pair->media = media;
+
+            /** compute the pair priority as per sec 5.7.2 */
+            ice_media_utils_compute_candidate_pair_priority(media, pair);
+
+            /* TODO; what is this? required in the context of trickling? */
+            if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
+            {
+                if (media->ice_session->instance->nomination_mode == 
+                                            ICE_NOMINATION_TYPE_AGGRESSIVE)
+                    pair->check_nom_status = true;
+                else
+                    pair->check_nom_status = false;
+            }
+
+            /* 
+             * pruning - replace server reflexive candidate with its base 
+             * for local candidate. And then check if there exists a pair
+             * with the same local and remote candidate.
+             */
+            if (l->type == ICE_CAND_TYPE_SRFLX)
+                pair->local = pair->local->base;
+
+            for (k = 0; k < ICE_MAX_CANDIDATE_PAIRS; k++)
+            {
+                ice_cand_pair_t *t = &media->ah_cand_pairs[k];
+                if (!t->local) continue;
+
+                if (k == i) continue;
+
+                if ((t->local == pair->local) && (t->remote == pair->remote))
+                    break;
+            }
+
+            if (k == ICE_MAX_CANDIDATE_PAIRS)
+            {
+                /* this is not a redundant pair */
+                j++;
+                media->num_cand_pairs += 1;
+
+                /* set the state for this new pair */
+                ice_utils_set_state_for_new_cand_pair(pair);
+            }
+        }
+    }
+
+    return STUN_OK;
+}
+
 
 int32_t ice_media_stream_ignore_msg(ice_media_stream_t *media, handle h_msg)
 {
     ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Event ignored");
     return STUN_OK;
 }
-
 
 
 int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media, 
@@ -1108,8 +1292,7 @@ int32_t ice_media_stream_fsm_inject_msg(ice_media_stream_t *media,
     cur_state = media->state;
     handler = ice_media_stream_fsm[cur_state][event];
 
-    if (!handler)
-        return STUN_INVALID_PARAMS;
+    if (!handler) return STUN_INVALID_PARAMS;
 
     status = handler(media, h_msg);
 

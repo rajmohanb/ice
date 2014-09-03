@@ -1301,10 +1301,16 @@ int32_t ice_utils_copy_media_host_candidates(
          */
         cand->default_cand = true;
         cand->base = cand;
+
+        /* compute the foundation id for this host candidate */
+        ice_utils_compute_foundation_id_for_given_candidate(dest, cand);
     }
 
+
+#if 0
     /** compute the foundation ids */
     ice_utils_compute_foundation_ids(dest);
+#endif
 
     dest->num_comp = src->num_comp;
 
@@ -1428,9 +1434,72 @@ ice_media_stream_t *
 
 
 
+void ice_utils_compute_foundation_id_for_given_candidate(
+                            ice_media_stream_t *media, ice_candidate_t *c)
+{
+    uint16_t i, j;
+    ice_candidate_t *t;
+    ice_media_stream_t *m;
+    bool_t found_similar = false;
+    ice_session_t *s = media->ice_session;
+
+    /* The foundation is an identifier, scoped within a session */
+
+    /**
+     * Two candidates have the same foundation when they are "similar" - of
+     * the same type and obtained from the same host candidate and STUN
+     * server using the same protocol
+     */
+    for (j = 0; j < ICE_MAX_MEDIA_STREAMS; j++)
+    {
+        m = s->aps_media_streams[j];
+        if(!m) continue; 
+
+        for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+        {
+            t = &m->as_local_cands[i];
+            if (t->type == ICE_CAND_TYPE_INVALID) continue;
+
+            if (c == t) continue;
+
+            /** Note: 
+             * check for same stun server and same host. As per existing
+             * API, all the media streams for a session share the same
+             * STUN server. Hence not validating the stun server here ...
+             */
+            if ((t->type == c->type) &&
+                (ice_utils_host_compare(t->base->transport.ip_addr, 
+                                        c->base->transport.ip_addr, 
+                                        c->transport.type) == true) &&
+                (t->transport.protocol == c->transport.protocol))
+            {
+                stun_strncpy((char *)c->foundation, 
+                        (char *)t->foundation, ICE_FOUNDATION_MAX_LEN - 1);
+                found_similar = true;
+                break;
+            }
+        }
+
+        if (found_similar == true) break;
+    }
+
+    if (found_similar == false)
+    {
+        /** need to generate foundation id */
+        s->foundation_id += 1;
+
+        stun_snprintf((char *)c->foundation, 
+                ICE_FOUNDATION_MAX_LEN, "%d", s->foundation_id);
+    }
+
+    return;
+}
+
+
+
 void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
 {
-    uint32_t i, j, count = 0;
+    uint32_t i, j;
     ice_candidate_t *cand1, *cand2;
     bool_t found_similar;
 
@@ -1475,10 +1544,11 @@ void ice_utils_compute_foundation_ids(ice_media_stream_t *media)
         if (found_similar == false)
         {
             /** need to generate foundation id */
-            count++;
+            media->ice_session->foundation_id += 1;
 
             stun_snprintf((char *)cand1->foundation, 
-                    ICE_FOUNDATION_MAX_LEN, "%d", count);
+                          ICE_FOUNDATION_MAX_LEN, "%d", 
+                          media->ice_session->foundation_id);
         }
     }
 
@@ -1684,9 +1754,11 @@ int32_t ice_utils_get_session_state_change_event(
 
     switch(session->state)
     {
+#if 0
         case ICE_SES_GATHERED: 
             *event = ICE_GATHERED;
             break;
+#endif
 
         case ICE_SES_CC_RUNNING:
             *event = ICE_CC_RUNNING;
@@ -1717,9 +1789,11 @@ int32_t ice_utils_get_media_state_change_event(
 
     switch(media->state)
     {
+#if 0
         case ICE_MEDIA_GATHERED:
             *event = ICE_GATHERED;
             break;
+#endif
 
         case ICE_MEDIA_CC_RUNNING:
             *event = ICE_CC_RUNNING;
@@ -1734,7 +1808,9 @@ int32_t ice_utils_get_media_state_change_event(
             break;
 
         case ICE_MEDIA_IDLE:
+#if 0
         case ICE_MEDIA_GATHERING:
+#endif
         case ICE_MEDIA_FROZEN:
         default:
             status = STUN_NOT_FOUND;
@@ -1781,6 +1857,59 @@ int32_t ice_session_utils_notify_state_change_event(ice_session_t *session)
     }
 
     return status;
+}
+
+
+/* TODO; may be add transport later? */
+int32_t ice_session_utils_notify_ice_candidate_event(
+            ice_media_stream_t *media, ice_cand_type_t type, uint32_t comp_id)
+{
+    int32_t i;
+    ice_candidate_t *c;
+    ice_cand_params_t cand;
+    ice_session_t *s = media->ice_session;
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        c = &media->as_local_cands[i];
+        if (c->type == ICE_CAND_TYPE_INVALID) continue;
+
+        if (c->comp_id != comp_id) continue;
+        if (c->type != type) continue;
+
+        /* this is the one */
+        memset(&cand, 0, sizeof(cand));
+
+        strncpy((char *)cand.foundation, 
+                (char *)c->foundation, ICE_FOUNDATION_MAX_LEN);
+        cand.component_id = c->comp_id;
+        cand.protocol = c->transport.protocol;
+        cand.priority = c->priority;
+
+        cand.ip_addr_type = c->transport.type;
+        strncpy((char *)cand.ip_addr, 
+                (char *)c->transport.ip_addr, ICE_IP_ADDR_MAX_LEN);
+        cand.port = c->transport.port;
+
+        cand.cand_type = c->type;
+
+        strncpy((char *)cand.rel_addr, 
+                (char *)c->base->transport.ip_addr, ICE_IP_ADDR_MAX_LEN);
+        cand.rel_port = c->base->transport.port;
+
+        break;
+    }
+
+    if (i == ICE_CANDIDATES_MAX_SIZE)
+    {
+        ICE_LOG(LOG_SEV_CRITICAL, 
+                "Unable to find the candidate for notification. Bug?");
+        return STUN_INT_ERROR;
+    }
+
+    s->instance->trickle_cand_cb(s->instance, s, media, s->app_handle, &cand);
+
+    return STUN_OK;
 }
 
 
@@ -1907,6 +2036,7 @@ int32_t ice_utils_determine_session_state(ice_session_t *session)
             new_session_state = ICE_SES_IDLE;
             break;
 
+#if 0
         case ICE_MEDIA_GATHERING:
             new_session_state = ICE_SES_GATHERING;
             break;
@@ -1914,6 +2044,7 @@ int32_t ice_utils_determine_session_state(ice_session_t *session)
         case ICE_MEDIA_GATHERED:
             new_session_state = ICE_SES_GATHERED;
             break;
+#endif
 
         case ICE_MEDIA_FROZEN:
         case ICE_MEDIA_CC_RUNNING:
@@ -2035,25 +2166,27 @@ int32_t ice_utils_get_free_local_candidate(
 
 
 
-int32_t ice_utils_copy_gathered_candidate_info(ice_candidate_t *cand, 
-                                stun_inet_addr_t *alloc_addr, 
-                                ice_cand_type_t cand_type, uint32_t comp_id,
-                                ice_candidate_t *base_cand, bool_t def_cand)
+int32_t ice_utils_copy_gathered_candidate_info(ice_media_stream_t *m, 
+        ice_candidate_t *c, stun_inet_addr_t *alloc_addr, 
+        ice_cand_type_t cand_type, uint32_t comp_id, 
+        ice_candidate_t *base_cand, bool_t def_cand)
 {
-    stun_memcpy(cand->transport.ip_addr, 
-                        alloc_addr->ip_addr, ICE_IP_ADDR_MAX_LEN);
-    cand->transport.port = alloc_addr->port;
-    cand->transport.protocol = ICE_TRANSPORT_UDP;
+    stun_memcpy(c->transport.ip_addr, alloc_addr->ip_addr, ICE_IP_ADDR_MAX_LEN);
+    c->transport.port = alloc_addr->port;
+    c->transport.protocol = ICE_TRANSPORT_UDP;
 
-    cand->type = cand_type;
-    cand->comp_id = comp_id;
+    c->type = cand_type;
+    c->comp_id = comp_id;
 
-    cand->base = base_cand;
-    cand->default_cand = def_cand;
-    cand->transport_param = base_cand->transport_param;
-    cand->local_pref = base_cand->local_pref;
+    c->base = base_cand;
+    c->default_cand = def_cand;
+    c->transport_param = base_cand->transport_param;
+    c->local_pref = base_cand->local_pref;
 
-    cand->priority = ice_utils_compute_candidate_priority(cand);
+    c->priority = ice_utils_compute_candidate_priority(c);
+
+    /* compute the foundation id for the candidate */
+    ice_utils_compute_foundation_id_for_given_candidate(m, c);
 
     return STUN_OK;
 }
@@ -2089,9 +2222,19 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     if (status == STUN_NO_RESOURCE) return status;
 
     /** copy server reflexive candidate information */
-    ice_utils_copy_gathered_candidate_info(cand, 
+    ice_utils_copy_gathered_candidate_info(media, cand, 
                             &alloc_info.mapped_addr, ICE_CAND_TYPE_SRFLX, 
                             comp_id, base_cand, false);
+
+    /* form candidate pairs for this new discovered candidate */
+    status = 
+        ice_utils_form_candidate_pairs_for_given_local_candidate(media, cand); 
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Unable to form candidate pair for the "\
+                "discovered server reflexive candidate. Status: %d", status);
+        return STUN_INT_ERROR;
+    }
 
     status = ice_utils_get_free_local_candidate(media, &cand);
     if (status == STUN_NO_RESOURCE) return status;
@@ -2110,10 +2253,20 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     }
 
     /** copy relay candidate information */
-    ice_utils_copy_gathered_candidate_info(cand, 
+    ice_utils_copy_gathered_candidate_info(media, cand, 
                             &alloc_info.relay_addr, ICE_CAND_TYPE_RELAYED, 
                             comp_id, base_cand, true);
     cand->base = cand;
+
+    /* form candidate pairs for this new discovered candidate */
+    status = 
+        ice_utils_form_candidate_pairs_for_given_local_candidate(media, cand); 
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Unable to form candidate pair for the "\
+                "discovered relayed candidate. Status: %d", status);
+        return STUN_INT_ERROR;
+    }
 
     /**
      * Sec 4.1.4 of RFC 5245 - choosing default candidates
@@ -2172,7 +2325,7 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
     if (status == STUN_NO_RESOURCE) return status;
 
     /** copy server reflexive candidate information */
-    ice_utils_copy_gathered_candidate_info(cand, 
+    ice_utils_copy_gathered_candidate_info(media, cand, 
                             &mapped_addr, ICE_CAND_TYPE_SRFLX, 
                             base_cand->comp_id, base_cand, true);
 
@@ -4875,6 +5028,322 @@ int32_t ice_utils_compute_turn_hmac_key(
 
     stun_MD5_Final(key, &ctx);
     *key_len = 16;
+
+    return STUN_OK;
+}
+
+
+int32_t ice_utils_add_new_media_stream (ice_session_t *session, 
+        ice_api_media_stream_t *media_params, ice_media_stream_t **h_media)
+{
+    int32_t i, status;
+    ice_media_stream_t *media_stream;
+
+    /** find a free slot for the new media stream */
+    for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+        if (session->aps_media_streams[i] == NULL) break;
+
+    if (i == ICE_MAX_MEDIA_STREAMS) return STUN_NO_RESOURCE;
+
+    /** allocate memory for media */
+    media_stream = (ice_media_stream_t *)
+                    stun_calloc (1, sizeof(ice_media_stream_t));
+    if (media_stream == NULL) return STUN_MEM_ERROR;
+
+    media_stream->ice_session = session;
+
+    /** copy the media stream parameters */
+    status = ice_utils_copy_media_host_candidates(media_params, media_stream);
+    if (status != STUN_OK) goto EXIT_PT;
+
+    media_stream->o_removed = false;
+
+    session->aps_media_streams[i] = media_stream;
+    session->num_media_streams++;
+
+    *h_media = media_stream;
+
+    /** determine the overall ice session state */
+    status = ice_utils_determine_session_state(session);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE SESSION] Unable to determine ICE session state.");
+        session->num_media_streams -= 1;
+        session->aps_media_streams[i] = NULL;
+        goto EXIT_PT;
+    }
+
+    return status;
+
+EXIT_PT:
+    stun_free(media_stream);
+    return status;
+}
+
+
+
+void ice_utils_set_state_for_new_cand_pair(ice_cand_pair_t *cp)
+{
+    int32_t i;
+    ice_cand_pair_t *t;
+    ice_media_stream_t *media = cp->media;
+
+    /* 
+     * if the check list for this media stream is Frozen, then the 
+     * new pair will also be assigned a Frozen state.
+     */
+    if (media->state == ICE_MEDIA_FROZEN)
+    {
+        cp->state = ICE_CP_FROZEN;
+        return;
+    }
+
+    /*
+     * else if the check list is Active and it is either empty or contains
+     * only candidates in the Succeeded and Failed states, then the new
+     * pair's state is set to Waiting.
+     */
+    if (media->state > ICE_MEDIA_FROZEN)
+    {
+        uint16_t len1, len2;
+
+        if (media->num_cand_pairs == 0)
+        {
+            cp->state = ICE_CP_WAITING;
+            return;
+        }
+
+        for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        {
+            if ((media->ah_cand_pairs[i].state == ICE_CP_SUCCEEDED) ||
+                    (media->ah_cand_pairs[i].state == ICE_CP_FAILED))
+                continue;
+
+            /* 
+             * OK, the checklist is active and non-empty. And there is 
+             * atleast one pair which has not succeeded/failed.
+             */
+            break;
+        }
+
+        /* all the pairs are either in succeeded or failed state */
+        if (i == ICE_MAX_CANDIDATE_PAIRS)
+        {
+            cp->state = ICE_CP_WAITING;
+            return;
+        }
+
+        /* 
+         * check if the list contains atleast one pair with the same foundation
+         * as the new pair, and whose state is neither succeeded nor failed  
+         */
+        for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        {
+            t = &media->ah_cand_pairs[i];
+            if (!t->local) continue;
+
+            len1 = strlen((char *)t->local->foundation);
+            len2 = strlen((char *)cp->local->foundation);
+
+            if (len1 != len2) continue;
+
+            if (strncmp((char *)t->local->foundation, 
+                            (char *)cp->local->foundation, len1) == 0)
+            {
+                len1 = strlen((char *)t->remote->foundation);
+                len2 = strlen((char *)cp->remote->foundation);
+
+                if (len1 != len2) continue;
+
+                if (strncmp((char *)t->remote->foundation, 
+                                (char *)cp->remote->foundation, len1) == 0)
+                {
+                    /* foundations of both the pairs match */
+                    if ((t->state != ICE_CP_SUCCEEDED) 
+                            && (t->state != ICE_CP_FAILED))
+                    {
+                        cp->state = ICE_CP_FROZEN;
+                        return;
+                    }
+                }
+            }
+        }
+
+        cp->state = ICE_CP_WAITING;
+    }
+
+    return;
+}
+
+
+
+int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
+                                    ice_media_stream_t *m, ice_candidate_t *l)
+{
+    int32_t status;
+    uint16_t i, slot_index, k;
+    ice_candidate_t *r;
+
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+    {
+        if (m->as_remote_cands[i].type == ICE_CAND_TYPE_INVALID)
+            continue;
+
+        r = &m->as_remote_cands[i];
+
+        /** 
+         * a local candidate is paired with a remote candidate if
+         * and only if the two candidates have the same component ID
+         * and have the same IP address version
+         */
+        if ((l->comp_id == r->comp_id) &&
+            (l->transport.type == r->transport.type) &&
+            (l->transport.protocol == r->transport.protocol))
+        {
+            ice_cand_pair_t *cp;
+
+            status = ice_utils_get_free_candidate_pair_index(m, &slot_index);
+            if (status != STUN_OK)
+            {
+                ICE_LOG(LOG_SEV_CRITICAL, "Ran out of candidate pair slots\n");
+                return status;
+            }
+
+            cp = &m->ah_cand_pairs[slot_index];
+
+            cp->local = l;
+            cp->remote = r;
+
+            if ((l->default_cand == true) &&
+                (r->default_cand == true))
+            {
+                cp->default_pair = true;
+            }
+            else
+            {
+                cp->default_pair = false;
+            }
+
+            /** initialize the pair */
+            cp->valid_pair = false;
+            cp->nominated = false;
+            cp->check_nom_status = false;
+
+            cp->state = ICE_CP_FROZEN;
+            cp->media = m;
+
+            /** compute the pair priority as per sec 5.7.2 */
+            ice_media_utils_compute_candidate_pair_priority(m, cp);
+
+            /* TODO; what is this? required in the context of trickling? */
+            if (m->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
+            {
+                if (m->ice_session->instance->nomination_mode == 
+                                            ICE_NOMINATION_TYPE_AGGRESSIVE)
+                    cp->check_nom_status = true;
+                else
+                    cp->check_nom_status = false;
+            }
+
+            /* 
+             * pruning - replace server reflexive candidate with its base 
+             * for local candidate. And then check if there exists a pair
+             * with the same local and remote candidate.
+             */
+            if (l->type == ICE_CAND_TYPE_SRFLX)
+                cp->local = cp->local->base;
+
+            for (k = 0; k < ICE_MAX_CANDIDATE_PAIRS; k++)
+            {
+                ice_cand_pair_t *t = &m->ah_cand_pairs[k];
+                if (!t->local) continue;
+
+                if (k == slot_index) continue;
+
+                if ((t->local == cp->local) && (t->remote == cp->remote))
+                {
+                    /* identical pair found */
+                    if (t->priority > cp->priority)
+                    {
+                        /* remove the new pair from the list */
+                        cp->local = cp->remote = NULL;
+                        cp->state = ICE_CP_STATE_MAX;
+                        cp->media = NULL;
+                    }
+                    else
+                    {
+                        /* remove the already existing pair from the list */
+                        t->local = t->remote = NULL;
+                        t->state = ICE_CP_STATE_MAX;
+                        t->media = NULL;
+                    }
+                    break;
+                }
+            }
+
+            if (k == ICE_MAX_CANDIDATE_PAIRS)
+            {
+                /* this is not a redundant pair */
+                m->num_cand_pairs += 1;
+
+                /* set the state for this new pair */
+                ice_utils_set_state_for_new_cand_pair(cp);
+
+                ICE_LOG(LOG_SEV_CRITICAL, "#####################################################");
+                ICE_LOG(LOG_SEV_CRITICAL, "Number of candidate pairs "\
+                        "increased. Count now %d\n", m->num_cand_pairs);
+                ICE_LOG(LOG_SEV_CRITICAL, "#####################################################");
+            }
+        }
+    }
+
+    return STUN_OK;
+}
+
+
+
+int32_t ice_utils_get_free_candidate_pair_index(
+                            ice_media_stream_t *m, uint16_t *index)
+{
+    uint16_t i;
+
+    for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
+        if (m->ah_cand_pairs[i].local == NULL)
+        { *index = i; break; }
+
+    if (i == ICE_CANDIDATES_MAX_SIZE)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Could not find free slot cand pair, no more slots left ...");
+        return STUN_NO_RESOURCE;
+    } 
+
+    return STUN_OK;
+}
+
+
+
+int32_t ice_utils_get_free_remote_candidate(
+                        ice_media_stream_t *media, ice_candidate_t **cand)
+{
+    int32_t i;
+
+    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+        if (media->as_remote_cands[i].type == ICE_CAND_TYPE_INVALID)
+        {
+            *cand = &media->as_remote_cands[i];
+            break;
+        }
+
+    if (i == ICE_CANDIDATES_MAX_SIZE)
+    {
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "Remote candidates exceeded limit, no more slots left ...");
+        *cand = NULL;
+        return STUN_NO_RESOURCE;
+    } 
 
     return STUN_OK;
 }

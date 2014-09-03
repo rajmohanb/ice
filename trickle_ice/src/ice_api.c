@@ -449,7 +449,8 @@ static int32_t ice_encode_and_send_message(handle h_msg,
     {
         /** turn message - calculate the long-term authentication hmac key */
         auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
-        status = ice_utils_compute_turn_hmac_key(ice_session, auth.key, &auth.key_len);
+        status = ice_utils_compute_turn_hmac_key(
+                            ice_session, auth.key, &auth.key_len);
 
         if (status != STUN_OK) return status;
     }
@@ -794,6 +795,7 @@ int32_t ice_instance_register_event_handlers(handle h_inst,
 
     instance->session_state_event_cb = event_handlers->session_state_cb;
     instance->media_state_event_cb = event_handlers->media_state_cb;
+    instance->trickle_cand_cb = event_handlers->trickle_cand_cb;
     
     return STUN_OK;
 }
@@ -1061,13 +1063,14 @@ int32_t ice_destroy_session(handle h_inst, handle h_session)
 
 
 int32_t ice_session_add_media_stream (handle h_inst, handle h_session, 
-                        ice_api_media_stream_t *media, handle *h_media)
+                        ice_api_media_stream_t *media_params, handle *h_media)
 {
-    int32_t i;
+    int32_t i, status;
     ice_instance_t *instance;
     ice_session_t *session;
+    ice_media_stream_t *m;
 
-    if ((h_inst == NULL) || (h_session == NULL) || (media == NULL))
+    if ((h_inst == NULL) || (h_session == NULL) || (media_params == NULL))
         return STUN_INVALID_PARAMS;
 
     instance = (ice_instance_t *) h_inst;
@@ -1082,7 +1085,34 @@ int32_t ice_session_add_media_stream (handle h_inst, handle h_session,
         return STUN_NO_RESOURCE;
     }
 
-    return ice_session_fsm_inject_msg(session, ICE_ADD_MEDIA, media, h_media);
+    status = ice_utils_add_new_media_stream(session, media_params, &m);
+    if (status != STUN_OK) {
+        ICE_LOG(LOG_SEV_ERROR, "[ICE] Adding of media stream failed.");
+        return status;
+    }
+
+    /* Notify the ice user about the host candidate(s) */
+    for (i = 0; i < media_params->num_comp; i++)
+    {
+        status = ice_session_utils_notify_ice_candidate_event(
+                m, ICE_CAND_TYPE_HOST, media_params->host_cands[i].comp_id);
+        if (status != STUN_OK) {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[ICE] Notifying user about the host candidate failed.");
+            /* continue? */
+        }
+    }
+
+    /* 
+     * TODO; do we inject into the session fsm? any 
+     * change required in the session fsm? any change in 
+     * the state machine of the newly created media stream? 
+     */
+
+    *h_media = m;
+
+    return status;
+    //return ice_session_fsm_inject_msg(session, ICE_ADD_MEDIA, media, h_media);
 }
 
 
@@ -1401,8 +1431,10 @@ int32_t ice_session_set_peer_trickle_candidate(handle h_inst,
 
     ICE_VALIDATE_SESSION_HANDLE(h_session);
 
+    /* TODO; validate media handle? */
+
     status = ice_session_fsm_inject_msg(
-                session, ICE_TRICKLE_CAND, peer_cand, NULL);
+                session, ICE_TRICKLE_CAND, peer_cand, h_media);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
