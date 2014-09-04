@@ -2227,8 +2227,8 @@ int32_t ice_utils_copy_turn_gathered_candidates(
                             comp_id, base_cand, false);
 
     /* form candidate pairs for this new discovered candidate */
-    status = 
-        ice_utils_form_candidate_pairs_for_given_local_candidate(media, cand); 
+    status = ice_utils_form_candidate_pairs_for_given_local_candidate(
+                                                            media, cand, true); 
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Unable to form candidate pair for the "\
@@ -2259,8 +2259,8 @@ int32_t ice_utils_copy_turn_gathered_candidates(
     cand->base = cand;
 
     /* form candidate pairs for this new discovered candidate */
-    status = 
-        ice_utils_form_candidate_pairs_for_given_local_candidate(media, cand); 
+    status = ice_utils_form_candidate_pairs_for_given_local_candidate(
+                                                            media, cand, true);
     if (status != STUN_OK)
     {
         ICE_LOG(LOG_SEV_ERROR, "Unable to form candidate pair for the "\
@@ -5179,45 +5179,60 @@ void ice_utils_set_state_for_new_cand_pair(ice_cand_pair_t *cp)
 
 
 int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
-                                    ice_media_stream_t *m, ice_candidate_t *l)
+                ice_media_stream_t *m, ice_candidate_t *nc, bool_t is_local)
 {
     int32_t status;
     uint16_t i, slot_index, k;
-    ice_candidate_t *r;
+    ice_candidate_t *oc; /* oc = other candidate, nc = new candidate */
 
+    fprintf(stderr, "Forming pairs for the given candidate - ");
+    if (is_local == true)
+        fprintf(stderr, "LOCAL\n");
+    else
+        fprintf(stderr, "REMOTE\n");
 
     for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
     {
-        if (m->as_remote_cands[i].type == ICE_CAND_TYPE_INVALID)
-            continue;
+        if (is_local == true)
+            oc = &m->as_remote_cands[i];
+        else
+            oc = &m->as_local_cands[i];
 
-        r = &m->as_remote_cands[i];
+        if (oc->type == ICE_CAND_TYPE_INVALID) continue;
 
         /** 
          * a local candidate is paired with a remote candidate if
          * and only if the two candidates have the same component ID
          * and have the same IP address version
          */
-        if ((l->comp_id == r->comp_id) &&
-            (l->transport.type == r->transport.type) &&
-            (l->transport.protocol == r->transport.protocol))
+        if ((nc->comp_id == oc->comp_id) &&
+            (nc->transport.type == oc->transport.type) &&
+            (nc->transport.protocol == oc->transport.protocol))
         {
             ice_cand_pair_t *cp;
 
             status = ice_utils_get_free_candidate_pair_index(m, &slot_index);
             if (status != STUN_OK)
             {
-                ICE_LOG(LOG_SEV_CRITICAL, "Ran out of candidate pair slots\n");
+                ICE_LOG(LOG_SEV_CRITICAL, "*** Ran out of candidate pair slots  ***\n");
                 return status;
             }
 
             cp = &m->ah_cand_pairs[slot_index];
 
-            cp->local = l;
-            cp->remote = r;
+            if (is_local == true)
+            {
+                cp->local = nc;
+                cp->remote = oc;
+            }
+            else
+            {
+                cp->local = oc;
+                cp->remote = nc;
+            }
 
-            if ((l->default_cand == true) &&
-                (r->default_cand == true))
+            if ((nc->default_cand == true) &&
+                (oc->default_cand == true))
             {
                 cp->default_pair = true;
             }
@@ -5252,7 +5267,7 @@ int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
              * for local candidate. And then check if there exists a pair
              * with the same local and remote candidate.
              */
-            if (l->type == ICE_CAND_TYPE_SRFLX)
+            if (cp->local->type == ICE_CAND_TYPE_SRFLX)
                 cp->local = cp->local->base;
 
             for (k = 0; k < ICE_MAX_CANDIDATE_PAIRS; k++)
@@ -5291,10 +5306,21 @@ int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
                 /* set the state for this new pair */
                 ice_utils_set_state_for_new_cand_pair(cp);
 
-                ICE_LOG(LOG_SEV_CRITICAL, "#####################################################");
+                fprintf(stderr, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+                fprintf(stderr, "Forming pair with candidates\n");
+                fprintf(stderr, "Local: Transport = %s %d Candidate Type:%d\n",
+                        cp->local->transport.ip_addr, 
+                        cp->local->transport.port, cp->local->type);
+                fprintf(stderr, "Remote: Transport = %s %d Candidate Type:%d \n", 
+                        cp->remote->transport.ip_addr, 
+                        cp->remote->transport.port, cp->remote->type);
+
                 ICE_LOG(LOG_SEV_CRITICAL, "Number of candidate pairs "\
                         "increased. Count now %d\n", m->num_cand_pairs);
-                ICE_LOG(LOG_SEV_CRITICAL, "#####################################################");
+                fprintf(stderr, "$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$\n");
+
+                //ICE_LOG(LOG_SEV_CRITICAL, "#####################################################");
+                //ICE_LOG(LOG_SEV_CRITICAL, "#####################################################");
             }
         }
     }

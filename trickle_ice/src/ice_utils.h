@@ -333,7 +333,7 @@ void ice_utils_compute_foundation_id_for_given_candidate(
                             ice_media_stream_t *media, ice_candidate_t *c);
 
 int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
-                                    ice_media_stream_t *m, ice_candidate_t *l);
+                ice_media_stream_t *m, ice_candidate_t *nc, bool_t is_local);
 
 int32_t ice_utils_get_free_candidate_pair_index(
                             ice_media_stream_t *m, uint16_t *index);

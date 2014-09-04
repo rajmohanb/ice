@@ -1147,9 +1147,9 @@ int32_t ice_media_stream_send_data(ice_media_stream_t *media, handle arg)
 
 int32_t ice_media_trickled_cand(ice_media_stream_t *media, handle h_msg)
 {
-    int32_t status, i, j, k;
+    int32_t status;
     ice_cand_t *pc = (ice_cand_t *) h_msg;
-    ice_candidate_t *l, *r;
+    ice_candidate_t *r;
 
     ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] handle trickled candidate");
 
@@ -1176,97 +1176,22 @@ int32_t ice_media_trickled_cand(ice_media_stream_t *media, handle h_msg)
             (char *)pc->cand.foundation, ICE_FOUNDATION_MAX_LEN);
     r->comp_id = pc->cand.component_id;
 
+    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Added trickled remote candidate");
 
-    j = media->num_cand_pairs;
-    /* form candidate pairs for the newly received peer candidate */
-    for (i = 0; i < ICE_CANDIDATES_MAX_SIZE; i++)
+
+    /* form candidate pairs for this new discovered candidate */
+    status = ice_utils_form_candidate_pairs_for_given_local_candidate(
+                                                               media, r, false);
+    if (status != STUN_OK)
     {
-        if (media->as_local_cands[i].type == ICE_CAND_TYPE_INVALID)
-            continue;
-
-        l = &media->as_local_cands[i];
-
-        /** 
-         * a local candidate is paired with a remote candidate if
-         * and only if the two candidates have the same component ID
-         * and have the same IP address version
-         */
-        if ((l->comp_id == r->comp_id) &&
-            (l->transport.type == r->transport.type) &&
-            (l->transport.protocol == r->transport.protocol))
-        {
-            ice_cand_pair_t *pair = &media->ah_cand_pairs[j];
-            if (j >= ICE_MAX_CANDIDATE_PAIRS)
-            {
-                ICE_LOG(LOG_SEV_CRITICAL,
-                        "J value %d more than ICE_MAX_CANDIDATE_PAIRS", j);
-                break;
-            }
-
-            pair->local = l;
-            pair->remote = r;
-
-            if ((l->default_cand == true) &&
-                (r->default_cand == true))
-            {
-                pair->default_pair = true;
-            }
-            else
-            {
-                pair->default_pair = false;
-            }
-
-            /** initialize the pair */
-            pair->valid_pair = false;
-            pair->nominated = false;
-            pair->check_nom_status = false;
-
-            pair->state = ICE_CP_FROZEN;
-            pair->media = media;
-
-            /** compute the pair priority as per sec 5.7.2 */
-            ice_media_utils_compute_candidate_pair_priority(media, pair);
-
-            /* TODO; what is this? required in the context of trickling? */
-            if (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING)
-            {
-                if (media->ice_session->instance->nomination_mode == 
-                                            ICE_NOMINATION_TYPE_AGGRESSIVE)
-                    pair->check_nom_status = true;
-                else
-                    pair->check_nom_status = false;
-            }
-
-            /* 
-             * pruning - replace server reflexive candidate with its base 
-             * for local candidate. And then check if there exists a pair
-             * with the same local and remote candidate.
-             */
-            if (l->type == ICE_CAND_TYPE_SRFLX)
-                pair->local = pair->local->base;
-
-            for (k = 0; k < ICE_MAX_CANDIDATE_PAIRS; k++)
-            {
-                ice_cand_pair_t *t = &media->ah_cand_pairs[k];
-                if (!t->local) continue;
-
-                if (k == i) continue;
-
-                if ((t->local == pair->local) && (t->remote == pair->remote))
-                    break;
-            }
-
-            if (k == ICE_MAX_CANDIDATE_PAIRS)
-            {
-                /* this is not a redundant pair */
-                j++;
-                media->num_cand_pairs += 1;
-
-                /* set the state for this new pair */
-                ice_utils_set_state_for_new_cand_pair(pair);
-            }
-        }
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE MEDIA] Added remote trickled candidate. "\
+                "However forming candidate pairs for this new "\
+                "remote candidate failed. Status: %d", status);
+        return status;
     }
+
+    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Added candidate pairs for the trickled candidate");
 
     return STUN_OK;
 }
