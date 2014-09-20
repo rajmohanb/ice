@@ -1455,14 +1455,11 @@ int32_t ice_session_inject_received_msg(handle h_inst,
     int32_t i, status;
     ice_session_event_t event;
 
-    if ((h_inst == NULL) || (h_session == NULL))
-        return STUN_INVALID_PARAMS;
+    if ((h_inst == NULL) || (h_session == NULL)) return STUN_INVALID_PARAMS;
 
-    if (stun_pkt == NULL)
-        return STUN_INVALID_PARAMS;
+    if (stun_pkt == NULL) return STUN_INVALID_PARAMS;
 
-    if (stun_pkt->h_msg == NULL)
-        return STUN_INVALID_PARAMS;
+    if (stun_pkt->h_msg == NULL) return STUN_INVALID_PARAMS;
 
     instance = (ice_instance_t *) h_inst;
     session = (ice_session_t *) h_session;
@@ -1503,6 +1500,9 @@ int32_t ice_session_inject_received_msg(handle h_inst,
     if (status != STUN_OK) return status;
 
     stun_pkt->relayed_check = false;
+
+    ICE_LOG (LOG_SEV_DEBUG,
+        "[ICE] Received ICE msg on socket %d", (int)stun_pkt->transport_param);
 
     return ice_session_fsm_inject_msg(session, event, (handle)stun_pkt, NULL);
 }

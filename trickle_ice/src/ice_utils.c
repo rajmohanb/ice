@@ -336,10 +336,9 @@ int32_t ice_utils_set_peer_media_params(
     /** store the number of components of peer */
     media->num_peer_comp = media_params->num_comps;
 
-    for (j = 0; j < media_params->num_comps; j++)
+    for (j = 0; j < ICE_MAX_COMPONENTS; j++)
     {
         ice_media_comp_t *peer_comp = &media_params->comps[j];
-
         if (peer_comp == NULL) continue;
 
         for (k = 0; k < peer_comp->num_cands; k++)
@@ -1007,13 +1006,12 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
         return status;
     }
 
-    /**
-     * If there is no pair in the FROZEN state, then terminate the timer
-     * for the particular check list
+    /* 
+     * For trickle ice, we don't terminate/stop the check list timer when 
+     * there are no more candidate pairs in the FROZEN state as more 
+     * candidates can come trickling in. For now, we wont stop the timer 
+     * till the spec which is still a draft gets more clearer on this aspect.
      */
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "No more candidate pairs left for this checklist. "\
-            "So terminating the check list timer for this checklist");
 
     return STUN_NOT_FOUND;
 }
@@ -1344,6 +1342,7 @@ int32_t ice_utils_find_media_for_transport_handle(
     for (j = 0; j < ICE_MAX_MEDIA_STREAMS; j++)
     {
         media = session->aps_media_streams[j];
+        if (!media) continue;
 
         for (k = 0; k < ICE_CANDIDATES_MAX_SIZE; k++)
         {
@@ -2381,7 +2380,7 @@ int32_t ice_media_utils_start_check_list_timer(ice_media_stream_t *media)
     }
     else
     {
-        ICE_LOG(LOG_SEV_DEBUG, 
+        ICE_LOG(LOG_SEV_CRITICAL, 
                 "[ICE] Starting of check list timer for %d msec for media %p "\
                 "failed", cc_timer_value, media);
         status = STUN_INT_ERROR;
@@ -3425,15 +3424,18 @@ int32_t ice_utils_process_incoming_check(
 
             ice_media_utils_update_nominated_pair_for_comp(media, cp);
 
-            status = ice_utils_start_keep_alive_timer_for_comp(
-                                                media, cp->local->comp_id);
-            if (status != STUN_OK)
+            if (media->state == ICE_MEDIA_CC_RUNNING)
             {
-                /** just log the error */
-                ICE_LOG(LOG_SEV_CRITICAL,
-                        "[ICE MEDIA] Starting of the media keep alive timer "\
-                        "failed for media %p and component ID %d", 
-                        media, cp->local->comp_id);
+                status = ice_utils_start_keep_alive_timer_for_comp(
+                                                media, cp->local->comp_id);
+                if (status != STUN_OK)
+                {
+                    /** just log the error */
+                    ICE_LOG(LOG_SEV_CRITICAL,
+                            "[ICE MEDIA] Starting of the media keep alive timer "\
+                            "failed for media %p and component ID %d", 
+                            media, cp->local->comp_id);
+                }
             }
 
             /** This could conclude ICE processing for this media checklist */

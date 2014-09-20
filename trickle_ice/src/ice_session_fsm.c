@@ -490,8 +490,8 @@ int32_t handle_peer_msg (ice_session_t *session, handle pkt, handle h_param)
         return STUN_INVALID_PARAMS;
     }
 
-    ICE_LOG (LOG_SEV_INFO, 
-            "[ICE SESSION] Found media stream for received message");
+    ICE_LOG (LOG_SEV_DEBUG, "[ICE SESSION] Found media stream "\
+            "for received message on %d", (int) stun_pkt->transport_param);
 
     media = session->aps_media_streams[index];
 

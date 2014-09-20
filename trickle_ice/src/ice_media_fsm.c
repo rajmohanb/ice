@@ -613,6 +613,15 @@ int32_t ice_media_unfreeze(ice_media_stream_t *media, handle h_msg)
     media->checklist_timer->timer_id = 0;
 
     status = ice_media_utils_start_check_list_timer(media);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_CRITICAL, "Error while starting the check list timer");
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_DEBUG, "Started check list timer : %d\n", 
+                                            media->checklist_timer->timer_id);
+    }
 
     /** 
      * start the connectivity checks timeout timer as well. This timer 
@@ -788,14 +797,17 @@ int32_t ice_media_stream_checklist_timer_expiry(
         /**
          * RFC 5245 sec 5.8 Scheduling Checks
          * No more pairs available for connectivity checks.
-         * Hence terminate the check list timer
+         * Here there is a change in Tricked ice when compared to 
+         * Vanilla ICE 5245, because the candidate pairs are added as and when
+         * trickled candidates are received and discovered. So at any time,
+         * there might not be any candiate pair for next connectivity check
+         * but one might become available at later point of time. So do not
+         * stop the check list timer.
          */
-        status = STUN_OK;
-
-        /** TODO
-         * 1. what should be the return value from this function?
-         * 2. Should the media state be changed to COMPLETED?
-         */
+        if (media->state != ICE_MEDIA_CC_COMPLETED)
+            status = ice_media_utils_start_check_list_timer(media);
+        else
+            status = STUN_OK;
     }
     else
     {

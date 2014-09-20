@@ -1338,6 +1338,7 @@ int32_t ice_utils_find_media_for_transport_handle(
     for (j = 0; j < ICE_MAX_MEDIA_STREAMS; j++)
     {
         media = session->aps_media_streams[j];
+        if (!media) continue;
 
         for (k = 0; k < ICE_CANDIDATES_MAX_SIZE; k++)
         {

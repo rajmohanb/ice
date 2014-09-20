@@ -216,9 +216,13 @@ sys_timer_handler(union sigval sig_val)
     //        "sys timer handler Exit: Num timers: %d", g_timer_table->cur_timers);
 
 #else
+    //int i;
     struct_timer_node *node;
     
     sem_wait(&timer_mutex);
+
+    //printf("PLATFORM TIMER: count %d\n", i);
+    //i++;
 
     /** run through the list */
     node = timer_head;
@@ -431,7 +435,7 @@ static bool platform_timer_init(void)
     ICE_LOG (LOG_SEV_INFO, "timer ID is 0x%lx\n", (long) timerid);
 
     /* arm the timer */
-#if 0
+#if 1
     its.it_value.tv_sec = 0;
     its.it_value.tv_nsec = PLATFORM_TIMER_PERIODIC_TIME_VALUE * 1000000;
     its.it_interval.tv_sec = 0;
@@ -594,6 +598,10 @@ void *platform_start_timer(int duration,
     //printf("Added a new timer node %p. timer_id %d and arg %p\n", 
     //                        new_node, new_node->timer_id, new_node->arg);
 
+    ICE_LOG(LOG_SEV_CRITICAL, 
+        "[TIMER]: Added timer node %p for %d ms. "\
+        "Returned timer handle %d and arg %p. No of timers %d\n", new_node, 
+        duration, new_node->timer_id, new_node->arg, g_timer_table->cur_timers);
 #else
     new_node = (struct_timer_node *) 
                 platform_malloc (sizeof(struct_timer_node));
@@ -623,12 +631,12 @@ void *platform_start_timer(int duration,
 
     sem_post(&timer_mutex);
 
-#endif
-
-    ICE_LOG(LOG_SEV_ERROR, 
+    ICE_LOG(LOG_SEV_DEBUG, 
         "[TIMER]: Added timer node %p for %d ms. "\
-        "Returned timer handle %d and arg %p. No of timers %d\n", new_node, 
-        duration, new_node->timer_id, new_node->arg, g_timer_table->cur_timers);
+        "Returned timer handle %d and arg %p", new_node, 
+        duration, new_node->timer_id, new_node->arg);
+
+#endif
 
     return (void *)new_node->timer_id;
 }
