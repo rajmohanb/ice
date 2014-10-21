@@ -861,7 +861,7 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
                 pair->local->foundation, pair->remote->foundation, candtype);
     }
 
-    ICE_LOG (LOG_SEV_WARNING, "Total %d valid pairs for this media", count);
+    ICE_LOG (LOG_SEV_WARNING, "Total %d candiadte pairs for this media", count);
 
     ICE_LOG (LOG_SEV_WARNING, "===============================================================");
 
@@ -1012,6 +1012,8 @@ int32_t ice_media_utils_get_next_connectivity_check_pair(
      * candidates can come trickling in. For now, we wont stop the timer 
      * till the spec which is still a draft gets more clearer on this aspect.
      */
+    ICE_LOG(LOG_SEV_DEBUG, "No more candidate pairs "\
+            "available for connectivity check at this instant");
 
     return STUN_NOT_FOUND;
 }
@@ -3214,6 +3216,9 @@ int32_t ice_utils_add_remote_peer_reflexive_candidate(
 
     *new_prflx = prflx_cand;
 
+    ICE_LOG(LOG_SEV_DEBUG, "Added peer reflexive candidate %s:%d to "\
+            "remote candidate list", peer_addr->ip_addr, peer_addr->port);
+
     return STUN_OK;
 }
 
@@ -3235,10 +3240,13 @@ int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media,
                 "[ICE] Exhausted the list of available candidate pairs "\
                 "in the checklist for media %p. Hence adding of new "\
                 "candidate pair failed", media);
+        *cp = NULL;
         return STUN_NO_RESOURCE;
     }
 
     new_pair = &media->ah_cand_pairs[i];
+
+    memset(new_pair, 0, sizeof(ice_cand_pair_t));
 
     new_pair->local = local;
     new_pair->remote = remote;
@@ -3308,12 +3316,18 @@ int32_t ice_utils_process_incoming_check(
             return status;
         }
 
+        ICE_LOG(LOG_SEV_WARNING, "Formed a new candidate pair %p with "\
+                "local %s:%d and remote %s:%d\n", cp, cp->local->transport.ip_addr, cp->local->transport.port,
+                cp->remote->transport.ip_addr, cp->remote->transport.port);
+
         /** set the state of this candidate pair to WAITING */
         status = ice_cand_pair_fsm_inject_msg(
                                 cp, ICE_CP_EVENT_UNFREEZE, NULL);
 
         /** The pair is enqueued into the triggered check queue */
         status = ice_utils_add_to_triggered_check_queue(media, cp);
+
+        ice_media_utils_dump_cand_pair_stats(media);
     }
     else
     {

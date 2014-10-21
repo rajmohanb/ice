@@ -135,8 +135,7 @@ int32_t ice_cand_pair_fsm_inject_msg(ice_cand_pair_t *cp,
     old_state = cp->state;
     handler = ice_cand_pair_fsm[cp->state][event];
 
-    if (!handler)
-        return STUN_INVALID_PARAMS;
+    if (!handler) return STUN_INVALID_PARAMS;
 
     status = handler(cp, h_msg);
 

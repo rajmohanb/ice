@@ -55,46 +55,6 @@ static ice_media_stream_fsm_handler
         ice_media_stream_ignore_msg,
         ice_media_stream_ignore_msg,
     },
-#if 0
-    /** ICE_MEDIA_GATHERING */
-    {
-        ice_media_stream_ignore_msg,
-        ice_media_process_relay_msg,
-        ice_media_stream_check_gather_resp,
-        ice_media_stream_gather_failed,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-    },
-    /** ICE_MEDIA_GATHERED */
-    {
-        ice_media_stream_ignore_msg,
-        ice_media_process_relay_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_form_checklist,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_process_rx_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_remote_params,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-        ice_media_stream_ignore_msg,
-    },
-#endif
     /** ICE_MEDIA_FROZEN */
     {
         ice_media_stream_ignore_msg,
@@ -323,7 +283,7 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
                     int i;
 
                     //media->state = ICE_MEDIA_GATHERED;
-                    media->state = ICE_MEDIA_FROZEN; /* TODO; */
+                    //media->state = ICE_MEDIA_FROZEN; /* TODO; */
 
                     /** 
                      * 4.1.1.3 - Computing foundations
@@ -334,7 +294,7 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
                      * TODO - should the foundation id be computed 
                      *        across all media streams?
                      */
-                    ice_utils_compute_foundation_ids(media);
+                    //ice_utils_compute_foundation_ids(media);
 
                     /* notify user about the newly discovered candidate */
                     for (i = 0; i < media->num_comp; i++)
