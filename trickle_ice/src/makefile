@@ -31,7 +31,7 @@ INCLUDE := -I ../../ -I ../inc -I ../../conn_check/inc \
 	-I ../../binding/inc -I $(ICE_APP_INCLUDE_PATH)
 
 CFLAGS += -c -Wall -Wstrict-prototypes $(ICE_APP_CFLAGS) -DMB_ENABLE_TURN \
-		  -DMB_ENABLE_ICE $(INCLUDE)
+		  -DMB_ENABLE_ICE $(INCLUDE) #-fsanitize=address -fno-omit-frame-pointer
 
 OBJS:=$(SRC:c=o)
 
