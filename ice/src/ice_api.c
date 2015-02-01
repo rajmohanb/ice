@@ -1781,6 +1781,32 @@ int32_t ice_instance_verify_valid_stun_packet(u_char *pkt, uint32_t pkt_len)
 
 
 
+int32_t ice_session_dump_candidate_pairs(handle h_inst, handle h_session)
+{
+    ice_instance_t *instance;
+    ice_session_t *session;
+    ice_media_stream_t *media;
+    int32_t i;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (ice_instance_t *) h_inst;
+    session = (ice_session_t *) h_session;
+
+    for (i = 0; i < ICE_MAX_MEDIA_STREAMS; i++)
+    {
+        media = session->aps_media_streams[i];
+        if (!media) continue;
+
+        ice_media_utils_dump_cand_pair_stats(media);
+    }
+
+    return STUN_OK;
+}
+
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus
