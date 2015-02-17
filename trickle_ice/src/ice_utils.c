@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2015, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -861,7 +861,7 @@ void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media)
                 pair->local->foundation, pair->remote->foundation, candtype);
     }
 
-    ICE_LOG (LOG_SEV_WARNING, "Total %d candiadte pairs for this media", count);
+    ICE_LOG (LOG_SEV_WARNING, "Total %d candidate pairs for this media", count);
 
     ICE_LOG (LOG_SEV_WARNING, "===============================================================");
 
@@ -1031,12 +1031,6 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
     media = pair->media;
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
-    ICE_LOG (LOG_SEV_WARNING, 
-            " Check: [%d] %s:%d --> %s:%d %s ", pair->local->comp_id, 
-            pair->local->transport.ip_addr, pair->local->transport.port,
-            pair->remote->transport.ip_addr, pair->remote->transport.port, 
-            cand_pair_states[pair->state]);
-
     status = conn_check_create_session(h_cc_inst, 
                             CC_CLIENT_SESSION, &(pair->h_cc_session));
     if (status != STUN_OK)
@@ -1137,6 +1131,12 @@ int32_t ice_cand_pair_utils_init_connectivity_check(ice_cand_pair_t *pair)
         goto ERROR_EXIT_PT2;
     }
 
+    ICE_LOG (LOG_SEV_WARNING, 
+            " Check: [%d] %s:%d --> %s:%d %s [%ld][%ld]", pair->local->comp_id, 
+            pair->local->transport.ip_addr, pair->local->transport.port,
+            pair->remote->transport.ip_addr, pair->remote->transport.port, 
+            cand_pair_states[pair->state], pair->h_cc_session, pair->h_cc_cancel);
+
     return status;
 
 ERROR_EXIT_PT2:
@@ -1149,7 +1149,7 @@ ERROR_EXIT_PT1:
 
 
 int32_t ice_utils_create_conn_check_session(
-                    ice_media_stream_t *media, ice_rx_stun_pkt_t *pkt)
+        ice_media_stream_t *media, ice_rx_stun_pkt_t *pkt, ice_cand_pair_t *cp)
 {
     int32_t status;
     handle h_cc_inst;
@@ -1167,8 +1167,8 @@ int32_t ice_utils_create_conn_check_session(
         return status;
     }
 
-    status = conn_check_session_set_app_param(h_cc_inst, 
-                                                media->h_cc_svr_session, media);
+    status = conn_check_session_set_app_param(
+                    h_cc_inst, media->h_cc_svr_session, cp);
     if (status != STUN_OK)
     {
         ICE_LOG (LOG_SEV_ERROR, 
@@ -2227,6 +2227,9 @@ int32_t ice_utils_copy_turn_gathered_candidates(
                             &alloc_info.mapped_addr, ICE_CAND_TYPE_SRFLX, 
                             comp_id, base_cand, false);
 
+    ICE_LOG(LOG_SEV_ERROR, "TURN gathered Server "\
+        "reflexive candidate: %s\n", alloc_info.mapped_addr.ip_addr);
+
     /* form candidate pairs for this new discovered candidate */
     status = ice_utils_form_candidate_pairs_for_given_local_candidate(
                                                             media, cand, true); 
@@ -2259,6 +2262,9 @@ int32_t ice_utils_copy_turn_gathered_candidates(
                             comp_id, base_cand, true);
     cand->base = cand;
 
+    ICE_LOG(LOG_SEV_ERROR, "TURN gathered Server "\
+        "reflexive candidate: %s\n", alloc_info.relay_addr.ip_addr);
+
     /* form candidate pairs for this new discovered candidate */
     status = ice_utils_form_candidate_pairs_for_given_local_candidate(
                                                             media, cand, true);
@@ -2279,6 +2285,9 @@ int32_t ice_utils_copy_turn_gathered_candidates(
      * and finally host candidates.
      */
     base_cand->default_cand = false;
+
+    ICE_LOG(LOG_SEV_ERROR, 
+        "[ICE MEDIA] Added candidate pairs for the TURN gathered candidates");
 
     return STUN_OK;
 }
@@ -2340,6 +2349,24 @@ int32_t ice_utils_copy_stun_gathered_candidates(ice_media_stream_t *media,
      * and finally host candidates.
      */
     base_cand->default_cand = false;
+
+    /*
+     * Add this new gathered local candidate to the checklist and form 
+     * candidate pairs and prune the check list.
+     */
+    status = ice_utils_form_candidate_pairs_for_given_local_candidate(
+                                                            media, cand, true);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[ICE MEDIA] Added local gathered candidate. "\
+                "However forming candidate pairs for this new "\
+                "local candidate failed. Status: %d", status);
+        return status;
+    }
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE MEDIA] Added candidate pairs for the new gathered candidate");
 
     return STUN_OK;
 }
@@ -2573,14 +2600,13 @@ int32_t ice_utils_stop_keep_alive_timer_for_comp(
 
 
 
-
 int32_t ice_utils_find_cand_pair_for_conn_check_session(
         ice_media_stream_t *media, handle h_conn_check, ice_cand_pair_t **cp)
 {
     int32_t i;
     ice_cand_pair_t *pair;
 
-    ICE_LOG(LOG_SEV_INFO, "Searching for "\
+    ICE_LOG(LOG_SEV_ERROR, "Searching for "\
             "connectivity check session handle [%ld]", h_conn_check);
 
     for (i = 0; i < ICE_MAX_CANDIDATE_PAIRS; i++)
@@ -2588,7 +2614,7 @@ int32_t ice_utils_find_cand_pair_for_conn_check_session(
         pair = &media->ah_cand_pairs[i];
         if (!pair->local) continue;
 
-        ICE_LOG(LOG_SEV_INFO, "[%d]: State: [%s] [%ld] [%ld] [%s:%d]", 
+        ICE_LOG(LOG_SEV_ERROR, "[%d]: State: [%s] [%ld] [%ld] [%s:%d]", 
                 i, cand_pair_states[pair->state], pair->h_cc_session, 
                 pair->h_cc_cancel, pair->remote->transport.ip_addr, 
                 pair->remote->transport.port);
@@ -3263,14 +3289,79 @@ int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media,
 
 
 
+int32_t ice_utils_extract_params_from_conn_check_req(
+            handle h_msg, uint32_t *priority, bool_t *nominated)
+{
+    handle h_attr;
+    uint32_t num;
+    int32_t status;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_USE_CANDIDATE, &h_attr, &num);
+    if (status == STUN_OK)
+    {
+        *nominated = true;
+        ICE_LOG(LOG_SEV_DEBUG, 
+                "USE-CANDIDATE attribute present in the request message");
+    }
+    else if (status == STUN_NOT_FOUND)
+    {
+        *nominated = false;
+    }
+    else
+    {
+        return STUN_INVALID_PARAMS;
+    }
+
+    /** extract priority */
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    h_msg, STUN_ATTR_PRIORITY, &h_attr, &num);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "Priority attribute missing in received request msg?");
+        return STUN_INVALID_PARAMS;
+    }
+
+    status = stun_attr_priority_get_priority(h_attr, priority);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, "Error while extracting "\
+                "priority value from request. status: %d", status);
+        return STUN_INVALID_PARAMS;
+    }
+
+
+    return status;
+}
+
+
+
 int32_t ice_utils_process_incoming_check(
-                ice_media_stream_t *media, ice_candidate_t *local_cand, 
-                ice_rx_stun_pkt_t *stun_pkt, conn_check_result_t *check_result)
+            ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt)
 {
     int32_t status;
-    ice_candidate_t *remote_cand;
+    ice_candidate_t *local_cand, *remote_cand;
     ice_cand_pair_t *cp;
+    uint32_t priority, resp_code;
+    bool_t nominated;
+    handle h_cc_inst = media->ice_session->instance->h_cc_inst;
 
+    /* get the local candidate */
+    local_cand = ice_utils_get_local_cand_for_transport_param(
+            media, stun_pkt->transport_param, stun_pkt->relayed_check);
+
+
+    /* extract parameters from request to check role */
+    status = ice_utils_extract_params_from_conn_check_req(
+                                stun_pkt->h_msg, &priority, &nominated);
+    if (status != STUN_OK)
+    {
+        /* TODO - send error response */
+        return status;
+    }
 
     /**
      * RFC 5245 Sec 7.2.1.3 Learning Peer Reflexive Candidates
@@ -3281,8 +3372,8 @@ int32_t ice_utils_process_incoming_check(
     {
         /** Found a peer reflexive candidate */
         status = ice_utils_add_remote_peer_reflexive_candidate(
-                                    media, &stun_pkt->src, local_cand->comp_id, 
-                                    check_result->priority, &remote_cand);
+                        media, &stun_pkt->src, local_cand->comp_id, 
+                        priority, &remote_cand);
         if (status != STUN_OK)
         {
             ICE_LOG(LOG_SEV_ERROR,
@@ -3347,6 +3438,15 @@ int32_t ice_utils_process_incoming_check(
              * enqueueing this pair in the triggered check queue. 
              * Change the state of the candidate pair to Waiting 
              */
+            if (cp->h_cc_session && cp->h_cc_cancel)
+            {
+                ICE_LOG(LOG_SEV_ERROR, "Both cancel and current sessions are "\
+                    "present for this pair, so not canceling and creating again?");
+                return STUN_OK;
+            }
+
+            ICE_LOG(LOG_SEV_ERROR, "CandPair in ICE_CP_INPROGRESS, Canceling and initiating new check");
+
             cp->h_cc_cancel = cp->h_cc_session;
             cp->h_cc_session = NULL;
             conn_check_cancel_session(
@@ -3378,11 +3478,59 @@ int32_t ice_utils_process_incoming_check(
         }
     }
 
+    /** RFC 5245 sec 7.2.1.1 Detecting and Repairing Role Conflicts */
+    ice_utils_check_for_role_change(media, stun_pkt, &resp_code);
+
+    /* 
+     * Now that we have the candidate pair, we need to send the response. 
+     * But up first, create new incoming connectivity check dialog 
+     */
+    status = ice_utils_create_conn_check_session(media, stun_pkt, cp);
+    if (status != STUN_OK)
+    {
+        ICE_LOG (LOG_SEV_ERROR, 
+            "[ICE MEDIA] ice_utils_create_conn_check_session() "\
+            "returned error %d\n", status);
+        return STUN_INT_ERROR;
+    }
+
+    /* inject the received conn check req */
+    status = conn_check_session_inject_received_msg(h_cc_inst, 
+            media->h_cc_svr_session, (conn_check_rx_pkt_t *)stun_pkt);
+    if (status != STUN_OK) {
+
+        /* 
+         * some issue with the received req, sending appropriate error 
+         * response is automatically done by conn check library.
+         */
+        return status;
+    }
+
+    /* if the received req message is alright, then send response */
+    status = conn_check_session_send_reponse(
+                    h_cc_inst, media->h_cc_svr_session, resp_code);
+#if 0
+    if (status != STUN_OK) {
+
+        ICE_LOG (LOG_SEV_ERROR, 
+            "[ICE MEDIA] conn_check_session_send_reponse() returned "\
+            "error %d when sending resp_code [%d]\n", status, resp_code);
+        return STUN_INT_ERROR;
+    }
+#endif
+
+    /* if we are here, then we have already sent a response to incoming check */
+
+    if (nominated == true)
+        ICE_LOG(LOG_SEV_ERROR, "This conn check is NOMINATED");
+    else
+        ICE_LOG(LOG_SEV_ERROR, "This conn check is NOT nominated");
+
     /**
      * RFC 5245 Sec 7.2.1.5 Updating the Nominated Flag
      */
-    if ((check_result->nominated == true) &&
-        (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
+    if ((nominated == true) && 
+            (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
     {
         /**
          * If the state of the pair is Succeeded, it means that the 
@@ -3416,7 +3564,7 @@ int32_t ice_utils_process_incoming_check(
 
                 if (vp)
                 {
-                    ICE_LOG(LOG_SEV_INFO,
+                    ICE_LOG(LOG_SEV_ERROR,
                             "[ICE] CONTROLLED ROLE - Associated valid pair"\
                             " found for the nominated check request "\
                             "received from peer. Hence choosing the "\
@@ -3917,15 +4065,32 @@ int32_t ice_media_utils_update_nominated_pair_for_comp(
 
     if (media->media_comps[i].np == NULL)
     {
+         ICE_LOG(LOG_SEV_ERROR, "No existing nominated pair. So chosing %s:%d<=>%s:%d", 
+            cp->local->transport.ip_addr, cp->local->transport.port,
+            cp->remote->transport.ip_addr, cp->remote->transport.port);
         media->media_comps[i].np = cp;
     }
     else
     {
         ice_cand_pair_t *cur_np = media->media_comps[i].np;
 
+        ICE_LOG(LOG_SEV_ERROR, "Checking if we can make change in the nominated "\
+            "pair. Cur priority[%ld] & new priority[%ld]", cur_np->priority, cp->priority);
+
         if (cp->priority > cur_np->priority)
+        {
+            ICE_LOG(LOG_SEV_ERROR, "Modifying the nominated pair "\
+                    "from %s:%d<=>%s:%d priority [%ld] to %s:%d<=>%s:%d priority[%ld]", 
+                    cur_np->local->transport.ip_addr, cur_np->local->transport.port, 
+                    cur_np->remote->transport.ip_addr, cur_np->remote->transport.port, 
+                    cur_np->priority, 
+                    cp->local->transport.ip_addr, cp->local->transport.port,
+                    cp->remote->transport.ip_addr, cp->remote->transport.port, cp->priority);
             media->media_comps[i].np = cp;
+        }
     }
+
+    ice_media_utils_dump_cand_pair_stats(media);
 
     return status;
 }
@@ -4130,6 +4295,9 @@ ice_cand_pair_t *ice_media_utils_get_associated_nominated_pair_for_cand_pair(
         }
     }
 
+    if (i == ICE_MAX_CANDIDATE_PAIRS)
+        return NULL;
+
     return temp_cp;
 }
 
@@ -4190,28 +4358,127 @@ int32_t ice_utils_handle_role_conflict_response(
 
 
 
-void ice_utils_check_for_role_change(
-        ice_media_stream_t *media, conn_check_result_t *check_result)
+void ice_utils_check_for_role_change(ice_media_stream_t *media, 
+                            ice_rx_stun_pkt_t *stun_pkt, uint32_t *resp_code)
 {
-    if ((check_result->controlling_role == true) &&
-            (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED))
+    handle h_attr;
+    uint32_t num;
+    int32_t status;
+    uint64_t tie_breaker;
+    ice_agent_role_type_t peer_role;
+
+    *resp_code = 0;
+
+    num = 1;
+    status = stun_msg_get_specified_attributes(
+                    stun_pkt->h_msg, STUN_ATTR_ICE_CONTROLLING, &h_attr, &num);
+    if (status == STUN_NOT_FOUND)
     {
-        media->ice_session->role = ICE_AGENT_ROLE_CONTROLLING;
-        ICE_LOG(LOG_SEV_WARNING, 
-                "[ICE] Agent role for this session switched to CONTROLLING");
+        num = 1;
+        status = stun_msg_get_specified_attributes(
+                        stun_pkt->h_msg, STUN_ATTR_ICE_CONTROLLED, &h_attr, &num);
+
+        if (status == STUN_NOT_FOUND)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Request message does not contain either "\
+                    "ICE-CONTROLLING or ICE-CONTROLLED attribute. Peer agent"\
+                    "is compliant to previous version?");
+            /** 
+             * the peer agent may have implemented a previous version of this
+             * spec. There may be a conflict, but it can not be detected.
+             */
+            *resp_code = STUN_ERROR_BAD_REQUEST;
+            return;
+        }
+        else if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting ICE-CONTROLLING attribute from "\
+                    "the message failed");
+            *resp_code = STUN_ERROR_SERVER_ERROR;
+            return;
+        }
+        else
+        {
+            peer_role = ICE_AGENT_ROLE_CONTROLLED;
+        }
+    }
+    else if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Extracting ICE-CONTROLLING attribute from the "\
+                "message failed");
+        *resp_code = STUN_ERROR_SERVER_ERROR;
+        return;
+    }
+    else
+    {
+        peer_role = ICE_AGENT_ROLE_CONTROLLING;
     }
 
-    if ((check_result->controlling_role == false) &&
-            (media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING))
+    /** if this agent is in controlling role */
+    if ((media->ice_session->role == ICE_AGENT_ROLE_CONTROLLING) && 
+                                    (peer_role == ICE_AGENT_ROLE_CONTROLLING))
     {
-        media->ice_session->role = ICE_AGENT_ROLE_CONTROLLED;
-        ICE_LOG(LOG_SEV_WARNING, 
-                "[ICE] Agent role for this session switched to CONTROLLED");
+        status = stun_attr_ice_controlling_get_tiebreaker_value(
+                                                    h_attr, &tie_breaker);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting tie-breaker value from "\
+                    "ICE-CONTROLLING attribute failed");
+            *resp_code = STUN_ERROR_SERVER_ERROR;
+            return;
+        }
+
+        if (media->ice_session->tie_breaker >= tie_breaker)
+        {
+            /** 
+             * Agent generates binding error response with an error 
+             * code of 487 (role conflict) but retains it's role.
+             */
+            *resp_code = STUN_ERROR_ROLE_CONFLICT;
+        }
+        else
+        {
+            /** agent switches the role */
+            media->ice_session->role = ICE_AGENT_ROLE_CONTROLLED;
+        }
+    }
+
+    /** if this agent is in controlled role */
+    if ((media->ice_session->role == ICE_AGENT_ROLE_CONTROLLED) && 
+                                    (peer_role == ICE_AGENT_ROLE_CONTROLLED))
+    {
+        status = stun_attr_ice_controlled_get_tiebreaker_value(
+                                                    h_attr, &tie_breaker);
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Extracting tie-breaker value from "\
+                    "ICE-CONTROLLED attribute failed");
+            *resp_code = STUN_ERROR_SERVER_ERROR;
+            return;
+        }
+
+        if (media->ice_session->tie_breaker >= tie_breaker)
+        {
+            /** agent switches the role */
+            media->ice_session->role = ICE_AGENT_ROLE_CONTROLLING;
+        }
+        else
+        {
+            /** 
+             * Agent generates binding error response with an error 
+             * code of 487 (role conflict) but retains it's role.
+             */
+            *resp_code = STUN_ERROR_ROLE_CONFLICT;
+        }
     }
 
     return;
 }
-
 
 
 bool_t ice_media_utils_did_all_checks_fail(ice_media_stream_t *media)
@@ -4289,7 +4556,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                 }
                 else if (status == STUN_NOT_FOUND)
                 {
-                    ICE_LOG (LOG_SEV_INFO, 
+                    ICE_LOG (LOG_SEV_ERROR, 
                             "[ICE MEDIA] The mapped address discovered "\
                             "from connectivity check is NOT present "\
                             "in the media local candidate list. Adding "\
@@ -4310,7 +4577,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
 
                 if (pair == NULL)
                 {
-                    ICE_LOG(LOG_SEV_INFO,
+                    ICE_LOG(LOG_SEV_ERROR,
                         "[ICE] Did not find the candidate pair on "\
                         "current check list, hence adding a new "\
                         "candidate pair to check list.");
@@ -4332,7 +4599,7 @@ int32_t ice_utils_process_conn_check_response(ice_media_stream_t *media,
                 pair->valid_pair = true;
                 pair->nominated = check_result.nominated;
 
-                ICE_LOG(LOG_SEV_INFO,
+                ICE_LOG(LOG_SEV_ERROR,
                         "[ICE] Added candidate pair to VALID list."\
                         " From %s %d ==> To %s %d", 
                         pair->local->transport.ip_addr, 
@@ -5193,7 +5460,11 @@ void ice_utils_set_state_for_new_cand_pair(ice_cand_pair_t *cp)
 }
 
 
-
+/* 
+ * TODO - The function name must be modified since it wrongly states that 
+ * it is only for local candidate. But the parameter 'is_local' indicates 
+ * if the given candidate is local or remote.
+ */
 int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
                 ice_media_stream_t *m, ice_candidate_t *nc, bool_t is_local)
 {
@@ -5340,6 +5611,8 @@ int32_t ice_utils_form_candidate_pairs_for_given_local_candidate(
             }
         }
     }
+
+    ice_media_utils_dump_cand_pair_stats(m);
 
     return STUN_OK;
 }

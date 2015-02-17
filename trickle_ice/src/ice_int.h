@@ -97,6 +97,13 @@ typedef struct
 } ice_transport_t;
 
 
+typedef struct {
+    bool_t nominated;
+    bool_t controlling_role;
+    uint32_t priority;
+} ice_ic_check_params_t;
+
+
 typedef struct tag_ice_candidate
 {
     ice_transport_t transport;
@@ -191,8 +198,6 @@ typedef enum
 typedef enum
 {
     ICE_SES_IDLE = 0,
-    //ICE_SES_GATHERING,
-    //ICE_SES_GATHERED,
     ICE_SES_CC_RUNNING,
     ICE_SES_CC_COMPLETED,
     ICE_SES_CC_FAILED,
@@ -226,8 +231,6 @@ typedef enum
 typedef enum
 {
     ICE_MEDIA_IDLE = 0,
-    //ICE_MEDIA_GATHERING,
-    //ICE_MEDIA_GATHERED,
     ICE_MEDIA_FROZEN,
     ICE_MEDIA_CC_RUNNING,
     ICE_MEDIA_NOMINATING,

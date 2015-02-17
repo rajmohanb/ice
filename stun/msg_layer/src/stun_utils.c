@@ -300,6 +300,30 @@ ERROR_EXIT:
 }
 
 
+char* stun_msg_utils_get_error_reason(uint32_t error_code)
+{
+    switch(error_code)
+    {
+        case STUN_ERROR_TRY_ALTERNATE: return STUN_REJECT_RESPONSE_300;
+        case STUN_ERROR_BAD_REQUEST: return STUN_REJECT_RESPONSE_400;
+        case STUN_ERROR_UNAUTHORIZED: return STUN_REJECT_RESPONSE_401;
+        case STUN_ERROR_FORBIDDEN: return STUN_REJECT_RESPONSE_403;
+        case STUN_ERROR_UNKNOWN_ATTR: return STUN_REJECT_RESPONSE_420;
+        case STUN_ERROR_ALLOC_MISMATCH: return STUN_REJECT_RESPONSE_437;
+        case STUN_ERROR_STALE_NONCE: return STUN_REJECT_RESPONSE_438;
+        case STUN_ERROR_WRONG_CREDS: return STUN_REJECT_RESPONSE_441;
+        case STUN_ERROR_UNSUPPORTED_PROTO: return STUN_REJECT_RESPONSE_442;
+        case STUN_ERROR_QUOTA_REACHED: return STUN_REJECT_RESPONSE_486;
+        case STUN_ERROR_ROLE_CONFLICT: return STUN_REJECT_RESPONSE_487;
+        case STUN_ERROR_SERVER_ERROR: return STUN_REJECT_RESPONSE_500;
+        case STUN_ERROR_INSUF_CAPACITY: return STUN_REJECT_RESPONSE_508;
+        default: return NULL;
+    }
+
+    return NULL;
+}
+
+
 /******************************************************************************/
 
 #ifdef __cplusplus

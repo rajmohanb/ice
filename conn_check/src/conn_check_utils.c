@@ -467,7 +467,7 @@ int32_t conn_check_utils_verify_request_msg(
      * If the USERNAME does not contain a username value currently valid
      * within the server:
      * - If the message is a request, the server must reject the request with
-     *   an error response. This response must use an error code of i
+     *   an error response. This response must use an error code of 
      *   401 (Unauthorized)
      */
     status = stun_attr_username_get_username_length(h_username_attr, &num);

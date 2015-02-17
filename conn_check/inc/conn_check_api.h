@@ -22,7 +22,7 @@ extern "C" {
 
 /******************************************************************************/
 
-#define CONN_CHECK_MAX_CONCURRENT_SESSIONS  20
+#define CONN_CHECK_MAX_CONCURRENT_SESSIONS  50
 #define STUN_MAX_USERNAME_LEN               128
 #define STUN_MAX_PASSWORD_LEN               128
 #define STUN_MAX_REALM_LEN                  64
@@ -44,6 +44,7 @@ typedef enum
     CC_OG_TERMINATED,
 
     CC_IC_IDLE,
+    CC_IC_WAITING,
     CC_IC_TERMINATED,
 
     CC_STATE_MAX,
@@ -176,6 +177,9 @@ int32_t conn_check_session_timer_get_session_handle (
 
 int32_t conn_check_session_get_check_result(handle h_inst, 
                                 handle h_session, conn_check_result_t *result);
+
+int32_t conn_check_session_send_reponse(
+        handle h_inst, handle h_session, uint32_t resp_code);
 
 /******************************************************************************/
 

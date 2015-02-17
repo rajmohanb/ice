@@ -57,6 +57,27 @@ static char* turn_states[] =
 };
 
 
+static char *stun_msg_class[] = {
+    "STUN_REQUEST",
+    "STUN_INDICATION",
+    "STUN_SUCCESS_RESP",
+    "STUN_ERROR_RESP",
+    "STUN_MSG_TYPE_MAX",
+};
+
+
+static char *stun_msg_types[] = {
+    "STUN_METHOD_MIN",
+    "STUN_METHOD_BINDING",
+    "STUN_METHOD_ALLOCATE",
+    "STUN_METHOD_REFRESH",
+    "STUN_METHOD_SEND",
+    "STUN_METHOD_DATA",
+    "STUN_METHOD_CREATE_PERMISSION",
+    "STUN_METHOD_CHANNEL_BIND",
+    "STUN_METHOD_MAX",
+};
+
 
 int32_t ice_create_instance(handle *h_inst)
 {
@@ -499,7 +520,8 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
     ice_media_stream_t *media;
     ice_session_t *ice_session;
     stun_auth_params_t auth = {0};
-    stun_msg_type_t msg_class;
+    stun_msg_type_t msg_class = STUN_MSG_TYPE_MAX;
+    stun_method_type_t method;
 
     if ((h_msg == NULL) || (ip_addr == NULL) || 
                             (port == 0) || (transport_param == NULL))
@@ -522,12 +544,17 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
             return STUN_INVALID_PARAMS;
         }
 
+     	cp = (ice_cand_pair_t *) app_param;
+     	media = cp->media;
+     	ice_session = media->ice_session;
+
         if (msg_class == STUN_REQUEST)
         {
+#if 0
             cp = (ice_cand_pair_t *) app_param;
             media = cp->media;
             ice_session = media->ice_session;
-
+#endif
             auth.key_len = stun_strlen(media->peer_pwd);
             if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
                 auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
@@ -536,10 +563,11 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
         else if ((msg_class == STUN_SUCCESS_RESP) || 
                  (msg_class == STUN_ERROR_RESP))
         {
+#if 0
             media = (ice_media_stream_t *) app_param;
             ice_session = media->ice_session;
             cp = NULL;
-
+#endif
             auth.key_len = stun_strlen(media->local_pwd);
             if(auth.key_len > STUN_MSG_AUTH_PASSWORD_LEN)
                 auth.key_len = STUN_MSG_AUTH_PASSWORD_LEN;
@@ -574,16 +602,26 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
         return STUN_INVALID_PARAMS;
     }
 
+    stun_msg_get_method(h_msg, &method);
+    ICE_LOG(LOG_SEV_ERROR, "[ICE] Outgoing Message Type: %s:%s", 
+		    	stun_msg_class[msg_class], stun_msg_types[method]);
+
     /** 
      * connectivity check messages that are sent using the relayed 
      * candidate must be encoded in a TURN DATA indication message
      */
+#if 0
     if((msg_intg_reqd == true) && (msg_class == STUN_REQUEST) && 
        (cp->local->type == ICE_CAND_TYPE_RELAYED))
+#endif
+    if((msg_intg_reqd == true) && (cp->local->type == ICE_CAND_TYPE_RELAYED))
     {
         handle h_turn_session;
         stun_inet_addr_t dest = {0};
         handle h_turn_inst = cp->media->ice_session->instance->h_turn_inst;
+
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE] Sending STUN message to %s:%d via TURN server", ip_addr, port);
 
         /** better way to identify turn session? */
         h_turn_session = cp->media->h_turn_sessions[cp->local->comp_id - 1];
@@ -594,11 +632,18 @@ static int32_t ice_encode_and_send_stun_binding_message(handle h_msg,
 
         status = turn_session_send_application_data(h_turn_inst, 
                                         h_turn_session, &dest, buf, buf_len);
+        if (status != STUN_OK) {
+            ICE_LOG(LOG_SEV_ERROR, 
+                "Sending of STUN message to TURN server failed: %d", status);
+        }
     }
     else
     {
         sent_bytes = ice_session->instance->nwk_send_cb(buf, 
                 buf_len, ip_addr_type, ip_addr, port, transport_param);
+
+        ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE] Sending STUN message directly to %s:%d", ip_addr, port);
 
         if (sent_bytes == -1)
             status = STUN_INT_ERROR;

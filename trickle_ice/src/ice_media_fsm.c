@@ -32,6 +32,27 @@ extern "C" {
 #include "ice_media_fsm.h"
 
 
+static char *tmp_stun_methods[] = {
+    "STUN_METHOD_MIN",
+    "STUN_METHOD_BINDING",
+    "STUN_METHOD_ALLOCATE",
+    "STUN_METHOD_REFRESH",
+    "STUN_METHOD_SEND",
+    "STUN_METHOD_DATA",
+    "STUN_METHOD_CREATE_PERMISSION",
+    "STUN_METHOD_CHANNEL_BIND",
+    "STUN_METHOD_MAX"
+};
+
+
+static char *tmp_stun_types[] = {
+    "STUN_REQUEST",
+    "STUN_INDICATION",
+    "STUN_SUCCESS_RESP",
+    "STUN_ERROR_RESP",
+    "STUN_MSG_TYPE_MAX",
+};
+
 
 static ice_media_stream_fsm_handler 
     ice_media_stream_fsm[ICE_MEDIA_STATE_MAX][ICE_MEDIA_EVENT_MAX] =
@@ -214,16 +235,20 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     handle h_bind_inst, h_bind_session;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) h_msg;
     stun_method_type_t method;
+    stun_msg_type_t stun_class;
 
     h_turn_inst = media->ice_session->instance->h_turn_inst;
     h_bind_inst = media->ice_session->instance->h_bind_inst;
 
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "[ICE MEDIA] Received message from %s and port %d", 
-            stun_pkt->src.ip_addr, stun_pkt->src.port);
-
     status = stun_msg_get_method(stun_pkt->h_msg, &method);
     if (status != STUN_OK) return status;
+
+    stun_msg_get_class(stun_pkt->h_msg, &stun_class);
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE MEDIA] Received %s:%s message from %s and port %d", 
+            tmp_stun_types[stun_class], tmp_stun_methods[method], 
+	    stun_pkt->src.ip_addr, stun_pkt->src.port);
 
     /** SEND messages are filtered out and ignored earlier */
     if (method == STUN_METHOD_DATA)
@@ -237,8 +262,38 @@ int32_t ice_media_process_relay_msg(ice_media_stream_t *media, handle h_msg)
     }
     else if (method == STUN_METHOD_BINDING)
     {
-        status = stun_binding_instance_find_session_for_received_msg(
+        handle h_cc_inst = media->ice_session->instance->h_cc_inst;
+        if (stun_class == STUN_REQUEST) { 
+
+            /* incoming connectivity check thru relay */
+            status = ice_utils_process_incoming_check(media, stun_pkt);
+            conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
+            media->h_cc_svr_session = NULL;
+            return status;
+        } else if ((stun_class == STUN_SUCCESS_RESP) || 
+                                (stun_class == STUN_ERROR_RESP)) {
+
+            status = stun_binding_instance_find_session_for_received_msg(
                                 h_bind_inst, stun_pkt->h_msg, &h_bind_session);
+
+            if (status != STUN_OK) {
+
+                handle h_cc_dialog;
+
+                /* is this a connectivity check message? */
+                status = conn_check_find_session_for_recv_msg(
+                                    h_cc_inst, stun_pkt->h_msg, &h_cc_dialog);
+
+                if (status == STUN_OK) {
+                
+                    status = ice_utils_process_conn_check_response(
+                                        media, stun_pkt, h_cc_inst, h_cc_dialog);
+                    ice_media_utils_dump_cand_pair_stats(media);
+                }
+            }
+        } else {
+            /* this must be indication, ignore */
+        }
     }
     else
     {
@@ -337,9 +392,21 @@ int32_t ice_media_stream_check_gather_resp(
 
     status = ice_utils_copy_turn_gathered_candidates(media, param, comp_id);
 
+    /**
+     * For the trickled turn discovered candidates, before the connectivity 
+     * checks are initiated, install permissions on the turn server.
+     */
+    status = ice_utils_install_turn_permissions(media);
+    if (status != STUN_OK)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+	        "[ICE MEDIA] Installing of TURN permissions failed");
+        return status;
+    }
+
     media->num_comp_gathered++;
 
-    ICE_LOG(LOG_SEV_DEBUG, "[ICE MEDIA] Candidates gathered for %d "\
+    ICE_LOG(LOG_SEV_ERROR, "[ICE MEDIA] Candidates gathered for %d "\
             "number of components", media->num_comp_gathered);
 
     if (media->num_comp_gathered >= media->num_comp)
@@ -614,12 +681,18 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
 {
     int32_t status;
     handle h_cc_inst, h_cc_dialog;
+    stun_msg_type_t tmp_class;
+    stun_method_type_t tmp_method;
     ice_rx_stun_pkt_t *stun_pkt = (ice_rx_stun_pkt_t *) pkt;
 
     h_cc_inst = media->ice_session->instance->h_cc_inst;
 
-    ICE_LOG(LOG_SEV_DEBUG, 
-            "[ICE MEDIA] Received message from %s and port %d", 
+    stun_msg_get_class(stun_pkt->h_msg, &tmp_class);
+    stun_msg_get_method(stun_pkt->h_msg, &tmp_method);
+
+    ICE_LOG(LOG_SEV_ERROR, 
+            "[ICE MEDIA] Received %s:%s message from %s and port %d", 
+            tmp_stun_types[tmp_class], tmp_stun_methods[tmp_method],
             stun_pkt->src.ip_addr, stun_pkt->src.port);
 
     /** 
@@ -648,6 +721,16 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             return ice_utils_process_binding_keepalive_response(media, stun_pkt);
         }
 
+        /* TODO
+         * handle scenarios where check is received before offer/answer. Is
+         * this scenario possible in trickle ice?
+         */
+        status = ice_utils_process_incoming_check(media, stun_pkt);
+
+        conn_check_destroy_session(h_cc_inst, media->h_cc_svr_session);
+        media->h_cc_svr_session = NULL;
+
+#if 0
         /** create new incoming connectivity check dialog */
         status = ice_utils_create_conn_check_session(media, stun_pkt);
         if (status != STUN_OK)
@@ -714,11 +797,14 @@ int32_t ice_media_process_rx_msg(ice_media_stream_t *media, handle pkt)
             media->h_cc_svr_session = NULL;
             return STUN_INT_ERROR;
         }
+#endif
     }
     else if (status == STUN_OK)
     {
         status = ice_utils_process_conn_check_response(
                                 media, stun_pkt, h_cc_inst, h_cc_dialog);
+
+        ice_media_utils_dump_cand_pair_stats(media);
     }
 
     return status;
@@ -732,8 +818,13 @@ int32_t ice_media_stream_checklist_timer_expiry(
 {
     int32_t status;
     ice_cand_pair_t *pair;
+    static int count = 0;
 
-    ice_media_utils_dump_cand_pair_stats(media);
+    count++;
+    if (count > 10) {
+        //ice_media_utils_dump_cand_pair_stats(media);
+        count = 0;
+    }
 
     media->checklist_timer->timer_id = 0;
 

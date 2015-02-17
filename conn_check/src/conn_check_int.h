@@ -24,7 +24,7 @@ extern "C" {
 
 
 #define MAX_STR_LEN                 763
-#define CONN_CHECK_TXN_TABLE_SIZE   25
+#define CONN_CHECK_TXN_TABLE_SIZE   50
 
 
 typedef enum

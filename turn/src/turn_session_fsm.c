@@ -899,6 +899,9 @@ int32_t turn_send_ind(turn_session_t *session, handle h_msg)
     status = stun_txn_send_stun_message(h_txn_inst, h_txn, h_ind);
     if (status != STUN_OK) goto ERROR_EXIT_PT;
 
+    ICE_LOG(LOG_SEV_ERROR, "[TURN] Sent SEND indication message "\
+                "to peer address %s:%d", data->dest->ip_addr, data->dest->port);
+
     /** once the indication is sent, destroy the transaction */
     stun_destroy_txn(h_txn_inst, h_txn, false, false);
 

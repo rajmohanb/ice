@@ -85,7 +85,7 @@ int32_t ice_utils_find_media_for_transport_handle(
 void ice_media_utils_dump_cand_pair_stats(ice_media_stream_t *media);
 
 int32_t ice_utils_create_conn_check_session(
-                    ice_media_stream_t *media, ice_rx_stun_pkt_t *pkt);
+        ice_media_stream_t *media, ice_rx_stun_pkt_t *pkt, ice_cand_pair_t *cp);
 
 int32_t ice_media_utils_get_next_connectivity_check_pair(
         ice_media_stream_t *media, ice_cand_pair_t **pair);
@@ -219,8 +219,7 @@ int32_t ice_media_utils_add_new_candidate_pair(ice_media_stream_t *media,
         ice_candidate_t *local, ice_candidate_t *remote, ice_cand_pair_t **cp);
 
 int32_t ice_utils_process_incoming_check(
-                ice_media_stream_t *media, ice_candidate_t *local_cand, 
-                ice_rx_stun_pkt_t *stun_pkt, conn_check_result_t *check_result);
+            ice_media_stream_t *media, ice_rx_stun_pkt_t *stun_pkt);
 
 ice_cand_pair_t *ice_utils_search_cand_pair_in_valid_pair_list(
                                 ice_media_stream_t *media, ice_cand_pair_t *cp);
@@ -286,8 +285,8 @@ ice_cand_pair_t *ice_media_utils_get_associated_nominated_pair_for_cand_pair(
 int32_t ice_utils_handle_role_conflict_response(
                 ice_cand_pair_t *cp, conn_check_result_t *result);
 
-void ice_utils_check_for_role_change(
-        ice_media_stream_t *media, conn_check_result_t *check_result);
+void ice_utils_check_for_role_change(ice_media_stream_t *media, 
+                            ice_rx_stun_pkt_t *stun_pkt, uint32_t *resp_code);
 
 bool_t ice_media_utils_did_all_checks_fail(ice_media_stream_t *media);
 

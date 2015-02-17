@@ -1034,8 +1034,8 @@ int32_t turn_utils_process_data_indication(
     status = stun_attr_xor_peer_addr_get_port(h_xor_peer_addr, &src.port);
     if (status != STUN_OK) return status;
 
-    ICE_LOG(LOG_SEV_CRITICAL,
-            "TURN DATA IP Address %s:%d", src.ip_addr, src.port);
+    ICE_LOG(LOG_SEV_ERROR, "Received DATA indication "\
+                      "from peer address %s:%d", src.ip_addr, src.port);
 
     /** TODO = 
      * This xor-peer-addr must be a valid one trusted by the 

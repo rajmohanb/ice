@@ -61,6 +61,9 @@ int32_t cc_nwk_send_cb_fxn(handle h_msg, handle h_param)
 {
     conn_check_session_t *session = (conn_check_session_t *) h_param;
 
+    ICE_LOG(LOG_SEV_ERROR, "[CONN CHECK] Sending conn "\
+    	"check message to %s:%d", session->stun_server, session->stun_port);
+
     return session->instance->nwk_send_cb (h_msg, 
             session->stun_server_type, session->stun_server, 
             session->stun_port, session->transport_param, session->app_param);
@@ -673,6 +676,37 @@ int32_t conn_check_session_get_check_result(handle h_inst,
 }
 
 
+int32_t conn_check_session_send_reponse(
+        handle h_inst, handle h_session, uint32_t resp_code)
+{
+    int32_t status = STUN_OK;
+    conn_check_instance_t *instance;
+    conn_check_session_t *session;
+    conn_check_session_state_t cur_state;
+
+    if ((h_inst == NULL) || (h_session == NULL))
+        return STUN_INVALID_PARAMS;
+
+    instance = (conn_check_instance_t *) h_inst;
+    session = (conn_check_session_t *) h_session;
+
+    if (session->sess_type != CC_SERVER_SESSION)
+    {
+        ICE_LOG(LOG_SEV_ERROR, 
+                "[CONN CHECK] Invalid session type for responding "\
+                "to connectivity check");
+        return STUN_INVALID_PARAMS;
+    }
+
+    cur_state = session->state;
+    status = conn_check_session_fsm_inject_msg(
+                        session, CONN_CHECK_RESP, resp_code);
+
+    if (cur_state != session->state)
+        instance->state_change_cb(h_inst, h_session, session->state, NULL);
+
+    return status;
+}
 
 
 /******************************************************************************/

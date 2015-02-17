@@ -1,6 +1,6 @@
 /*******************************************************************************
 *                                                                              *
-*               Copyright (C) 2009-2012, MindBricks Technologies               *
+*               Copyright (C) 2009-2015, MindBricks Technologies               *
 *                  Rajmohan Banavi (rajmohan@mindbricks.com)                   *
 *                     MindBricks Confidential Proprietary.                     *
 *                            All Rights Reserved.                              *
@@ -61,13 +61,20 @@ static conn_check_session_fsm_handler
         cc_ignore_event,
         cc_ignore_event,
     },
+    /* CC_IC_WAITING */
+    {
+        cc_ignore_event,
+        cc_respond_to_check,
+        cc_ignore_event,
+        cc_ignore_event,
+    },
     /** CC_IC_TERMINATED */
     {
         cc_ignore_event,
         cc_ignore_event,
         cc_ignore_event,
         cc_ignore_event,
-    }
+    },
 };
 
 
@@ -145,10 +152,11 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_rcvdmsg)
         ICE_LOG(LOG_SEV_ERROR, 
                 "[CONN CHECK] Incmoing conn check request message "\
                 "validation failed");
-        return STUN_TERMINATED;
+        return status;
     }
 #endif
 
+#if 0
     status = conn_check_utils_extract_info_from_request_msg(session, h_msg);
     if (status != STUN_OK)
     {
@@ -207,6 +215,11 @@ int32_t cc_process_ic_check (conn_check_session_t *session, handle h_rcvdmsg)
     }
 
     return STUN_TERMINATED;
+#endif
+
+    session->state = CC_IC_WAITING;
+
+    return STUN_OK;
 }
 
 
@@ -374,14 +387,67 @@ int32_t cc_cancel (conn_check_session_t *session, handle h_txn)
 }
 
 
+int32_t cc_respond_to_check (conn_check_session_t *session, handle params)
+{
+    int32_t status;
+    handle h_resp, h_txn_inst;
+    uint32_t resp_code = (uint32_t) params;
+
+    h_txn_inst = session->instance->h_txn_inst;
+
+    ICE_LOG(LOG_SEV_ERROR, "Responding to check with response code [%d]", resp_code);
+
+    if (resp_code)
+    {
+        ICE_LOG(LOG_SEV_WARNING, 
+            "Role conflict detected. Sending 487 Role Conflict response");
+
+        conn_check_utils_send_error_resp(session, resp_code, STUN_REJECT_RESPONSE_401);
+    }
+    else
+    {
+        ICE_LOG(LOG_SEV_INFO, 
+                "[CONN CHECK] Incoming conn check request validation "\
+                "succeeded. All decks clear for sending response");
+
+        /** if everything is fine, then go ahead and send success response */
+        status = cc_utils_create_resp_from_req(
+                        session, session->h_req, STUN_SUCCESS_RESP, &h_resp);
+    
+        if (status != STUN_OK)
+        {
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Creating a response from the request "\
+                    "message failed");
+            return status;
+        }
+
+        session->h_resp = h_resp;
+
+        status = stun_txn_send_stun_message(h_txn_inst, session->h_txn, h_resp);
+        if (status != STUN_OK)
+        { 
+            ICE_LOG(LOG_SEV_ERROR, 
+                    "[CONN CHECK] Sending conn check response via stun "\
+                    "transaction failed - %d", status);
+            return status;
+        }
+
+        //session->state = CC_IC_TERMINATED;
+        session->cc_succeeded = true;
+    }
+
+    return STUN_TERMINATED;
+}
+
+
 int32_t cc_ignore_event (conn_check_session_t *session, handle h_msg)
 {
     return STUN_OK;
 }
 
 int32_t conn_check_session_fsm_inject_msg(
-                                    conn_check_session_t *session, 
-                                    conn_check_event_t event, handle h_msg)
+        conn_check_session_t *session, conn_check_event_t event, handle h_msg)
 {
     conn_check_session_fsm_handler handler;
 

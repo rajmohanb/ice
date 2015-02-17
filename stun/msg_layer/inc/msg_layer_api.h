@@ -391,6 +391,8 @@ int32_t stun_extended_attr_get_attr_type(handle h_attr, uint16_t *attr_type);
 int32_t stun_msg_utils_add_unknown_attributes(
                             handle h_msg, handle *pah_attr, uint32_t num);
 
+char* stun_msg_utils_get_error_reason(uint32_t error_code);
+
 /******************************************************************************/
 
 #ifdef __cplusplus
