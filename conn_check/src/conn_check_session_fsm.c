@@ -395,7 +395,8 @@ int32_t cc_respond_to_check (conn_check_session_t *session, handle params)
 
     h_txn_inst = session->instance->h_txn_inst;
 
-    ICE_LOG(LOG_SEV_ERROR, "Responding to check with response code [%d]", resp_code);
+    ICE_LOG(LOG_SEV_DEBUG, 
+            "Responding to check with response code [%d]", resp_code);
 
     if (resp_code)
     {

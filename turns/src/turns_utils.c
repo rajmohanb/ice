@@ -2109,6 +2109,11 @@ int32_t turns_utils_forward_send_data(turns_allocation_t *alloc, handle h_msg)
     turns_permission_t *perm = NULL;
     u_char *data;
 
+    /*
+     * TODO: some SEND indications are sent to keep the NAT binding alive. So
+     * check for the number of attributes, if none then ignore.dont forward
+     */
+
     /** get the peer address */
     num = 1;
     status = stun_msg_get_specified_attributes(h_msg, 

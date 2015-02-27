@@ -3418,7 +3418,9 @@ int32_t ice_utils_process_incoming_check(
         /** The pair is enqueued into the triggered check queue */
         status = ice_utils_add_to_triggered_check_queue(media, cp);
 
-        ice_media_utils_dump_cand_pair_stats(media);
+        /* log only during checks to reduce log clutter */
+        if (media->state < ICE_MEDIA_CC_COMPLETED)
+            ice_media_utils_dump_cand_pair_stats(media);
     }
     else
     {
@@ -3522,9 +3524,9 @@ int32_t ice_utils_process_incoming_check(
     /* if we are here, then we have already sent a response to incoming check */
 
     if (nominated == true)
-        ICE_LOG(LOG_SEV_ERROR, "This conn check is NOMINATED");
+        ICE_LOG(LOG_SEV_INFO, "This conn check is NOMINATED");
     else
-        ICE_LOG(LOG_SEV_ERROR, "This conn check is NOT nominated");
+        ICE_LOG(LOG_SEV_INFO, "This conn check is NOT nominated");
 
     /**
      * RFC 5245 Sec 7.2.1.5 Updating the Nominated Flag

@@ -61,7 +61,7 @@ int32_t cc_nwk_send_cb_fxn(handle h_msg, handle h_param)
 {
     conn_check_session_t *session = (conn_check_session_t *) h_param;
 
-    ICE_LOG(LOG_SEV_ERROR, "[CONN CHECK] Sending conn "\
+    ICE_LOG(LOG_SEV_DEBUG, "[CONN CHECK] Sending conn "\
     	"check message to %s:%d", session->stun_server, session->stun_port);
 
     return session->instance->nwk_send_cb (h_msg, 
